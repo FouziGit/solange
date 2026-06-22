@@ -1,26 +1,325 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+/* ============================================================
+   SOLANGE — design system
+   Strict noir & blanc — ivory on ink, no chroma.
+   Grain, glass, cinematic motion.
+   ============================================================ */
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-ink: #060607; /* feed / true black */
+  --color-noir: #0b0b0c; /* base canvas */
+  --color-coal: #141416; /* raised surfaces */
+  --color-smoke: #1d1d20; /* borders / hairlines base */
+  --color-bone: #f3f0e8; /* primary type / warm ivory */
+  --color-ash: #8a8782; /* muted type */
+  /* Brand is strict noir & blanc — the single "accent" is pure white. */
+  --color-pure: #ffffff;
+
+  --font-display: var(--font-archivo);
+  --font-serif: var(--font-bodoni);
+  --font-sans: var(--font-hanken);
+
+  --ease-silk: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-luxe: cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-@media (prefers-color-scheme: dark) {
+:root {
+  --background: #0b0b0c;
+  --foreground: #f4f1e9;
+  /* clearance for the floating mobile tab bar (safe-area + bar height) */
+  --tabbar-clearance: calc(env(safe-area-inset-bottom) + 5.5rem);
+}
+
+@media (min-width: 768px) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --tabbar-clearance: 0px;
   }
+}
+
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+html {
+  background: var(--background);
+  color: var(--foreground);
+  scroll-behavior: smooth;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-hanken), ui-sans-serif, system-ui, sans-serif;
+  font-feature-settings: "ss01", "cv01";
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  overscroll-behavior: none;
+}
+
+/* Custom cursor: hide native only on precise-pointer desktops once ready */
+@media (hover: hover) and (pointer: fine) {
+  html.cursor-ready,
+  html.cursor-ready * {
+    cursor: none !important;
+  }
+}
+
+/* Keyboard focus ring — strict mono, keyboard-only (coexists with cursor:none,
+   which is hover/fine-pointer scoped). Mouse focus stays ringless. */
+:focus-visible {
+  outline: 2px solid var(--color-bone);
+  outline-offset: 2px;
+}
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
+::selection {
+  background: var(--color-bone);
+  color: #060607;
+}
+
+::-webkit-scrollbar {
+  width: 0px;
+  height: 0px;
+}
+
+/* ---------- Typography helpers ---------- */
+.font-display {
+  font-family: var(--font-archivo), sans-serif;
+  font-stretch: 125%;
+}
+.font-serif,
+.font-editorial {
+  font-family: var(--font-bodoni), "Didot", "Bodoni MT", serif;
+}
+.tracking-mega {
+  letter-spacing: -0.04em;
+}
+/* section/page kicker only */
+.eyebrow {
+  font-family: var(--font-bodoni), serif;
+  font-style: italic;
+  letter-spacing: 0.02em;
+}
+/* card/metadata labels */
+.overline {
+  font-family: var(--font-hanken), sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 0.32em;
+  font-weight: 600;
+}
+
+/* ---------- Surfaces ---------- */
+.glass {
+  background: rgba(20, 20, 22, 0.5);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(244, 241, 233, 0.1);
+}
+.glass-bone {
+  background: rgba(244, 241, 233, 0.07);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(244, 241, 233, 0.14);
+}
+.hairline {
+  border-color: rgba(244, 241, 233, 0.1);
+}
+
+/* ---------- Form input (glass field) ---------- */
+.field {
+  width: 100%;
+  border-radius: 0.75rem;
+  border: 1px solid rgba(243, 240, 232, 0.15);
+  background: rgba(243, 240, 232, 0.03);
+  padding: 0.75rem 1rem;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  color: var(--color-bone);
+  outline: none;
+  transition: border-color 0.2s ease;
+}
+.field::placeholder {
+  color: var(--color-ash);
+}
+.field:focus {
+  border-color: rgba(243, 240, 232, 0.4);
+}
+
+/* ---------- Horizontal scroller (momentum + edge fade) ---------- */
+.hscroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scroll-snap-type: x proximity;
+  -webkit-mask-image: linear-gradient(
+    to right,
+    #000 0,
+    #000 calc(100% - 2.5rem),
+    transparent 100%
+  );
+  mask-image: linear-gradient(
+    to right,
+    #000 0,
+    #000 calc(100% - 2.5rem),
+    transparent 100%
+  );
+}
+
+/* ---------- Safe-area padding (notch / home indicator) ---------- */
+.pt-safe {
+  padding-top: max(1.25rem, env(safe-area-inset-top));
+}
+.pb-safe {
+  padding-bottom: max(1.25rem, env(safe-area-inset-bottom));
+}
+
+/* ---------- Grain overlay ---------- */
+/* Static film grain — mix-blend composites once (animating it would force a
+   full-screen recomposite every frame, which tanks paint performance). */
+.grain {
+  pointer-events: none;
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  opacity: 0.045;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* ---------- Cinematic media: Ken Burns ---------- */
+.kenburns {
+  animation: kenburns 16s ease-out both;
+  will-change: transform;
+}
+
+/* ---------- Keyframes ---------- */
+@keyframes grain-shift {
+  0% {
+    transform: translate(0, 0);
+  }
+  25% {
+    transform: translate(-3%, 2%);
+  }
+  50% {
+    transform: translate(2%, -4%);
+  }
+  75% {
+    transform: translate(-2%, 3%);
+  }
+  100% {
+    transform: translate(3%, -2%);
+  }
+}
+
+@keyframes kenburns {
+  0% {
+    transform: scale(1.04) translate(0, 0);
+  }
+  100% {
+    transform: scale(1.22) translate(-2.5%, -3%);
+  }
+}
+
+@keyframes pulse-ring {
+  0% {
+    box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.5);
+  }
+  70% {
+    box-shadow: 0 0 0 12px rgba(255, 255, 255, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(255, 255, 255, 0);
+  }
+}
+.pulse-ring {
+  animation: pulse-ring 2.6s var(--ease-silk) infinite;
+}
+
+/* slow cinematic light sweep across the active still */
+@keyframes sweep {
+  0% {
+    transform: translateX(-130%) skewX(-12deg);
+  }
+  100% {
+    transform: translateX(130%) skewX(-12deg);
+  }
+}
+.sweep {
+  position: absolute;
+  inset: -30% -50%;
+  background: linear-gradient(
+    90deg,
+    transparent 42%,
+    rgba(255, 255, 255, 0.05) 50%,
+    transparent 58%
+  );
+  animation: sweep 11s var(--ease-luxe) infinite;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+.shimmer {
+  background: linear-gradient(
+    100deg,
+    transparent 20%,
+    rgba(244, 241, 233, 0.08) 50%,
+    transparent 80%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 2.4s linear infinite;
+}
+
+@keyframes marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+.marquee {
+  animation: marquee 22s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.spin-disc {
+  animation: spin 6s linear infinite;
+}
+
+/* Snap scroll feed */
+.feed-scroll {
+  scroll-snap-type: y mandatory;
+  -webkit-overflow-scrolling: touch;
+}
+.feed-snap {
+  scroll-snap-align: start;
+  scroll-snap-stop: always;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kenburns,
+  .grain,
+  .marquee,
+  .shimmer,
+  .sweep,
+  .pulse-ring,
+  .spin-disc {
+    animation: none !important;
+  }
+  html {
+    scroll-behavior: auto;
+  }
 }
