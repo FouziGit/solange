@@ -6,6 +6,8 @@ import { motion } from "motion/react";
 import type { CatalogItem } from "@/lib/mock";
 import { savedIds } from "@/lib/mock";
 import { composition, euro, gradientFor } from "@/lib/utils";
+import { imgItem } from "@/lib/img";
+import { Photo } from "./Photo";
 import { Heart, Bag } from "../chrome/icons";
 
 export function ProductCard({ item, index = 0 }: { item: CatalogItem; index?: number }) {
@@ -74,6 +76,8 @@ export function ProductCard({ item, index = 0 }: { item: CatalogItem; index?: nu
                 <span className="mt-2 h-px w-8 bg-bone/25" />
               </div>
             </div>
+            {/* real photo (covers the gradient when it loads) */}
+            <Photo src={imgItem(item.id)} alt={`${item.brand} ${item.name}`} />
             <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/70 to-transparent" />
             {/* inset vignette */}
             <div

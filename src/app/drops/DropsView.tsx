@@ -6,12 +6,22 @@ import { motion } from "motion/react";
 import type { Drop } from "@/lib/mock";
 import { catalogItem } from "@/lib/mock";
 import { compact, composition, gradientFor } from "@/lib/utils";
+import { imgItem } from "@/lib/img";
 import { Avatar } from "@/components/chrome/Avatar";
+import { Photo } from "@/components/ui/Photo";
 import { ProductCard } from "@/components/ui/ProductCard";
 import { Verified } from "@/components/chrome/icons";
 
 /** Full-bleed media tile reusing the ProductCard gradient recipe. */
-function DropMedia({ seed, className }: { seed: string; className?: string }) {
+function DropMedia({
+  seed,
+  image,
+  className,
+}: {
+  seed: string;
+  image?: string;
+  className?: string;
+}) {
   const c = composition(seed);
   return (
     <div className={`absolute inset-0 ${className ?? ""}`}>
@@ -19,6 +29,7 @@ function DropMedia({ seed, className }: { seed: string; className?: string }) {
         className="absolute inset-0"
         style={{ background: gradientFor(seed) }}
       >
+        {image && <Photo src={image} alt="" eager />}
         <div
           className="absolute inset-0"
           style={{
@@ -107,7 +118,10 @@ export function DropsView({ drops }: { drops: Drop[] }) {
         className="relative overflow-hidden rounded-[28px] ring-1 ring-bone/10"
       >
         <div className="relative aspect-[4/5] w-full sm:aspect-[16/10]">
-          <DropMedia seed={featured.seed} />
+          <DropMedia
+            seed={featured.seed}
+            image={imgItem(featured.productIds[0])}
+          />
 
           {/* top badges */}
           <div className="absolute inset-x-0 top-0 flex items-center justify-between p-5">

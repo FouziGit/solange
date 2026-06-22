@@ -8,6 +8,7 @@ import {
   type Variants,
 } from "motion/react";
 import type { Look } from "@/lib/mock";
+import { imgLook } from "@/lib/img";
 import { KenBurnsMedia } from "./KenBurnsMedia";
 import { ProductHotspots } from "./ProductHotspots";
 import { CreatorHeader } from "./CreatorHeader";
@@ -116,6 +117,7 @@ export function FeedCard({
                 index={index}
                 active={active}
                 paused={paused}
+                image={imgLook(look.id)}
               />
             </div>
 

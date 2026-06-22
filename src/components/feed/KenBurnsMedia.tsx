@@ -1,5 +1,7 @@
+/* eslint-disable @next/next/no-img-element */
 "use client";
 
+import { useState } from "react";
 import { motion } from "motion/react";
 import { composition } from "@/lib/utils";
 
@@ -28,6 +30,7 @@ export function KenBurnsMedia({
   index,
   active,
   paused,
+  image,
 }: {
   seed: string;
   title: string;
@@ -35,8 +38,11 @@ export function KenBurnsMedia({
   index: number;
   active: boolean;
   paused: boolean;
+  image?: string;
 }) {
   const c = composition(seed);
+  const [imgOk, setImgOk] = useState(true);
+  const showPhoto = Boolean(image) && imgOk;
   const num = String(index + 1).padStart(2, "0");
   const sx = 30 + (c.h % 40); // key-light x
   const sy = 18 + ((c.h >> 4) % 22); // key-light y
@@ -55,59 +61,72 @@ export function KenBurnsMedia({
         className={`absolute inset-0 ${active && !paused ? "kenburns" : ""}`}
         style={{ animationPlayState: paused ? "paused" : "running" }}
       >
-        {/* studio cyclorama sweep */}
-        <div
-          className="absolute inset-0"
-          style={{
-            background:
-              "linear-gradient(177deg, #272727 0%, #19191a 38%, #0a0a0b 72%, #050505 100%)",
-          }}
-        />
-        {/* key light */}
-        <div
-          className="absolute inset-0"
-          style={{
-            background: `radial-gradient(46% 42% at ${sx}% ${sy}%, rgba(255,255,255,0.22) 0%, rgba(255,255,255,0.05) 38%, transparent 64%)`,
-          }}
-        />
-        {/* fill light */}
-        <div
-          className="absolute inset-0"
-          style={{
-            background: `radial-gradient(38% 36% at ${c.fx2}% ${c.fy2}%, rgba(255,255,255,0.08) 0%, transparent 60%)`,
-          }}
-        />
-        {/* draped-light forms (silk / smoke under the key light) */}
-        <div
-          className="absolute rounded-full opacity-70 blur-2xl"
-          style={{
-            width: "70%",
-            height: "55%",
-            left: `${c.fx1}%`,
-            top: `${20 + (c.h % 24)}%`,
-            background:
-              "radial-gradient(closest-side, rgba(255,255,255,0.13), transparent 72%)",
-          }}
-        />
-        <div
-          className="absolute rounded-full opacity-60 blur-2xl"
-          style={{
-            width: "55%",
-            height: "70%",
-            left: `${35 + ((c.h >> 6) % 30)}%`,
-            top: `${38 + ((c.h >> 8) % 30)}%`,
-            background:
-              "radial-gradient(closest-side, rgba(255,255,255,0.10), transparent 70%)",
-          }}
-        />
-        {/* central "subject" glow */}
-        <div
-          className="absolute left-1/2 top-[46%] h-[62%] w-[34%] -translate-x-1/2 -translate-y-1/2 rounded-[50%] opacity-50 blur-3xl"
-          style={{
-            background:
-              "radial-gradient(closest-side, rgba(255,255,255,0.12), transparent 75%)",
-          }}
-        />
+        {showPhoto ? (
+          /* real B&W editorial photo — hero layer */
+          <img
+            src={image}
+            alt={`${house} — ${title}`}
+            draggable={false}
+            onError={() => setImgOk(false)}
+            className="absolute inset-0 size-full object-cover grayscale contrast-[1.04] brightness-[0.78]"
+          />
+        ) : (
+          <>
+            {/* studio cyclorama sweep */}
+            <div
+              className="absolute inset-0"
+              style={{
+                background:
+                  "linear-gradient(177deg, #272727 0%, #19191a 38%, #0a0a0b 72%, #050505 100%)",
+              }}
+            />
+            {/* key light */}
+            <div
+              className="absolute inset-0"
+              style={{
+                background: `radial-gradient(46% 42% at ${sx}% ${sy}%, rgba(255,255,255,0.22) 0%, rgba(255,255,255,0.05) 38%, transparent 64%)`,
+              }}
+            />
+            {/* fill light */}
+            <div
+              className="absolute inset-0"
+              style={{
+                background: `radial-gradient(38% 36% at ${c.fx2}% ${c.fy2}%, rgba(255,255,255,0.08) 0%, transparent 60%)`,
+              }}
+            />
+            {/* draped-light forms (silk / smoke under the key light) */}
+            <div
+              className="absolute rounded-full opacity-70 blur-2xl"
+              style={{
+                width: "70%",
+                height: "55%",
+                left: `${c.fx1}%`,
+                top: `${20 + (c.h % 24)}%`,
+                background:
+                  "radial-gradient(closest-side, rgba(255,255,255,0.13), transparent 72%)",
+              }}
+            />
+            <div
+              className="absolute rounded-full opacity-60 blur-2xl"
+              style={{
+                width: "55%",
+                height: "70%",
+                left: `${35 + ((c.h >> 6) % 30)}%`,
+                top: `${38 + ((c.h >> 8) % 30)}%`,
+                background:
+                  "radial-gradient(closest-side, rgba(255,255,255,0.10), transparent 70%)",
+              }}
+            />
+            {/* central "subject" glow */}
+            <div
+              className="absolute left-1/2 top-[46%] h-[62%] w-[34%] -translate-x-1/2 -translate-y-1/2 rounded-[50%] opacity-50 blur-3xl"
+              style={{
+                background:
+                  "radial-gradient(closest-side, rgba(255,255,255,0.12), transparent 75%)",
+              }}
+            />
+          </>
+        )}
       </div>
 
       {/* cinematic light sweep — active only */}

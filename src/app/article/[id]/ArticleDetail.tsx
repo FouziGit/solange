@@ -6,7 +6,9 @@ import { motion } from "motion/react";
 import type { CatalogItem } from "@/lib/mock";
 import { savedIds } from "@/lib/mock";
 import { composition, euro, gradientFor } from "@/lib/utils";
+import { imgItem } from "@/lib/img";
 import { Avatar } from "@/components/chrome/Avatar";
+import { Photo } from "@/components/ui/Photo";
 import { ProductCard } from "@/components/ui/ProductCard";
 import { Chip } from "@/components/ui/Chip";
 import { Bag, Heart, Send, Verified } from "@/components/chrome/icons";
@@ -17,11 +19,13 @@ function MediaTile({
   brand,
   className,
   small,
+  image,
 }: {
   seed: string;
   brand: string;
   className?: string;
   small?: boolean;
+  image?: string;
 }) {
   const c = composition(seed);
   return (
@@ -62,6 +66,7 @@ function MediaTile({
             <span className="mt-2 h-px w-8 bg-bone/25" />
           </div>
         </div>
+        {image && <Photo src={image} alt={brand} eager />}
         <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/70 to-transparent" />
         {/* inset vignette */}
         <div
@@ -103,6 +108,7 @@ export function ArticleDetail({
             seed={item.seed}
             brand={item.brand}
             className="aspect-[3/4]"
+            image={imgItem(item.id)}
           />
           <div className="mt-3 grid grid-cols-2 gap-3">
             {thumbs.map((t) => (

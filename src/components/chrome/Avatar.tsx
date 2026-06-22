@@ -1,6 +1,8 @@
 import { cn, gradientFor, initials } from "@/lib/utils";
+import { imgPerson } from "@/lib/img";
+import { Photo } from "../ui/Photo";
 
-/** Deterministic monogram avatar — no network, on-brand monochrome. */
+/** Monogram avatar with a real portrait overlay (falls back to the monogram). */
 export function Avatar({
   name,
   seed,
@@ -13,7 +15,7 @@ export function Avatar({
   return (
     <span
       className={cn(
-        "grid place-items-center overflow-hidden rounded-full",
+        "relative grid place-items-center overflow-hidden rounded-full",
         className,
       )}
       style={{ background: gradientFor(seed) }}
@@ -21,6 +23,7 @@ export function Avatar({
       <span className="font-display text-[0.42em] font-bold tracking-wide text-bone/85">
         {initials(name)}
       </span>
+      <Photo src={imgPerson(seed)} alt={name} className="rounded-full" />
     </span>
   );
 }
