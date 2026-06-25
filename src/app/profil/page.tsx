@@ -6,10 +6,18 @@ import { motion } from "motion/react";
 import { PageShell } from "@/components/ui/PageShell";
 import { ProductCard } from "@/components/ui/ProductCard";
 import { Avatar } from "@/components/chrome/Avatar";
-import { looks, me } from "@/lib/mock";
+import { AnimatePresence } from "motion/react";
+import { invite, looks, me } from "@/lib/mock";
 import { forSale, liked } from "@/lib/data";
 import { EASE, compact, euro, gradientFor } from "@/lib/utils";
-import { Verified, Star, Pin, Crown, Share } from "@/components/chrome/icons";
+import {
+  Verified,
+  Star,
+  Pin,
+  Crown,
+  Share,
+  Check,
+} from "@/components/chrome/icons";
 
 const tabs = [
   { key: "vente", label: "À vendre" },
@@ -30,8 +38,97 @@ function Stat({ value, label }: { value: string; label: string }) {
   );
 }
 
+function ReferralCard() {
+  const [copied, setCopied] = useState(false);
+
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(invite.code);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1800);
+    } catch {
+      // Clipboard unavailable (insecure context / denied) — stay silent,
+      // the code is still visible for manual copy.
+    }
+  };
+
+  return (
+    <motion.section
+      initial={{ opacity: 0, y: -8, height: 0 }}
+      animate={{ opacity: 1, y: 0, height: "auto" }}
+      exit={{ opacity: 0, y: -8, height: 0 }}
+      transition={{ duration: 0.4, ease: EASE.luxe }}
+      className="overflow-hidden"
+      aria-label="Parrainage"
+    >
+      <div className="mt-6 rounded-3xl border border-bone/12 bg-coal/60 p-5 md:max-w-md">
+        <p className="overline text-[9px] text-ash">Parrainage</p>
+        <p className="mt-1 font-editorial text-2xl font-semibold text-bone">
+          Invite, gagne.
+        </p>
+        <p className="mt-1 text-[13px] leading-relaxed text-ash">
+          {invite.reward}.
+        </p>
+
+        {/* code + copy */}
+        <div className="mt-4 flex items-center gap-2 rounded-2xl bg-bone/[0.05] p-1.5 pl-4">
+          <span className="flex-1 select-all font-display text-[15px] font-bold tracking-[0.12em] text-bone">
+            {invite.code}
+          </span>
+          <button
+            type="button"
+            onClick={copy}
+            aria-label="Copier le code de parrainage"
+            data-cursor="link"
+            className="inline-flex items-center gap-1.5 rounded-full bg-bone px-3.5 py-2 text-[13px] font-semibold text-ink transition-transform active:scale-95"
+          >
+            {copied ? (
+              <>
+                <Check className="size-4" /> Copié
+              </>
+            ) : (
+              "Copier le code"
+            )}
+          </button>
+        </div>
+
+        {/* reward ladder with pips */}
+        <ol className="mt-5 space-y-3">
+          {invite.steps.map((step, i) => (
+            <li key={step.label} className="flex gap-3">
+              <span
+                aria-hidden="true"
+                className="mt-0.5 grid size-6 shrink-0 place-items-center rounded-full border border-bone/25 font-display text-[11px] font-bold text-bone/80"
+              >
+                {i + 1}
+              </span>
+              <span className="min-w-0">
+                <span className="block text-[13px] font-medium text-bone">
+                  {step.label}
+                </span>
+                <span className="block text-[12px] leading-relaxed text-ash">
+                  {step.detail}
+                </span>
+              </span>
+            </li>
+          ))}
+        </ol>
+
+        <p className="mt-5 border-t border-bone/10 pt-3 text-[12px] text-ash">
+          <span className="font-semibold text-bone tabular-nums">
+            {invite.invited}
+          </span>{" "}
+          ami{invite.invited > 1 ? "s" : ""} déjà parrainé
+          {invite.invited > 1 ? "s" : ""}.
+        </p>
+      </div>
+    </motion.section>
+  );
+}
+
 export default function ProfilPage() {
   const [tab, setTab] = useState<string>("vente");
+  const [referral, setReferral] = useState(false);
   const saleItems = forSale();
   const likedItems = liked();
 
@@ -76,11 +173,27 @@ export default function ProfilPage() {
           >
             <Crown className="size-4" /> Premium
           </Link>
-          <button className="grid size-10 place-items-center rounded-full border border-bone/20 text-bone transition-colors hover:bg-bone/10">
+          <button
+            type="button"
+            onClick={() => setReferral((r) => !r)}
+            aria-expanded={referral}
+            aria-label="Inviter des amis"
+            data-cursor="link"
+            className={`grid size-10 place-items-center rounded-full border transition-colors ${
+              referral
+                ? "border-bone bg-bone text-ink"
+                : "border-bone/20 text-bone hover:bg-bone/10"
+            }`}
+          >
             <Share className="size-4" />
           </button>
         </div>
       </div>
+
+      {/* referral / invite — toggled by the Share button above */}
+      <AnimatePresence initial={false}>
+        {referral && <ReferralCard />}
+      </AnimatePresence>
 
       {/* stats */}
       <div className="mt-8 flex items-center justify-around rounded-2xl border border-bone/10 py-4 md:max-w-md">

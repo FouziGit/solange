@@ -7,8 +7,9 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { ProductCard } from "@/components/ui/ProductCard";
 import { Avatar } from "@/components/chrome/Avatar";
 import { Verified } from "@/components/chrome/icons";
-import { savedItems, followedHandles, looks } from "@/lib/mock";
+import { followedHandles, looks } from "@/lib/mock";
 import type { Creator } from "@/lib/mock";
+import { useStore } from "@/lib/store";
 
 type Tab = "pieces" | "vendeurs";
 
@@ -21,12 +22,13 @@ function followedCreators(): Creator[] {
     .filter((c): c is Creator => c !== undefined);
 }
 
-function FollowToggle() {
-  const [following, setFollowing] = useState(true);
+function FollowToggle({ handle }: { handle: string }) {
+  const { isFollowing, toggleFollow } = useStore();
+  const following = isFollowing(handle);
   return (
     <button
       type="button"
-      onClick={() => setFollowing((f) => !f)}
+      onClick={() => toggleFollow(handle)}
       aria-pressed={following}
       data-cursor="link"
       className={`shrink-0 rounded-full border px-4 py-1.5 text-[13px] font-medium transition-colors ${
@@ -42,6 +44,8 @@ function FollowToggle() {
 
 export default function FavorisPage() {
   const [tab, setTab] = useState<Tab>("pieces");
+  const { savedItems } = useStore();
+  const saved = savedItems();
   const creators = useMemo(() => followedCreators(), []);
 
   return (
@@ -52,7 +56,7 @@ export default function FavorisPage() {
       <div role="tablist" aria-label="Favoris" className="flex gap-2">
         {(
           [
-            ["pieces", `Pièces · ${savedItems.length}`],
+            ["pieces", `Pièces · ${saved.length}`],
             ["vendeurs", `Vendeurs suivis · ${creators.length}`],
           ] as const
         ).map(([id, label]) => {
@@ -78,9 +82,9 @@ export default function FavorisPage() {
 
       {/* pieces */}
       {tab === "pieces" &&
-        (savedItems.length > 0 ? (
+        (saved.length > 0 ? (
           <div className="mt-7 columns-2 gap-3 md:columns-3 xl:columns-4">
-            {savedItems.map((it, i) => (
+            {saved.map((it, i) => (
               <ProductCard key={it.id} item={it} index={i} />
             ))}
           </div>
@@ -125,7 +129,7 @@ export default function FavorisPage() {
                   </span>
                 </span>
               </Link>
-              <FollowToggle />
+              <FollowToggle handle={c.handle} />
             </div>
           ))}
         </div>

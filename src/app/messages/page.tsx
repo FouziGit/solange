@@ -1,9 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { motion } from "motion/react";
 import { Avatar } from "@/components/chrome/Avatar";
-import { conversations, type Message } from "@/lib/mock";
+import {
+  conversations,
+  catalogItem,
+  type CatalogItem,
+  type Message,
+  type Conversation,
+} from "@/lib/mock";
 import { EASE, euro } from "@/lib/utils";
 import {
   Verified,
@@ -13,12 +20,50 @@ import {
   Bag,
 } from "@/components/chrome/icons";
 
-export default function MessagesPage() {
-  const [selId, setSelId] = useState<string | null>(null);
-  const [draft, setDraft] = useState("");
-  const [extra, setExtra] = useState<Record<string, Message[]>>({});
+/**
+ * When arriving from an article with ?item={id}, open the thread that already
+ * discusses that piece (matched by its seed). If none exists, fall back to the
+ * piece's seller, then the first conversation.
+ */
+function threadForItem(
+  item: CatalogItem | undefined,
+): Conversation | undefined {
+  if (!item) return undefined;
+  return (
+    conversations.find((c) => c.itemSeed === item.seed) ??
+    conversations.find((c) => c.handle === item.seller) ??
+    conversations[0]
+  );
+}
 
-  const active = conversations.find((c) => c.id === selId) ?? conversations[0];
+/** The opening offer message seeded into the thread (10 % below asking). */
+function offerMessage(item: CatalogItem): Message {
+  const offer = Math.round(item.priceEUR * 0.9);
+  return {
+    from: "me",
+    text: `Bonjour ! Le ${item.brand} ${item.name} (${euro(item.priceEUR)}) m'intéresse. Tu accepterais ${euro(offer)} ?`,
+  };
+}
+
+function MessagesInner() {
+  const params = useSearchParams();
+  const itemId = params.get("item");
+  const item = itemId ? catalogItem(itemId) : undefined;
+  const targetConv = threadForItem(item);
+
+  // The ?item param is stable for the page's lifetime, so the seeded thread and
+  // pre-selection are derived once via lazy initializers — no effect, no
+  // cascading render. The user's own messages append on top from there.
+  const [selId, setSelId] = useState<string | null>(
+    () => targetConv?.id ?? null,
+  );
+  const [draft, setDraft] = useState("");
+  const [extra, setExtra] = useState<Record<string, Message[]>>(() =>
+    item && targetConv ? { [targetConv.id]: [offerMessage(item)] } : {},
+  );
+
+  const active =
+    conversations.find((c) => c.id === selId) ?? targetConv ?? conversations[0];
   const thread = [...active.messages, ...(extra[active.id] ?? [])];
 
   const send = () => {
@@ -179,5 +224,13 @@ export default function MessagesPage() {
         </div>
       </section>
     </div>
+  );
+}
+
+export default function MessagesPage() {
+  return (
+    <Suspense fallback={null}>
+      <MessagesInner />
+    </Suspense>
   );
 }

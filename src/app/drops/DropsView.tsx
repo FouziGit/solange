@@ -1,59 +1,51 @@
 "use client";
 
-import { useState } from "react";
-import Link from "next/link";
-import { motion } from "motion/react";
+import { useEffect, useRef, useState } from "react";
+import { motion, useReducedMotion } from "motion/react";
 import type { Drop } from "@/lib/mock";
 import { catalogItem } from "@/lib/mock";
-import { compact, composition, gradientFor } from "@/lib/utils";
+import { compact } from "@/lib/utils";
 import { imgItem } from "@/lib/img";
+import { track } from "@/lib/track";
 import { Avatar } from "@/components/chrome/Avatar";
-import { Photo } from "@/components/ui/Photo";
+import { LuxeMedia } from "@/components/ui/LuxeMedia";
 import { ProductCard } from "@/components/ui/ProductCard";
 import { Verified } from "@/components/chrome/icons";
 
-/** Full-bleed media tile reusing the ProductCard gradient recipe. */
-function DropMedia({
-  seed,
-  image,
-  className,
-}: {
-  seed: string;
-  image?: string;
-  className?: string;
-}) {
-  const c = composition(seed);
+/** Format a remaining-seconds count as a zero-padded HH:MM:SS string. */
+function formatCountdown(total: number): string {
+  const s = Math.max(0, Math.floor(total));
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const sec = s % 60;
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${pad(h)}:${pad(m)}:${pad(sec)}`;
+}
+
+/**
+ * Live featured countdown. Ticks the Wave-A `secondsToStart` down once a second.
+ * - secondsToStart === 0 → the drop is live, render the "EN DIRECT" label instead.
+ * - reduced-motion → no interval, render the static initial value (no flicker).
+ */
+function FeaturedCountdown({ seconds }: { seconds: number }) {
+  const reduce = useReducedMotion();
+  const [remaining, setRemaining] = useState(seconds);
+
+  // Subscribe to a 1 s ticker; cleared on unmount or when reduced-motion is on.
+  // `seconds` is fixed for the featured drop, so initial state covers the static
+  // (reduced-motion / live) cases without re-syncing inside the effect.
+  useEffect(() => {
+    if (seconds <= 0 || reduce) return;
+    const id = setInterval(() => {
+      setRemaining((r) => (r <= 1 ? 0 : r - 1));
+    }, 1000);
+    return () => clearInterval(id);
+  }, [seconds, reduce]);
+
   return (
-    <div className={`absolute inset-0 ${className ?? ""}`}>
-      <div
-        className="absolute inset-0"
-        style={{ background: gradientFor(seed) }}
-      >
-        {image && <Photo src={image} alt="" eager />}
-        <div
-          className="absolute inset-0"
-          style={{
-            background: `radial-gradient(56% 46% at ${30 + (c.h % 40)}% 22%, rgba(255,255,255,0.16) 0%, rgba(255,255,255,0.04) 40%, transparent 64%)`,
-          }}
-        />
-        <div
-          className="absolute rounded-full opacity-60 blur-2xl"
-          style={{
-            width: "70%",
-            height: "58%",
-            left: `${c.fx1}%`,
-            top: `${22 + (c.h % 22)}%`,
-            background:
-              "radial-gradient(closest-side, rgba(255,255,255,0.10), transparent 72%)",
-          }}
-        />
-        <div className="absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
-        <div
-          className="absolute inset-0"
-          style={{ boxShadow: "inset 0 0 110px 26px rgba(0,0,0,0.55)" }}
-        />
-      </div>
-    </div>
+    <span className="glass rounded-full px-3 py-1.5 text-[12px] font-medium tabular-nums text-bone">
+      Démarre dans {formatCountdown(remaining)}
+    </span>
   );
 }
 
@@ -108,6 +100,21 @@ export function DropsView({ drops }: { drops: Drop[] }) {
   const featured = drops.find((d) => d.badge === "LIVE") ?? drops[0];
   const upcoming = drops.filter((d) => d.id !== featured.id);
 
+  const gridRef = useRef<HTMLDivElement>(null);
+  const [reserved, setReserved] = useState(false);
+
+  /** Scroll the featured product grid into view instead of leaving the page. */
+  const seeDrop = () => {
+    track("drop_view", { id: featured.id });
+    gridRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
+  const reserve = () => {
+    if (reserved) return;
+    setReserved(true);
+    track("drop_reserve", { id: featured.id });
+  };
+
   return (
     <div>
       {/* ---- Featured live drop ---- */}
@@ -118,9 +125,11 @@ export function DropsView({ drops }: { drops: Drop[] }) {
         className="relative overflow-hidden rounded-[28px] ring-1 ring-bone/10"
       >
         <div className="relative aspect-[4/5] w-full sm:aspect-[16/10]">
-          <DropMedia
+          <LuxeMedia
             seed={featured.seed}
             image={imgItem(featured.productIds[0])}
+            watermark={false}
+            eager
           />
 
           {/* top badges */}
@@ -140,10 +149,14 @@ export function DropsView({ drops }: { drops: Drop[] }) {
                 {featured.badge}
               </span>
             )}
-            {/* glass countdown pill */}
-            <span className="glass rounded-full px-3 py-1.5 text-[12px] font-medium tabular-nums text-bone">
-              Démarre dans 02:14:30
-            </span>
+            {/* countdown — live when the drop is still upcoming, label when in direct */}
+            {featured.secondsToStart > 0 ? (
+              <FeaturedCountdown seconds={featured.secondsToStart} />
+            ) : (
+              <span className="glass rounded-full px-3 py-1.5 text-[12px] font-medium text-bone">
+                Ouvert maintenant
+              </span>
+            )}
           </div>
 
           {/* bottom content */}
@@ -153,7 +166,7 @@ export function DropsView({ drops }: { drops: Drop[] }) {
                 {featured.collab}
               </p>
             )}
-            <h2 className="font-editorial mt-1 text-4xl font-semibold leading-[0.98] tracking-tight text-bone md:text-6xl">
+            <h2 className="font-editorial mt-1 text-5xl font-semibold leading-[0.95] tracking-tight text-bone md:text-7xl">
               {featured.title}
             </h2>
 
@@ -177,20 +190,41 @@ export function DropsView({ drops }: { drops: Drop[] }) {
                   {compact(featured.creator.followers)} abonnés
                 </span>
               </div>
-              <Link
-                href="/decouvrir"
+              <button
+                type="button"
+                onClick={seeDrop}
                 data-cursor="link"
                 className="ml-auto rounded-full bg-bone px-5 py-2 text-xs font-semibold text-ink transition-transform active:scale-95"
               >
                 Voir le drop
-              </Link>
+              </button>
             </div>
           </div>
         </div>
       </motion.section>
 
       {/* featured product grid */}
-      <ProductRow ids={featured.productIds} />
+      <div ref={gridRef} className="scroll-mt-24">
+        <div className="mt-6 flex items-center justify-between gap-4">
+          <h2 className="font-editorial text-2xl font-semibold tracking-tight text-bone md:text-3xl">
+            Pièces du drop
+          </h2>
+          <button
+            type="button"
+            onClick={reserve}
+            data-cursor="link"
+            aria-live="polite"
+            className={`rounded-full px-5 py-2 text-xs font-semibold transition-transform active:scale-95 ${
+              reserved
+                ? "border border-bone/25 text-bone/70"
+                : "bg-bone text-ink"
+            }`}
+          >
+            {reserved ? "Place réservée ✓" : "Réserver ma place"}
+          </button>
+        </div>
+        <ProductRow ids={featured.productIds} />
+      </div>
 
       {/* ---- Upcoming drops ---- */}
       <section className="mt-14">
@@ -233,9 +267,13 @@ export function DropsView({ drops }: { drops: Drop[] }) {
                   </p>
                 </div>
                 <div className="flex shrink-0 flex-col items-end gap-1.5">
-                  <span className="rounded-full border border-bone/20 px-2.5 py-0.5 text-[11px] font-medium text-bone/70">
-                    {d.startsIn}
-                  </span>
+                  {d.secondsToStart > 0 ? (
+                    <FeaturedCountdown seconds={d.secondsToStart} />
+                  ) : (
+                    <span className="rounded-full border border-bone/20 px-2.5 py-0.5 text-[11px] font-medium text-bone/70">
+                      {d.startsIn}
+                    </span>
+                  )}
                   <NotifySwitch label={`Me prévenir pour ${d.title}`} />
                 </div>
               </div>

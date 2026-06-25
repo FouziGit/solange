@@ -300,6 +300,10 @@ body {
 }
 
 /* Snap scroll feed */
+/* `mandatory` is intentional and load-bearing: the TikTok-style feed relies on
+   hard snapping so each post locks to the viewport. Do NOT loosen to
+   `proximity` — that breaks the one-post-per-screen feel. Any feed progress
+   bar that animates `width` lives in its component, not here. */
 .feed-scroll {
   scroll-snap-type: y mandatory;
   -webkit-overflow-scrolling: touch;

@@ -42,7 +42,7 @@ export default function VendrePage() {
     <PageShell>
       <PageHeader
         back="/"
-        eyebrow="Vendre"
+        eyebrow="Vendre = mettre en vente"
         title="Déposer"
         subtitle="Mets une pièce en vente en moins d'une minute. Commission légère, tu fixes ton prix."
       />
@@ -168,6 +168,12 @@ export default function VendrePage() {
                 >
                   Déposer une autre pièce
                 </button>
+                <Link
+                  href="/creer"
+                  className="mt-3 text-[13px] font-medium text-ash transition-colors hover:text-bone"
+                >
+                  Créer un look avec cette pièce →
+                </Link>
               </div>
             ) : (
               <>

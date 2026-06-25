@@ -4,6 +4,10 @@ import Link from "next/link";
 import { motion } from "motion/react";
 import { ArrowLeft } from "@/components/chrome/icons";
 
+/** Canonical H1 scale — single source of truth for page titles across views. */
+export const PAGE_TITLE =
+  "font-editorial text-5xl font-semibold leading-[0.95] tracking-tight text-bone md:text-7xl";
+
 export function PageHeader({
   eyebrow,
   title,
@@ -46,7 +50,7 @@ export function PageHeader({
           initial={{ opacity: 0, y: 14 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1], delay: 0.06 }}
-          className="font-editorial text-5xl font-semibold leading-[0.95] tracking-tight text-bone md:text-7xl"
+          className={PAGE_TITLE}
         >
           {title}
         </motion.h1>
@@ -65,7 +69,9 @@ export function PageHeader({
       {(right || sectionNo) && (
         <div className="flex shrink-0 flex-col items-end gap-1">
           {sectionNo && (
-            <span className="overline text-[10px] text-bone/40">{sectionNo}</span>
+            <span className="overline text-[10px] text-bone/40">
+              {sectionNo}
+            </span>
           )}
           {right}
         </div>

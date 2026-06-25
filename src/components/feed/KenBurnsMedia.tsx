@@ -56,18 +56,25 @@ export function KenBurnsMedia({
 
   return (
     <div className="absolute inset-0 overflow-hidden bg-black">
-      {/* moving composition */}
+      {/* moving composition — will-change only while actually animating */}
       <div
         className={`absolute inset-0 ${active && !paused ? "kenburns" : ""}`}
-        style={{ animationPlayState: paused ? "paused" : "running" }}
+        style={{
+          animationPlayState: paused ? "paused" : "running",
+          willChange: active && !paused ? "transform" : "auto",
+        }}
       >
         {showPhoto ? (
-          /* real B&W editorial photo — hero layer */
+          /* real B&W editorial photo — hero (LCP) layer. The active card
+             fetches eagerly at high priority; neighbours stay lazy. */
           <img
             src={image}
             alt={`${house} — ${title}`}
             draggable={false}
             onError={() => setImgOk(false)}
+            loading={active ? "eager" : "lazy"}
+            fetchPriority={active ? "high" : "auto"}
+            decoding="async"
             className="absolute inset-0 size-full object-cover grayscale contrast-[1.04] brightness-[0.78]"
           />
         ) : (
@@ -132,7 +139,20 @@ export function KenBurnsMedia({
       {/* cinematic light sweep — active only */}
       {active && !paused && <div className="sweep" />}
 
-      {/* editorial campaign typography — seed-composed per card */}
+      {/* legibility scrims — painted UNDER the campaign title so they never
+          occlude it. The title block follows in DOM order = renders on top. */}
+      <div className="absolute inset-x-0 top-0 h-48 bg-gradient-to-b from-black/85 via-black/30 to-transparent" />
+      <div className="absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-black via-black/70 to-transparent" />
+
+      {/* vignette */}
+      <div
+        className="absolute inset-0"
+        style={{ boxShadow: "inset 0 0 180px 40px rgba(0,0,0,0.7)" }}
+      />
+
+      {/* editorial campaign typography — seed-composed per card, ABOVE scrims.
+          A contained radial darken sits directly behind the headline for
+          legibility without re-introducing a full-bleed scrim over it. */}
       <motion.div
         className={`pointer-events-none absolute inset-x-0 flex flex-col px-8 ${
           leftAligned ? "items-start text-left" : "items-center text-center"
@@ -142,11 +162,19 @@ export function KenBurnsMedia({
         animate={{ opacity: active ? 1 : 0.35, y: active ? 0 : 10 }}
         transition={{ duration: 0.9, ease: [0.16, 1, 0.3, 1] }}
       >
+        <span
+          aria-hidden="true"
+          className="absolute left-1/2 top-1/2 -z-10 h-[150%] w-[140%] -translate-x-1/2 -translate-y-1/2 blur-2xl"
+          style={{
+            background:
+              "radial-gradient(closest-side, rgba(0,0,0,0.62), rgba(0,0,0,0.28) 55%, transparent 78%)",
+          }}
+        />
         <span className="overline mb-3 text-[10px] text-bone/70">
           Solange · {season}
         </span>
         <h2
-          className="font-editorial font-semibold leading-[0.9] tracking-tight text-bone drop-shadow-[0_2px_24px_rgba(0,0,0,0.6)]"
+          className="line-clamp-2 max-w-[14ch] font-editorial font-semibold leading-[0.9] tracking-tight text-bone drop-shadow-[0_2px_24px_rgba(0,0,0,0.6)]"
           style={{
             fontSize: `clamp(3.5rem, 15vw, 6rem)`,
             transform: `rotate(${titleRot}deg) scale(${titleScale})`,
@@ -160,16 +188,6 @@ export function KenBurnsMedia({
           {house} · Look Nº{num}
         </span>
       </motion.div>
-
-      {/* legibility scrims */}
-      <div className="absolute inset-x-0 top-0 h-48 bg-gradient-to-b from-black/85 via-black/30 to-transparent" />
-      <div className="absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-black via-black/70 to-transparent" />
-
-      {/* vignette */}
-      <div
-        className="absolute inset-0"
-        style={{ boxShadow: "inset 0 0 180px 40px rgba(0,0,0,0.7)" }}
-      />
     </div>
   );
 }

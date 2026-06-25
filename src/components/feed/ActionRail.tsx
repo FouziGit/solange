@@ -53,6 +53,7 @@ export function ActionRail({
   shares,
   onLike,
   onSave,
+  onComment,
   creatorSeed,
   creatorName,
   active,
@@ -64,6 +65,7 @@ export function ActionRail({
   shares: number;
   onLike: () => void;
   onSave: () => void;
+  onComment?: () => void;
   creatorSeed: string;
   creatorName: string;
   active?: boolean;
@@ -90,7 +92,11 @@ export function ActionRail({
         </motion.span>
       </Action>
 
-      <Action label={compact(comments)} ariaLabel="Commentaires">
+      <Action
+        label={compact(comments)}
+        onClick={onComment}
+        ariaLabel="Commentaires"
+      >
         <Comment className="size-6 text-bone" />
       </Action>
 

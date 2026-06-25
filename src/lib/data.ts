@@ -9,6 +9,7 @@
 import {
   catalog,
   catalogItem,
+  me,
   savedItems,
   type CatalogItem,
 } from "@/lib/mock";
@@ -62,7 +63,7 @@ export function filterCatalog(opts: CatalogFilter = {}): CatalogItem[] {
 
 /** Pieces the current user has listed for sale (vitrine). */
 export function forSale(): CatalogItem[] {
-  return catalog.slice(0, 8);
+  return catalog.filter((it) => it.seller === me.handle);
 }
 
 /** Pieces the current user has saved (favoris). */

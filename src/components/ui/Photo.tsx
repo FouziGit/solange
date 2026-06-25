@@ -21,15 +21,19 @@ export function Photo({
   className?: string;
   eager?: boolean;
 }) {
-  const [ok, setOk] = useState(true);
-  if (!ok) return null;
+  // Track the src that failed rather than a boolean, so a recycled <Photo>
+  // (e.g. a re-keyed card swapping items, or src changing) re-attempts the
+  // new image without an effect — visibility is derived, not synchronised.
+  const [failedSrc, setFailedSrc] = useState<string | null>(null);
+  if (failedSrc === src) return null;
   return (
     <img
       src={src}
       alt={alt}
       draggable={false}
       loading={eager ? "eager" : "lazy"}
-      onError={() => setOk(false)}
+      decoding="async"
+      onError={() => setFailedSrc(src)}
       className={cn(
         "absolute inset-0 size-full object-cover grayscale contrast-[1.05]",
         className,

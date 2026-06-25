@@ -5,6 +5,7 @@ import { CustomCursor } from "@/components/chrome/CustomCursor";
 import { GrainOverlay } from "@/components/chrome/GrainOverlay";
 import { SideNav } from "@/components/chrome/SideNav";
 import { MobileTabBar } from "@/components/chrome/MobileTabBar";
+import { SolangeProvider } from "@/lib/store";
 
 const archivo = Archivo({
   subsets: ["latin"],
@@ -37,6 +38,12 @@ export const metadata: Metadata = {
   },
   description:
     "Inspire-toi, achète, revends. La marketplace sociale de la mode de seconde main. Chaque look est shoppable.",
+  manifest: "/manifest.webmanifest",
+  appleWebApp: {
+    capable: true,
+    title: "SOLANGE",
+    statusBarStyle: "black-translucent",
+  },
   openGraph: {
     type: "website",
     siteName: "SOLANGE",
@@ -68,11 +75,13 @@ export default function RootLayout({
       className={`${archivo.variable} ${bodoni.variable} ${hanken.variable} antialiased`}
     >
       <body className="bg-noir text-bone">
-        <GrainOverlay />
-        <CustomCursor />
-        <SideNav />
-        <main className="md:pl-[88px]">{children}</main>
-        <MobileTabBar />
+        <SolangeProvider>
+          <GrainOverlay />
+          <CustomCursor />
+          <SideNav />
+          <main className="md:pl-[88px]">{children}</main>
+          <MobileTabBar />
+        </SolangeProvider>
       </body>
     </html>
   );

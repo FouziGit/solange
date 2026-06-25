@@ -4,79 +4,15 @@ import { useState } from "react";
 import Link from "next/link";
 import { motion } from "motion/react";
 import type { CatalogItem } from "@/lib/mock";
-import { savedIds } from "@/lib/mock";
-import { composition, euro, gradientFor } from "@/lib/utils";
+import { euro } from "@/lib/utils";
 import { imgItem } from "@/lib/img";
+import { track } from "@/lib/track";
+import { useStore } from "@/lib/store";
 import { Avatar } from "@/components/chrome/Avatar";
-import { Photo } from "@/components/ui/Photo";
+import { LuxeMedia } from "@/components/ui/LuxeMedia";
 import { ProductCard } from "@/components/ui/ProductCard";
 import { Chip } from "@/components/ui/Chip";
-import { Bag, Heart, Send, Verified } from "@/components/chrome/icons";
-
-/** Large media tile reusing the ProductCard gradient recipe. */
-function MediaTile({
-  seed,
-  brand,
-  className,
-  small,
-  image,
-}: {
-  seed: string;
-  brand: string;
-  className?: string;
-  small?: boolean;
-  image?: string;
-}) {
-  const c = composition(seed);
-  return (
-    <div
-      className={`relative overflow-hidden rounded-3xl ring-1 ring-bone/10 ${className ?? ""}`}
-    >
-      <div
-        className="absolute inset-0"
-        style={{ background: gradientFor(seed) }}
-      >
-        {/* top key-light */}
-        <div
-          className="absolute inset-0"
-          style={{
-            background: `radial-gradient(56% 46% at ${30 + (c.h % 40)}% 24%, rgba(255,255,255,0.16) 0%, rgba(255,255,255,0.04) 40%, transparent 64%)`,
-          }}
-        />
-        {/* draped-light form */}
-        <div
-          className="absolute rounded-full opacity-60 blur-2xl"
-          style={{
-            width: "70%",
-            height: "58%",
-            left: `${c.fx1}%`,
-            top: `${24 + (c.h % 22)}%`,
-            background:
-              "radial-gradient(closest-side, rgba(255,255,255,0.10), transparent 72%)",
-          }}
-        />
-        {/* centered Didone brand watermark + hairline rule */}
-        <div className="absolute inset-0 grid place-items-center px-4">
-          <div className="flex flex-col items-center text-center">
-            <span
-              className={`font-editorial italic leading-tight text-bone/30 ${small ? "text-lg" : "text-3xl md:text-5xl"}`}
-            >
-              {brand}
-            </span>
-            <span className="mt-2 h-px w-8 bg-bone/25" />
-          </div>
-        </div>
-        {image && <Photo src={image} alt={brand} eager />}
-        <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/70 to-transparent" />
-        {/* inset vignette */}
-        <div
-          className="absolute inset-0"
-          style={{ boxShadow: "inset 0 0 90px 20px rgba(0,0,0,0.55)" }}
-        />
-      </div>
-    </div>
-  );
-}
+import { Bag, Check, Heart, Send, Verified } from "@/components/chrome/icons";
 
 export function ArticleDetail({
   item,
@@ -85,11 +21,19 @@ export function ArticleDetail({
   item: CatalogItem;
   similar: CatalogItem[];
 }) {
-  const [saved, setSaved] = useState(() => savedIds.includes(item.id));
+  const { isSaved, toggleSave } = useStore();
+  const saved = isSaved(item.id);
   const [size, setSize] = useState(item.size);
+  const [bought, setBought] = useState(false);
   const discount = item.originalEUR
     ? Math.round((1 - item.priceEUR / item.originalEUR) * 100)
     : 0;
+
+  const buy = () => {
+    if (bought) return;
+    setBought(true);
+    track("buy", { id: item.id, brand: item.brand, priceEUR: item.priceEUR });
+  };
 
   // deterministic thumbnail variants off the base seed
   const thumbs = [`${item.seed}-a`, `${item.seed}-b`];
@@ -104,21 +48,22 @@ export function ArticleDetail({
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
         >
-          <MediaTile
-            seed={item.seed}
-            brand={item.brand}
-            className="aspect-[3/4]"
-            image={imgItem(item.id)}
-          />
+          <div className="relative aspect-[3/4] overflow-hidden rounded-3xl ring-1 ring-bone/10">
+            <LuxeMedia
+              seed={item.seed}
+              brand={item.brand}
+              image={imgItem(item.id)}
+              eager
+            />
+          </div>
           <div className="mt-3 grid grid-cols-2 gap-3">
             {thumbs.map((t) => (
-              <MediaTile
+              <div
                 key={t}
-                seed={t}
-                brand={item.brand}
-                className="aspect-[4/3]"
-                small
-              />
+                className="relative aspect-[4/3] overflow-hidden rounded-3xl ring-1 ring-bone/10"
+              >
+                <LuxeMedia seed={t} brand={item.brand} small />
+              </div>
             ))}
           </div>
         </motion.div>
@@ -131,12 +76,12 @@ export function ArticleDetail({
           className="lg:py-2"
         >
           <p className="overline text-[11px] text-ash">{item.brand}</p>
-          <h1 className="font-editorial mt-2 text-4xl font-semibold leading-[1.02] tracking-tight text-bone md:text-5xl">
+          <h1 className="font-editorial mt-2 text-5xl font-semibold leading-[0.95] tracking-tight text-bone md:text-7xl">
             {item.name}
           </h1>
 
           {/* price row */}
-          <div className="mt-5 flex items-baseline gap-3">
+          <div className="mt-5 flex flex-wrap items-baseline gap-3">
             <span className="font-display text-3xl font-bold text-bone">
               {euro(item.priceEUR)}
             </span>
@@ -150,6 +95,10 @@ export function ArticleDetail({
                 −{discount}%
               </span>
             )}
+            {/* scarcity pill */}
+            <span className="rounded-full border border-bone/25 px-2.5 py-0.5 text-[11px] font-medium uppercase tracking-[0.14em] text-bone/70">
+              Pièce unique
+            </span>
           </div>
 
           {/* size + condition pills */}
@@ -197,35 +146,59 @@ export function ArticleDetail({
           </Link>
 
           {/* actions */}
-          <div className="mt-5 flex flex-col gap-3 sm:flex-row">
-            <motion.button
-              type="button"
-              whileTap={{ scale: 0.97 }}
-              data-cursor="link"
-              className="flex flex-1 items-center justify-center gap-2 rounded-full bg-bone px-6 py-3.5 text-sm font-semibold text-ink transition-transform"
+          {bought ? (
+            <motion.div
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+              className="mt-5 flex items-center gap-3 rounded-2xl border border-bone/15 bg-bone/[0.05] px-5 py-4"
+              role="status"
+              aria-live="polite"
             >
-              <Bag className="size-5" />
-              Acheter — {euro(item.priceEUR)}
-            </motion.button>
-            <Link
-              href="/messages"
-              data-cursor="link"
-              className="glass flex items-center justify-center gap-2 rounded-full px-6 py-3.5 text-sm font-semibold text-bone transition-colors hover:bg-bone/15"
-            >
-              <Send className="size-4" />
-              Faire une offre
-            </Link>
-            <button
-              type="button"
-              onClick={() => setSaved((s) => !s)}
-              aria-label="Enregistrer"
-              aria-pressed={saved}
-              data-cursor="link"
-              className="glass grid size-[52px] shrink-0 place-items-center rounded-full text-bone transition-transform active:scale-90"
-            >
-              <Heart filled={saved} className="size-5" />
-            </button>
-          </div>
+              <span className="grid size-10 shrink-0 place-items-center rounded-full bg-bone text-ink">
+                <Check className="size-5" />
+              </span>
+              <span className="min-w-0">
+                <span className="block text-sm font-semibold text-bone">
+                  Commande confirmée ✓
+                </span>
+                <span className="block text-[12px] text-ash">
+                  Livraison 48h · paiement sécurisé
+                </span>
+              </span>
+            </motion.div>
+          ) : (
+            <div className="mt-5 flex flex-col gap-3 sm:flex-row">
+              <motion.button
+                type="button"
+                onClick={buy}
+                whileTap={{ scale: 0.97 }}
+                data-cursor="link"
+                className="flex flex-1 items-center justify-center gap-2 rounded-full bg-bone px-6 py-3.5 text-sm font-semibold text-ink transition-transform"
+              >
+                <Bag className="size-5" />
+                Acheter — {euro(item.priceEUR)}
+              </motion.button>
+              <Link
+                href={`/messages?item=${item.id}`}
+                data-cursor="link"
+                className="glass flex items-center justify-center gap-2 rounded-full px-6 py-3.5 text-sm font-semibold text-bone transition-colors hover:bg-bone/15"
+              >
+                <Send className="size-4" />
+                Faire une offre
+              </Link>
+              <button
+                type="button"
+                onClick={() => toggleSave(item.id)}
+                aria-label="Enregistrer"
+                aria-pressed={saved}
+                data-cursor="link"
+                className="glass grid size-[52px] shrink-0 place-items-center rounded-full text-bone transition-transform active:scale-90"
+              >
+                <Heart filled={saved} className="size-5" />
+              </button>
+            </div>
+          )}
 
           <p className="mt-6 text-[13px] leading-relaxed text-ash">
             Pièce authentifiée par la communauté SOLANGE. Paiement sécurisé,

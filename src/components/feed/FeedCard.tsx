@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   AnimatePresence,
   motion,
@@ -9,12 +9,16 @@ import {
 } from "motion/react";
 import type { Look } from "@/lib/mock";
 import { imgLook } from "@/lib/img";
+import { useStore } from "@/lib/store";
 import { KenBurnsMedia } from "./KenBurnsMedia";
 import { ProductHotspots } from "./ProductHotspots";
 import { CreatorHeader } from "./CreatorHeader";
 import { ActionRail } from "./ActionRail";
 import { ShopTheLook } from "./ShopTheLook";
+import { CommentSheet } from "./CommentSheet";
 import { Heart, Play, Music, Pin, Mute, Volume } from "../chrome/icons";
+
+const COACH_FLAG = "solange.coach";
 
 type Burst = { id: number; x: number; y: number };
 
@@ -43,17 +47,42 @@ export function FeedCard({
   inView: boolean;
 }) {
   const reduce = useReducedMotion();
-  const [liked, setLiked] = useState(false);
-  const [saved, setSaved] = useState(false);
-  const [following, setFollowing] = useState(false);
+  const { isLiked, toggleLike, isSaved, toggleSave, isFollowing, toggleFollow } =
+    useStore();
+  const liked = isLiked(look.id);
+  const saved = isSaved(look.id);
+  const following = isFollowing(look.creator.handle);
+
   const [paused, setPaused] = useState(false);
   const [muted, setMuted] = useState(true);
   const [shopOpen, setShopOpen] = useState(false);
+  const [commentsOpen, setCommentsOpen] = useState(false);
   const [highlight, setHighlight] = useState<string | null>(null);
   const [bursts, setBursts] = useState<Burst[]>([]);
+  const [coach, setCoach] = useState(false);
 
   const clickTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const burstId = useRef(0);
+
+  // first-run coachmark near a hotspot — shown once, gated by reduced-motion.
+  // State flips happen inside timers (not synchronously in the effect body) so
+  // the card has settled before the tooltip appears, then auto-dismisses.
+  useEffect(() => {
+    if (!active || reduce) return;
+    if (typeof window === "undefined") return;
+    try {
+      if (localStorage.getItem(COACH_FLAG)) return;
+      localStorage.setItem(COACH_FLAG, "1");
+    } catch {
+      return; // storage unavailable — skip silently
+    }
+    const show = setTimeout(() => setCoach(true), 700);
+    const hide = setTimeout(() => setCoach(false), 4200);
+    return () => {
+      clearTimeout(show);
+      clearTimeout(hide);
+    };
+  }, [active, reduce]);
 
   const spawnHeart = (x: number, y: number) => {
     if (reduce) return; // no burst animation under reduced-motion
@@ -69,7 +98,8 @@ export function FeedCard({
     if (clickTimer.current) {
       clearTimeout(clickTimer.current);
       clickTimer.current = null;
-      setLiked(true);
+      // double-tap is a "like" gesture, never an unlike
+      if (!isLiked(look.id)) toggleLike(look.id);
       spawnHeart(x, y);
     } else {
       clickTimer.current = setTimeout(() => {
@@ -95,7 +125,9 @@ export function FeedCard({
           opacity: active ? 1 : 0.5,
         }}
         transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
-        style={{ willChange: "transform, opacity" }}
+        // hint the compositor only for cards in the active/animating band;
+        // far-off cards drop it so we don't promote dozens of layers
+        style={{ willChange: inView ? "transform, opacity" : "auto" }}
         className="stage relative z-10 h-full w-full overflow-hidden bg-black md:h-full md:max-h-[880px] md:w-[min(94vw,468px)] md:rounded-[30px] md:ring-1 md:ring-bone/10 md:shadow-[0_40px_120px_-20px_rgba(0,0,0,0.85)]"
       >
         {/* Off-window cards drop everything but a flat black panel of the same
@@ -164,6 +196,24 @@ export function FeedCard({
               ))}
             </AnimatePresence>
 
+            {/* first-run coachmark — glass tooltip near a hotspot, once */}
+            <AnimatePresence>
+              {coach && active && (
+                <motion.div
+                  initial={{ opacity: 0, y: 8, scale: 0.96 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: 8, scale: 0.96 }}
+                  transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+                  className="pointer-events-none absolute left-1/2 top-1/3 z-30 -translate-x-1/2"
+                >
+                  <span className="glass flex items-center gap-2 rounded-full px-4 py-2 text-[12px] font-medium text-bone shadow-[0_10px_40px_-10px_rgba(0,0,0,0.7)]">
+                    <span className="size-1.5 animate-pulse rounded-full bg-bone" />
+                    Touche un point pour shopper
+                  </span>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
             {/* top: creator + mute — clears the floating feed top bar via safe-area */}
             <motion.div
               initial={false}
@@ -181,7 +231,7 @@ export function FeedCard({
               <CreatorHeader
                 creator={look.creator}
                 following={following}
-                onToggleFollow={() => setFollowing((f) => !f)}
+                onToggleFollow={() => toggleFollow(look.creator.handle)}
               />
               {/* >=44px tap target around the mute glyph */}
               <button
@@ -218,8 +268,9 @@ export function FeedCard({
                 likes={look.likes}
                 comments={look.comments}
                 shares={look.shares}
-                onLike={() => setLiked((l) => !l)}
-                onSave={() => setSaved((s) => !s)}
+                onLike={() => toggleLike(look.id)}
+                onSave={() => toggleSave(look.id)}
+                onComment={() => setCommentsOpen(true)}
                 creatorSeed={look.creator.seed}
                 creatorName={look.creator.name}
                 active={active}
@@ -298,6 +349,13 @@ export function FeedCard({
                 />
               </motion.div>
             </motion.div>
+
+            {/* comment thread bottom-sheet */}
+            <CommentSheet
+              lookId={look.id}
+              open={commentsOpen}
+              onOpenChange={setCommentsOpen}
+            />
 
             {/* progress bar */}
             <div className="absolute inset-x-0 bottom-0 z-30 h-[2px] bg-bone/10">

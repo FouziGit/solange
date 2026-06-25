@@ -51,7 +51,7 @@ export default function CreerPage() {
   return (
     <PageShell marginWord="Créer">
       <PageHeader
-        eyebrow="Création de contenu"
+        eyebrow="Créer = mise en scène shoppable"
         title="Créer"
         subtitle="Compose un look éditorial shoppable. Médias, légende, pièces taguées — et il part dans le feed."
       />

@@ -8,6 +8,7 @@ import { Chip } from "@/components/ui/Chip";
 import { FilterDrawer, type Filters } from "@/components/ui/FilterDrawer";
 import { categories, conditions, trendingTags } from "@/lib/mock";
 import { catalogBrands, catalogSizes, filterCatalog } from "@/lib/data";
+import { euro } from "@/lib/utils";
 import { Search, Sliders } from "@/components/chrome/icons";
 
 const EMPTY_FILTERS: Filters = {
@@ -43,6 +44,11 @@ export default function DecouvrirPage() {
     // priceMin isn't a filterCatalog field — apply locally to keep SSOT intact.
     return priceMin != null ? out.filter((it) => it.priceEUR >= priceMin) : out;
   }, [cat, q, filters]);
+
+  const priceMinNum = filters.priceMin ? Number(filters.priceMin) : undefined;
+  const priceMaxNum = filters.priceMax ? Number(filters.priceMax) : undefined;
+  const invertedRange =
+    priceMinNum != null && priceMaxNum != null && priceMinNum > priceMaxNum;
 
   const activeCount =
     (filters.priceMin ? 1 : 0) +
@@ -131,9 +137,20 @@ export default function DecouvrirPage() {
           ))}
         </div>
       ) : (
-        <p className="mt-20 text-center text-sm text-ash">
-          Aucune pièce ne correspond à ta recherche.
-        </p>
+        <div className="mt-20 text-center">
+          {invertedRange ? (
+            <p className="mx-auto max-w-xs text-sm text-ash">
+              Ton prix minimum ({euro(priceMinNum!)}) dépasse ton maximum (
+              {euro(priceMaxNum!)}). Inverse les deux bornes pour voir des
+              pièces.
+            </p>
+          ) : (
+            <p className="mx-auto max-w-xs text-sm text-ash">
+              Aucune pièce ne correspond. Élargis tes filtres ou tente une autre
+              marque.
+            </p>
+          )}
+        </div>
       )}
 
       <FilterDrawer

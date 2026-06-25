@@ -1,10 +1,12 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { AnimatePresence, motion } from "motion/react";
 import type { Product } from "@/lib/mock";
+import { track } from "@/lib/track";
 import { euro, gradientFor, initials } from "@/lib/utils";
-import { Bag, ChevronUp, X } from "../chrome/icons";
+import { Bag, Check, ChevronUp, X } from "../chrome/icons";
 
 export function ShopTheLook({
   products,
@@ -18,6 +20,20 @@ export function ShopTheLook({
   highlightId: string | null;
 }) {
   const minPrice = Math.min(...products.map((p) => p.priceEUR));
+  const [added, setAdded] = useState(false);
+
+  // reset the micro-state whenever the drawer is dismissed so re-opening
+  // always shows the actionable "Tout ajouter" label again
+  const close = () => {
+    setAdded(false);
+    onOpenChange(false);
+  };
+
+  const addAll = () => {
+    if (added) return;
+    track("add_all", { count: products.length });
+    setAdded(true);
+  };
 
   return (
     <>
@@ -53,7 +69,7 @@ export function ShopTheLook({
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              onClick={() => onOpenChange(false)}
+              onClick={close}
               className="absolute inset-0 z-30 bg-ink/70 backdrop-blur-[2px]"
             />
             <motion.div
@@ -72,7 +88,7 @@ export function ShopTheLook({
                   </p>
                 </div>
                 <button
-                  onClick={() => onOpenChange(false)}
+                  onClick={close}
                   className="grid size-9 place-items-center rounded-full bg-bone/10 text-bone"
                   aria-label="Fermer"
                 >
@@ -146,9 +162,42 @@ export function ShopTheLook({
                 <span className="text-xs text-ash">
                   Protection acheteur incluse · livraison 48h
                 </span>
-                <button className="rounded-full bg-bone px-5 py-2.5 text-sm font-semibold text-ink transition-transform active:scale-95">
-                  Tout ajouter
-                </button>
+                <motion.button
+                  onClick={addAll}
+                  data-cursor="link"
+                  aria-live="polite"
+                  whileTap={{ scale: 0.95 }}
+                  className={`flex items-center gap-1.5 rounded-full px-5 py-2.5 text-sm font-semibold transition-colors ${
+                    added
+                      ? "bg-bone/15 text-bone ring-1 ring-bone/40"
+                      : "bg-bone text-ink"
+                  }`}
+                >
+                  <AnimatePresence mode="wait" initial={false}>
+                    {added ? (
+                      <motion.span
+                        key="added"
+                        initial={{ opacity: 0, y: 4 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -4 }}
+                        transition={{ duration: 0.18 }}
+                        className="flex items-center gap-1.5"
+                      >
+                        <Check className="size-4" /> Ajouté
+                      </motion.span>
+                    ) : (
+                      <motion.span
+                        key="add"
+                        initial={{ opacity: 0, y: 4 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -4 }}
+                        transition={{ duration: 0.18 }}
+                      >
+                        Tout ajouter
+                      </motion.span>
+                    )}
+                  </AnimatePresence>
+                </motion.button>
               </div>
             </motion.div>
           </>

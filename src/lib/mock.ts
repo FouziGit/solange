@@ -113,7 +113,7 @@ export const looks: Look[] = [
     badge: "ARCHIVE",
     products: [
       {
-        id: "p1",
+        id: "k1",
         name: "Veste motard cuir vieilli",
         brand: "Acne Studios",
         priceEUR: 245,
@@ -123,9 +123,9 @@ export const looks: Look[] = [
         hotspot: { x: 35, y: 23 },
       },
       {
-        id: "p2",
-        name: "Jean droit délavé",
-        brand: "Levi's 501",
+        id: "k8",
+        name: "501 droit délavé",
+        brand: "Levi's",
         priceEUR: 49,
         originalEUR: 120,
         size: "W30",
@@ -150,7 +150,7 @@ export const looks: Look[] = [
     badge: "DROP",
     products: [
       {
-        id: "p3",
+        id: "k3",
         name: "Gilet Detroit doublé sherpa",
         brand: "Carhartt WIP",
         priceEUR: 95,
@@ -160,16 +160,16 @@ export const looks: Look[] = [
         hotspot: { x: 28, y: 24 },
       },
       {
-        id: "p4",
-        name: "Sneakers basses suède",
-        brand: "Salomon XT-6",
+        id: "k7",
+        name: "XT-6 suède gris",
+        brand: "Salomon",
         priceEUR: 110,
         size: "42",
         condition: "Neuf avec étiquette",
         hotspot: { x: 70, y: 26 },
       },
       {
-        id: "p5",
+        id: "k14",
         name: "Bonnet côtelé laine",
         brand: "Stüssy",
         priceEUR: 28,
@@ -194,7 +194,7 @@ export const looks: Look[] = [
     soundtrack: "Sade — Cherish The Day",
     products: [
       {
-        id: "p6",
+        id: "k2",
         name: "Manteau laine épaules structurées",
         brand: "Maison Margiela",
         priceEUR: 420,
@@ -221,7 +221,7 @@ export const looks: Look[] = [
     badge: "GRAIL",
     products: [
       {
-        id: "p7",
+        id: "k4",
         name: "Chemise mesh imprimé cyber",
         brand: "Jean Paul Gaultier",
         priceEUR: 340,
@@ -231,7 +231,7 @@ export const looks: Look[] = [
         hotspot: { x: 34, y: 22 },
       },
       {
-        id: "p8",
+        id: "k17",
         name: "Lunettes ovales métal",
         brand: "Oakley Vintage",
         priceEUR: 65,
@@ -256,7 +256,7 @@ export const looks: Look[] = [
     soundtrack: "Beach House — Space Song",
     products: [
       {
-        id: "p9",
+        id: "k5",
         name: "Pantalon plissé technique",
         brand: "Pleats Please Issey Miyake",
         priceEUR: 180,
@@ -266,7 +266,7 @@ export const looks: Look[] = [
         hotspot: { x: 35, y: 24 },
       },
       {
-        id: "p10",
+        id: "k13",
         name: "Mary Janes cuir verni",
         brand: "Dr. Martens",
         priceEUR: 70,
@@ -292,9 +292,9 @@ export const looks: Look[] = [
     badge: "DROP",
     products: [
       {
-        id: "p11",
-        name: "Veste shell Gore-Tex",
-        brand: "Arc'teryx Beta",
+        id: "k6",
+        name: "Veste shell Gore-Tex Beta",
+        brand: "Arc'teryx",
         priceEUR: 290,
         originalEUR: 550,
         size: "M",
@@ -302,8 +302,8 @@ export const looks: Look[] = [
         hotspot: { x: 34, y: 23 },
       },
       {
-        id: "p12",
-        name: "Sac banane ripstop",
+        id: "k16",
+        name: "Banane ripstop noire",
         brand: "Patagonia",
         priceEUR: 35,
         size: "TU",
@@ -359,12 +359,13 @@ export const catalog: CatalogItem[] = [
   { id: "k8", brand: "Levi's", name: "501 droit délavé", priceEUR: 49, originalEUR: 120, size: "W30", condition: "Bon état", seed: "cat-levis-501", category: "Homme", seller: "lou.archive", likes: 64 },
   { id: "k9", brand: "Prada", name: "Sac nylon Re-Edition 2000", priceEUR: 680, originalEUR: 1100, size: "TU", condition: "Très bon état", seed: "cat-prada-nylon", category: "Luxe", seller: "maya.curates", likes: 1240, span: true },
   { id: "k10", brand: "Comme des Garçons", name: "Cardigan zip laine", priceEUR: 210, originalEUR: 480, size: "M", condition: "Excellent état", seed: "cat-cdg-cardigan", category: "Archive", seller: "theo.grail", likes: 198 },
-  { id: "k11", brand: "Nike", name: "Air Max 90 vintage", priceEUR: 95, size: "41", condition: "Bon état", seed: "cat-nike-am90", category: "Sneakers", seller: "yuki.paris", likes: 142 },
+  { id: "k11", brand: "Nike", name: "Air Max 90 vintage", priceEUR: 95, size: "41", condition: "Bon état", seed: "cat-nike-am90", category: "Sneakers", seller: "nouh.archive", likes: 142 },
   { id: "k12", brand: "Lemaire", name: "Croissant bag cuir", priceEUR: 390, originalEUR: 590, size: "TU", condition: "Très bon état", seed: "cat-lemaire-croissant", category: "Accessoires", seller: "maya.curates", likes: 540 },
-  { id: "k13", brand: "Dr. Martens", name: "Mary Janes cuir verni", priceEUR: 70, size: "39", condition: "Bon état", seed: "cat-drmartens-mj", category: "Femme", seller: "neige.vintage", likes: 51 },
+  { id: "k13", brand: "Dr. Martens", name: "Mary Janes cuir verni", priceEUR: 70, size: "39", condition: "Bon état", seed: "cat-drmartens-mj", category: "Femme", seller: "nouh.archive", likes: 51 },
   { id: "k14", brand: "Stüssy", name: "Bonnet côtelé laine", priceEUR: 28, size: "TU", condition: "Bon état", seed: "cat-stussy-beanie", category: "Accessoires", seller: "samir.fits", likes: 33 },
   { id: "k15", brand: "Helmut Lang", name: "Veste tailleur archive 99", priceEUR: 260, originalEUR: 700, size: "40", condition: "Très bon état", seed: "cat-helmut-blazer", category: "Femme", seller: "lou.archive", likes: 220, span: true },
-  { id: "k16", brand: "Patagonia", name: "Banane ripstop noire", priceEUR: 35, size: "TU", condition: "Bon état", seed: "cat-patagonia-bag", category: "Accessoires", seller: "yuki.paris", likes: 77 },
+  { id: "k16", brand: "Patagonia", name: "Banane ripstop noire", priceEUR: 35, size: "TU", condition: "Bon état", seed: "cat-patagonia-bag", category: "Accessoires", seller: "nouh.archive", likes: 77 },
+  { id: "k17", brand: "Oakley Vintage", name: "Lunettes ovales métal", priceEUR: 65, size: "TU", condition: "Bon état", seed: "cat-oakley-oval", category: "Accessoires", seller: "nouh.archive", likes: 96 },
 ];
 
 export const conditions = [
@@ -401,6 +402,8 @@ export type Drop = {
   creator: Creator;
   collab?: string;
   startsIn: string;
+  /** Seconds until the drop opens; ticked down live by the UI. 0 = en direct. */
+  secondsToStart: number;
   seed: string;
   badge: "DROP" | "LIVE" | "ARCHIVE";
   productIds: string[];
@@ -413,6 +416,7 @@ export const drops: Drop[] = [
     creator: creators.lou,
     collab: "Les Puces de Saint-Ouen",
     startsIn: "En direct",
+    secondsToStart: 0,
     seed: "solange-drop-leather",
     badge: "LIVE",
     productIds: ["k1", "k8", "k15"],
@@ -422,6 +426,7 @@ export const drops: Drop[] = [
     title: "Workwear Lyonnais",
     creator: creators.samir,
     startsIn: "Dans 2 h",
+    secondsToStart: 8070, // ~02:14:30
     seed: "solange-drop-workwear",
     badge: "DROP",
     productIds: ["k3", "k7", "k14"],
@@ -432,6 +437,7 @@ export const drops: Drop[] = [
     creator: creators.maya,
     collab: "Dépôt-vente Le Marais",
     startsIn: "Demain · 19 h",
+    secondsToStart: 100800, // ~28 h
     seed: "solange-drop-margiela",
     badge: "DROP",
     productIds: ["k2", "k9", "k12"],
@@ -441,6 +447,7 @@ export const drops: Drop[] = [
     title: "Grails Gaultier",
     creator: creators.theo,
     startsIn: "Archive",
+    secondsToStart: 0,
     seed: "solange-drop-gaultier",
     badge: "ARCHIVE",
     productIds: ["k4", "k10"],
@@ -697,3 +704,240 @@ export const plans: Plan[] = [
     cta: "Passer Pro",
   },
 ];
+
+/* ---------- Commentaires (par look) ---------- */
+
+export type Comment = {
+  seed: string; // avatar seed (Photo component)
+  handle: string;
+  name: string;
+  text: string;
+  time: string;
+};
+
+/** Mock comment threads keyed by look id. Drives the feed comment sheet. */
+export const commentsByLook: Record<string, Comment[]> = {
+  l1: [
+    {
+      seed: "maya-d-55",
+      handle: "maya.curates",
+      name: "Maya Diallo",
+      text: "La patine du cuir est parfaite, j'adore 🤍",
+      time: "Il y a 2 h",
+    },
+    {
+      seed: "theo-grail-3",
+      handle: "theo.grail",
+      name: "Théo Laurent",
+      text: "Le 501 délavé avec, combo intemporel.",
+      time: "Il y a 1 h",
+    },
+    {
+      seed: "neige-77",
+      handle: "neige.vintage",
+      name: "Neige",
+      text: "Les Puces c'est la mine d'or, validé.",
+      time: "Il y a 47 min",
+    },
+    {
+      seed: "yuki-p-12",
+      handle: "yuki.paris",
+      name: "Yuki Tanaka",
+      text: "Tu shippes en province ?",
+      time: "Il y a 31 min",
+    },
+    {
+      seed: "samir-b-09",
+      handle: "samir.fits",
+      name: "Samir Benali",
+      text: "Taille M ça part vite, fonce 🔥",
+      time: "Il y a 12 min",
+    },
+  ],
+  l2: [
+    {
+      seed: "lou-mercier-21",
+      handle: "lou.archive",
+      name: "Lou Mercier",
+      text: "Le Carhartt vieillit tellement bien, vrai.",
+      time: "Il y a 3 h",
+    },
+    {
+      seed: "yuki-p-12",
+      handle: "yuki.paris",
+      name: "Yuki Tanaka",
+      text: "Les XT-6 en 42 encore dispo ?",
+      time: "Il y a 2 h",
+    },
+    {
+      seed: "neige-77",
+      handle: "neige.vintage",
+      name: "Neige",
+      text: "Layering propre, ça respire la Croix-Rousse.",
+      time: "Il y a 1 h",
+    },
+    {
+      seed: "maya-d-55",
+      handle: "maya.curates",
+      name: "Maya Diallo",
+      text: "Le bonnet Stüssy complète nickel 🧶",
+      time: "Il y a 38 min",
+    },
+  ],
+  l3: [
+    {
+      seed: "lou-mercier-21",
+      handle: "lou.archive",
+      name: "Lou Mercier",
+      text: "La coupe Margiela, intemporelle. Sublime trouvaille.",
+      time: "Il y a 5 h",
+    },
+    {
+      seed: "theo-grail-3",
+      handle: "theo.grail",
+      name: "Théo Laurent",
+      text: "Dépôt-vente du Marais, les vraies pépites.",
+      time: "Il y a 4 h",
+    },
+    {
+      seed: "samir-b-09",
+      handle: "samir.fits",
+      name: "Samir Benali",
+      text: "Épaules structurées = pièce signature, d'accord.",
+      time: "Il y a 2 h",
+    },
+    {
+      seed: "neige-77",
+      handle: "neige.vintage",
+      name: "Neige",
+      text: "Le minimalisme noir & blanc te va trop bien 🤍",
+      time: "Il y a 1 h",
+    },
+    {
+      seed: "yuki-p-12",
+      handle: "yuki.paris",
+      name: "Yuki Tanaka",
+      text: "Investissement justifié, ça se garde à vie.",
+      time: "Il y a 22 min",
+    },
+  ],
+  l4: [
+    {
+      seed: "samir-b-09",
+      handle: "samir.fits",
+      name: "Samir Benali",
+      text: "8 mois de chasse, le grail mérité 🙏",
+      time: "Il y a 6 h",
+    },
+    {
+      seed: "maya-d-55",
+      handle: "maya.curates",
+      name: "Maya Diallo",
+      text: "Le mesh Gaultier archive, pièce de musée.",
+      time: "Il y a 3 h",
+    },
+    {
+      seed: "lou-mercier-21",
+      handle: "lou.archive",
+      name: "Lou Mercier",
+      text: "Les lunettes ovales finissent le total look.",
+      time: "Il y a 2 h",
+    },
+    {
+      seed: "neige-77",
+      handle: "neige.vintage",
+      name: "Neige",
+      text: "Patience récompensée, respect.",
+      time: "Il y a 54 min",
+    },
+  ],
+  l5: [
+    {
+      seed: "maya-d-55",
+      handle: "maya.curates",
+      name: "Maya Diallo",
+      text: "Le plissé Issey, ma pièce d'hiver préférée aussi 🤍",
+      time: "Il y a 4 h",
+    },
+    {
+      seed: "lou-mercier-21",
+      handle: "lou.archive",
+      name: "Lou Mercier",
+      text: "Trouvaille de l'année validée, sans hésiter.",
+      time: "Il y a 2 h",
+    },
+    {
+      seed: "theo-grail-3",
+      handle: "theo.grail",
+      name: "Théo Laurent",
+      text: "Les Mary Janes Dr. Martens, choix audacieux.",
+      time: "Il y a 1 h",
+    },
+    {
+      seed: "samir-b-09",
+      handle: "samir.fits",
+      name: "Samir Benali",
+      text: "Slow fashion bien pensée, ça change.",
+      time: "Il y a 28 min",
+    },
+  ],
+  l6: [
+    {
+      seed: "theo-grail-3",
+      handle: "theo.grail",
+      name: "Théo Laurent",
+      text: "Le shell Arc'teryx Beta, indémodable.",
+      time: "Il y a 3 h",
+    },
+    {
+      seed: "lou-mercier-21",
+      handle: "lou.archive",
+      name: "Lou Mercier",
+      text: "Gorpcore propre pour les jours gris ☁️",
+      time: "Il y a 2 h",
+    },
+    {
+      seed: "maya-d-55",
+      handle: "maya.curates",
+      name: "Maya Diallo",
+      text: "Expédition 24h depuis Paris, parfait.",
+      time: "Il y a 1 h",
+    },
+    {
+      seed: "neige-77",
+      handle: "neige.vintage",
+      name: "Neige",
+      text: "La banane Patagonia complète le layering 🎒",
+      time: "Il y a 41 min",
+    },
+  ],
+};
+
+/* ---------- Parrainage (referral) ---------- */
+
+export type InviteStep = { label: string; detail: string };
+
+export const invite: {
+  code: string;
+  invited: number;
+  reward: string;
+  steps: InviteStep[];
+} = {
+  code: "SOLANGE-NOUH",
+  invited: 12,
+  reward: "5 € par ami qui vend sa 1re pièce",
+  steps: [
+    {
+      label: "Partage ton code",
+      detail: "Envoie SOLANGE-NOUH à un ami qui chine ou qui revend.",
+    },
+    {
+      label: "Il rejoint SOLANGE",
+      detail: "Ton ami crée son compte avec ton code de parrainage.",
+    },
+    {
+      label: "Il vend sa 1re pièce",
+      detail: "Dès sa première vente validée, vous gagnez chacun 5 €.",
+    },
+  ],
+};
