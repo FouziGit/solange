@@ -137,7 +137,6 @@ export function FeedCard({
                     ? (look.brandTags?.[0] ?? look.creator.name)
                     : (look.products[0]?.brand ?? look.creator.name)
                 }
-                index={index}
                 active={active}
                 paused={paused}
                 image={isPost ? postHero : imgLook(look.id)}
