@@ -88,7 +88,7 @@ export function KenBurnsMedia({
           playsInline
           preload="metadata"
           onError={() => setVideoOk(false)}
-          className="absolute inset-0 size-full object-cover grayscale contrast-[1.05] brightness-[0.82]"
+          className="absolute inset-0 size-full object-cover brightness-[0.82]"
         />
       ) : (
         /* moving composition — will-change only while actually animating */
@@ -110,7 +110,7 @@ export function KenBurnsMedia({
               loading={active ? "eager" : "lazy"}
               fetchPriority={active ? "high" : "auto"}
               decoding="async"
-              className="absolute inset-0 size-full object-cover grayscale contrast-[1.04] brightness-[0.78]"
+              className="absolute inset-0 size-full object-cover brightness-[0.78]"
             />
           ) : (
             <>

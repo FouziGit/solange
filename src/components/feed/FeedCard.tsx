@@ -7,9 +7,13 @@ import {
   useReducedMotion,
   type Variants,
 } from "motion/react";
-import type { Look } from "@/lib/mock";
-import { imgLook, videoLook, videoPoster } from "@/lib/img";
+import Link from "next/link";
+import type { CatalogItem, Look } from "@/lib/mock";
+import { getCatalogItem } from "@/lib/data";
+import { imgItem, imgLook, videoLook, videoPoster } from "@/lib/img";
+import { euro } from "@/lib/utils";
 import { useStore } from "@/lib/store";
+import { Photo } from "../ui/Photo";
 import { KenBurnsMedia } from "./KenBurnsMedia";
 import { ProductHotspots } from "./ProductHotspots";
 import { CreatorHeader } from "./CreatorHeader";
@@ -58,6 +62,22 @@ export function FeedCard({
   const liked = isLiked(look.id);
   const saved = isSaved(look.id);
   const following = isFollowing(look.creator.handle);
+
+  // social posts (actu / achats) are photo-editorial: no runway clip, media
+  // comes from the first linked catalog piece, hotspots stay empty.
+  const isPost = look.kind === "actu" || look.kind === "achats";
+  const postHero =
+    isPost && look.linkedProductIds?.length
+      ? imgItem(look.linkedProductIds[0])
+      : undefined;
+  // linked-products rail replaces the Shop-the-look trigger when the post
+  // references catalog pieces without on-media hotspots
+  const linkedItems: CatalogItem[] =
+    isPost && look.products.length === 0
+      ? (look.linkedProductIds ?? [])
+          .map(getCatalogItem)
+          .filter((p): p is CatalogItem => Boolean(p))
+      : [];
 
   const [paused, setPaused] = useState(false);
   const [muted, setMuted] = useState(true);
@@ -151,13 +171,17 @@ export function FeedCard({
               <KenBurnsMedia
                 seed={look.seed}
                 title={look.title}
-                house={look.products[0]?.brand ?? look.creator.name}
+                house={
+                  isPost
+                    ? (look.brandTags?.[0] ?? look.creator.name)
+                    : (look.products[0]?.brand ?? look.creator.name)
+                }
                 index={index}
                 active={active}
                 paused={paused}
-                image={imgLook(look.id)}
-                video={videoLook(look.id)}
-                poster={videoPoster(look.id)}
+                image={isPost ? postHero : imgLook(look.id)}
+                video={isPost ? undefined : videoLook(look.id)}
+                poster={isPost ? undefined : videoPoster(look.id)}
               />
             </div>
 
@@ -296,14 +320,26 @@ export function FeedCard({
               }}
               className="absolute inset-x-0 bottom-0 z-20 space-y-3 p-4 pr-20 md:!pb-9"
             >
-              {look.badge && (
+              {/* kind overline for social posts; classic badge otherwise.
+                  Sharp chips — brutalist DA, circles reserved for dots. */}
+              {isPost ? (
                 <motion.span
                   variants={item}
-                  className="inline-flex items-center gap-2 rounded-full border border-bone/25 px-3 py-1 text-[10px] font-semibold tracking-[0.24em] text-bone/80"
+                  className="inline-flex items-center gap-2 border border-bone/25 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.24em] text-bone/80"
                 >
                   <span className="size-1.5 rounded-full bg-bone" />
-                  {look.badge}
+                  {look.kind === "actu" ? "Actu" : "Achats"}
                 </motion.span>
+              ) : (
+                look.badge && (
+                  <motion.span
+                    variants={item}
+                    className="inline-flex items-center gap-2 border border-bone/25 px-3 py-1 text-[10px] font-semibold tracking-[0.24em] text-bone/80"
+                  >
+                    <span className="size-1.5 rounded-full bg-bone" />
+                    {look.badge}
+                  </motion.span>
+                )
               )}
 
               <motion.div
@@ -320,6 +356,23 @@ export function FeedCard({
               >
                 {look.caption}
               </motion.p>
+
+              {/* brands discussed in the post — sharp outline chips */}
+              {isPost && look.brandTags?.length ? (
+                <motion.div
+                  variants={item}
+                  className="flex flex-wrap gap-x-1.5 gap-y-1"
+                >
+                  {look.brandTags.map((b) => (
+                    <span
+                      key={b}
+                      className="border border-bone/20 px-2.5 py-1 text-[11px] font-medium text-bone/70"
+                    >
+                      #{b}
+                    </span>
+                  ))}
+                </motion.div>
+              ) : null}
 
               <motion.div
                 variants={item}
@@ -345,17 +398,54 @@ export function FeedCard({
                 </div>
               </motion.div>
 
-              <motion.div variants={item}>
-                <ShopTheLook
-                  products={look.products}
-                  open={shopOpen}
-                  onOpenChange={(v) => {
-                    setShopOpen(v);
-                    if (!v) setHighlight(null);
-                  }}
-                  highlightId={highlight}
-                />
-              </motion.div>
+              {/* hotspot looks keep the Shop-the-look drawer; posts swap it
+                  for a compact rail of the catalog pieces they reference */}
+              {look.products.length > 0 && (
+                <motion.div variants={item}>
+                  <ShopTheLook
+                    products={look.products}
+                    open={shopOpen}
+                    onOpenChange={(v) => {
+                      setShopOpen(v);
+                      if (!v) setHighlight(null);
+                    }}
+                    highlightId={highlight}
+                  />
+                </motion.div>
+              )}
+              {linkedItems.length > 0 && (
+                <motion.div variants={item} className="space-y-1.5">
+                  <span className="overline block text-[9px] text-bone/55">
+                    Pièces liées
+                  </span>
+                  {linkedItems.map((p) => (
+                    <Link
+                      key={p.id}
+                      href={`/article/${p.id}`}
+                      data-cursor="link"
+                      className="glass flex min-h-11 items-center gap-3 px-3 py-2 transition-colors hover:bg-bone/15"
+                    >
+                      <span
+                        aria-hidden="true"
+                        className="relative size-9 shrink-0 overflow-hidden border border-bone/15 bg-coal"
+                      >
+                        <Photo src={imgItem(p.id)} />
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="overline block text-[8px] text-bone/55">
+                          {p.brand}
+                        </span>
+                        <span className="block truncate text-[12.5px] font-medium text-bone">
+                          {p.name}
+                        </span>
+                      </span>
+                      <span className="shrink-0 font-display text-[13px] font-bold text-bone">
+                        {euro(p.priceEUR)}
+                      </span>
+                    </Link>
+                  ))}
+                </motion.div>
+              )}
             </motion.div>
 
             {/* comment thread bottom-sheet */}

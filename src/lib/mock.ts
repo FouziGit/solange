@@ -43,7 +43,12 @@ export type Look = {
   products: Product[];
   soundtrack: string;
   badge?: string; // e.g. "DROP", "ARCHIVE"
-  kind?: "look" | "edito"; // editorial framing variant
+  /** Post nature: look (default), edito framing, actu (news), achats (haul). */
+  kind?: "look" | "edito" | "actu" | "achats";
+  /** Brands discussed in the post (actu / achats), for chips & search. */
+  brandTags?: string[];
+  /** Catalog ids referenced by the post without on-media hotspots. */
+  linkedProductIds?: string[];
 };
 
 const creators: Record<string, Creator> = {
@@ -311,6 +316,43 @@ export const looks: Look[] = [
         hotspot: { x: 66, y: 26 },
       },
     ],
+  },
+  {
+    id: "l7",
+    kind: "actu",
+    creator: creators.maya,
+    title: "Actu",
+    caption:
+      "Nouvelle collection Lemaire, on en parle. Des volumes amples, zéro logo, et le Croissant bag qui reste la pièce la plus recherchée de la maison en seconde main.",
+    location: "Paris 3e · Haut-Marais",
+    tags: ["#lemaire", "#actu", "#quietluxury"],
+    brandTags: ["Lemaire"],
+    linkedProductIds: ["k12"],
+    seed: "solange-post-actu-lemaire-07",
+    likes: 21400,
+    comments: 733,
+    shares: 502,
+    soundtrack: "Arthur Russell — A Little Lost",
+    badge: "ACTU",
+    products: [],
+  },
+  {
+    id: "l8",
+    kind: "achats",
+    creator: creators.samir,
+    title: "Achats",
+    caption:
+      "Mes derniers achats chez Carhartt & Salomon. Le gilet Detroit et les XT-6, les deux chinés sur SOLANGE en moins d'une semaine. Zéro regret.",
+    location: "Lyon · Croix-Rousse",
+    tags: ["#haul", "#carhartt", "#salomon", "#secondemain"],
+    brandTags: ["Carhartt WIP", "Salomon"],
+    linkedProductIds: ["k3", "k7"],
+    seed: "solange-post-achats-samir-08",
+    likes: 11250,
+    comments: 316,
+    shares: 189,
+    soundtrack: "Little Simz — Selhurst",
+    products: [],
   },
 ];
 
@@ -1033,5 +1075,95 @@ export const streams: Stream[] = [
     poster: "/video/l6.jpg",
     productIds: ["k6", "k16"],
     chat: [],
+  },
+];
+
+/* ---------- Éditorial (magazine) ---------- */
+
+export type Article = {
+  id: string;
+  kind: "focus" | "collection" | "entretien";
+  title: string;
+  standfirst: string;
+  brand?: string;
+  creatorHandle?: string;
+  seed: string;
+  productIds: string[];
+  paragraphs: string[];
+  readingMin: number;
+  date: string;
+};
+
+export const articles: Article[] = [
+  {
+    id: "a1",
+    kind: "focus",
+    title: "Margiela, l'archive vivante",
+    standfirst:
+      "Vingt ans après les défilés anonymes de la rue Saint-Maur, les pièces Margiela circulent de dressing en dressing. Portrait d'une maison qui se collectionne comme elle se porte.",
+    brand: "Maison Margiela",
+    seed: "solange-edito-margiela-a1",
+    productIds: ["k2"],
+    paragraphs: [
+      "Il y a des vêtements qui vieillissent et des vêtements qui mûrissent. Le manteau à épaules structurées de Maison Margiela appartient à la seconde catégorie : chaque passage de main en main ajoute une couche à son histoire, sans jamais entamer sa coupe.",
+      "Sur SOLANGE, les pièces Margiela partent en moyenne trois fois plus vite que le reste du vestiaire luxe. Ce n'est pas un hasard. La maison a construit son langage sur la déconstruction, les quatre points de suture blancs, l'anonymat revendiqué. Autant de signes que la seconde main amplifie au lieu de les diluer.",
+      "Les collectionneuses le savent : un Margiela d'archive ne s'achète pas pour une saison. Il s'achète pour être transmis. Le dépôt-vente du Marais où Maya Diallo a déniché son manteau en laine ne s'y trompe pas, les pièces des années 1990 et 2000 y sont exposées comme des documents.",
+      "Acheter une archive, c'est accepter d'en être le dépositaire temporaire. La patine, les doublures reprises, l'étiquette blanche cousue aux quatre coins : tout raconte le passage du temps. Et c'est précisément ce que le neuf ne pourra jamais offrir.",
+    ],
+    readingMin: 4,
+    date: "2026-07-08",
+  },
+  {
+    id: "a2",
+    kind: "collection",
+    title: "Le vestiaire gorpcore",
+    standfirst:
+      "Shell Gore-Tex, banane ripstop, semelle Contagrip : la technique est sortie des sentiers pour s'installer en ville. Trois pièces pour construire un vestiaire outdoor qui dure.",
+    seed: "solange-edito-gorpcore-a2",
+    productIds: ["k6", "k16", "k7"],
+    paragraphs: [
+      "Le gorpcore n'est plus une tendance, c'est une grammaire. Née sur les sentiers et adoptée par les capitales, elle repose sur une idée simple : un vêtement conçu pour la montagne survivra sans effort au bitume.",
+      "Premier pilier, la veste shell. La Beta d'Arc'teryx en Gore-Tex reste la référence : coupe nette, coutures étanchées, aucune fioriture. En seconde main, elle se trouve autour de 290 euros, soit presque moitié prix du neuf, pour une durée de vie qui se compte en décennies.",
+      "Deuxième pilier, l'accessoire porté croisé. La banane ripstop de Patagonia coche toutes les cases : légère, réparable, garantie à vie par la marque. C'est l'exemple parfait de la pièce qui gagne à être achetée d'occasion, puisqu'elle ne s'use presque pas.",
+      "Troisième pilier, la chaussure trail. Les XT-6 de Salomon ont fait le pont entre podium et pierrier. Une paire en suède gris, état neuf avec étiquette, circule en ce moment sur SOLANGE. La boucle est bouclée : la technique se recycle aussi bien qu'elle se porte.",
+    ],
+    readingMin: 3,
+    date: "2026-07-05",
+  },
+  {
+    id: "a3",
+    kind: "entretien",
+    title: "Lou Mercier, chineuse d'archives",
+    standfirst:
+      "Elle a fait des Puces de Saint-Ouen son bureau et du cuir vieilli sa signature. Rencontre avec la curatrice derrière lou.archive, 24 300 abonnés et un oeil que rien n'échappe.",
+    creatorHandle: "lou.archive",
+    seed: "solange-edito-lou-a3",
+    productIds: ["k1", "k8"],
+    paragraphs: [
+      "On la croise chaque samedi à l'ouverture du marché Vernaison, thermos à la main. Lou Mercier chine depuis dix ans, documente depuis cinq, revend depuis trois. Sa règle : ne jamais acheter une pièce qu'elle ne porterait pas elle-même.",
+      "« La veste motard Acne Studios que je vends en ce moment, je l'ai trouvée sous une pile de blousons sans intérêt. Le cuir était sec, je l'ai nourri pendant deux semaines. C'est ça le travail : voir ce que la pièce peut redevenir, pas ce qu'elle est sur le moment. »",
+      "Son fonds de commerce, c'est le vestiaire des années 1990 : cuir patiné, denim brut, tailoring désossé. Le 501 délavé qu'elle propose à 49 euros illustre sa philosophie, une pièce banale en apparence, mais dont le délavage naturel est impossible à reproduire en usine.",
+      "« Les gens croient que chiner, c'est trouver la pièce rare. En vrai, c'est surtout dire non quatre-vingt-dix-neuf fois sur cent. La sélection, c'est le seul luxe qui ne s'achète pas. »",
+      "Depuis son arrivée sur SOLANGE, Lou vend en direct depuis les allées des Puces. Son prochain live, Cuir & Archive, est déjà l'un des plus attendus de la plateforme.",
+    ],
+    readingMin: 5,
+    date: "2026-07-01",
+  },
+  {
+    id: "a4",
+    kind: "focus",
+    title: "Cuir : patine et permanence",
+    standfirst:
+      "Une veste en cuir bien née ne meurt jamais, elle change de propriétaire. Pourquoi le cuir vieilli est devenu la valeur refuge de la seconde main.",
+    seed: "solange-edito-cuir-a4",
+    productIds: ["k1", "k15"],
+    paragraphs: [
+      "Le cuir est la seule matière du vestiaire qui s'améliore en s'abîmant. Les plis aux coudes, le grain assoupli, la teinte qui fonce aux points de friction : ce que l'industrie appelle usure, les connaisseurs l'appellent patine.",
+      "C'est ce qui explique la cote du cuir en seconde main. Une veste motard Acne Studios affichée 890 euros en boutique se trouve autour de 245 euros après quelques années de vie, avec un supplément d'âme que le neuf n'aura jamais. Le rapport matière-prix est imbattable.",
+      "Le tailoring en fait aussi son profit. La veste Helmut Lang de 1999, coupée dans une laine sèche à la structure quasi militaire, dialogue naturellement avec un cuir patiné. Les deux pièces partagent la même promesse : traverser les modes sans se démoder.",
+      "Entretenir un cuir demande peu : un lait nourrissant deux fois par an, un cintre large, et de la patience. En échange, la pièce vous survivra. Dans un vestiaire pensé pour durer, c'est le meilleur contrat qui soit.",
+    ],
+    readingMin: 4,
+    date: "2026-06-27",
   },
 ];

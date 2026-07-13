@@ -174,7 +174,7 @@ export function ArticleDetail({
                 onClick={buy}
                 whileTap={{ scale: 0.97 }}
                 data-cursor="link"
-                className="flex flex-1 items-center justify-center gap-2 rounded-full bg-bone px-6 py-3.5 text-sm font-semibold text-ink transition-transform"
+                className="flex flex-1 items-center justify-center gap-2 rounded-none bg-bone px-6 py-3.5 text-sm font-semibold text-ink transition-transform"
               >
                 <Bag className="size-5" />
                 Acheter — {euro(item.priceEUR)}
@@ -182,7 +182,7 @@ export function ArticleDetail({
               <Link
                 href={`/messages?item=${item.id}`}
                 data-cursor="link"
-                className="glass flex items-center justify-center gap-2 rounded-full px-6 py-3.5 text-sm font-semibold text-bone transition-colors hover:bg-bone/15"
+                className="glass flex items-center justify-center gap-2 rounded-none px-6 py-3.5 text-sm font-semibold text-bone transition-colors hover:bg-bone/15"
               >
                 <Send className="size-4" />
                 Faire une offre
@@ -193,7 +193,7 @@ export function ArticleDetail({
                 aria-label="Enregistrer"
                 aria-pressed={saved}
                 data-cursor="link"
-                className="glass grid size-[52px] shrink-0 place-items-center rounded-full text-bone transition-transform active:scale-90"
+                className="glass grid size-[52px] shrink-0 place-items-center rounded-none text-bone transition-transform active:scale-90"
               >
                 <Heart filled={saved} className="size-5" />
               </button>

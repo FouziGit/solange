@@ -7,11 +7,15 @@
    ============================================================ */
 
 import {
+  articles,
   catalog,
   catalogItem,
+  looks,
   me,
   savedItems,
+  streams,
   type CatalogItem,
+  type Creator,
 } from "@/lib/mock";
 
 export type SortKey = "recent" | "price-asc" | "price-desc" | "popular";
@@ -95,4 +99,76 @@ export function catalogSizes(): string[] {
   return [...new Set(catalog.map((it) => it.size))].sort((a, b) =>
     a.localeCompare(b, "fr", { numeric: true }),
   );
+}
+
+/** One search-result row for posts & articles (recherche unifiée). */
+export type ContentHit = {
+  type: "post" | "article";
+  id: string;
+  title: string;
+  sub: string;
+  seed: string;
+};
+
+/** Every creator visible in the app (feed + lives), deduped by id. */
+function allCreators(): Creator[] {
+  const seen = new Map<string, Creator>();
+  for (const c of [
+    ...looks.map((l) => l.creator),
+    ...streams.map((s) => s.creator),
+  ]) {
+    if (!seen.has(c.id)) seen.set(c.id, c);
+  }
+  return [...seen.values()];
+}
+
+/**
+ * Recherche unifiée : pièces (catalogue), profils (créateurs) et
+ * contenus (posts du feed + articles éditoriaux). Case-insensitive
+ * substring match. Empty query returns empty arrays.
+ */
+export function searchAll(q: string): {
+  items: CatalogItem[];
+  profiles: Creator[];
+  content: ContentHit[];
+} {
+  const needle = q.trim().toLowerCase();
+  if (!needle) return { items: [], profiles: [], content: [] };
+
+  const items = filterCatalog({ query: needle });
+
+  const profiles = allCreators().filter((c) =>
+    `${c.name} ${c.handle}`.toLowerCase().includes(needle),
+  );
+
+  const postHits: ContentHit[] = looks
+    .filter((l) =>
+      [l.title, l.caption, ...l.tags, ...(l.brandTags ?? [])]
+        .join(" ")
+        .toLowerCase()
+        .includes(needle),
+    )
+    .map((l) => ({
+      type: "post" as const,
+      id: l.id,
+      title: l.title,
+      sub: l.caption,
+      seed: l.seed,
+    }));
+
+  const articleHits: ContentHit[] = articles
+    .filter((a) =>
+      `${a.title} ${a.standfirst} ${a.brand ?? ""}`
+        .toLowerCase()
+        .includes(needle),
+    )
+    .map((a) => ({
+      type: "article" as const,
+      id: a.id,
+      title: a.title,
+      sub: a.standfirst,
+      seed: a.seed,
+    }));
+
+  return { items, profiles, content: [...postHits, ...articleHits] };
 }

@@ -4,9 +4,9 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { AnimatePresence, motion } from "motion/react";
-import { SMark } from "./Brandmark";
+import { LogoMark } from "./Brandmark";
 import { Avatar } from "./Avatar";
-import { Home, Compass, Live, Plus, Chat, Heart, Bell } from "./icons";
+import { Home, Compass, Live, Plus, Chat, Heart, Bell, Grid } from "./icons";
 import { streams } from "@/lib/mock";
 
 const anyLive = streams.some((s) => s.live);
@@ -15,6 +15,7 @@ const items = [
   { href: "/", label: "Feed", Icon: Home, match: (p: string) => p === "/", live: false },
   { href: "/live", label: "Live", Icon: Live, match: (p: string) => p.startsWith("/live"), live: anyLive },
   { href: "/decouvrir", label: "Découvrir", Icon: Compass, match: (p: string) => p.startsWith("/decouvrir"), live: false },
+  { href: "/journal", label: "Journal", Icon: Grid, match: (p: string) => p.startsWith("/journal") || p.startsWith("/article"), live: false },
   { href: "/favoris", label: "Favoris", Icon: Heart, match: (p: string) => p.startsWith("/favoris"), live: false },
   { href: "/messages", label: "Messages", Icon: Chat, match: (p: string) => p.startsWith("/messages"), live: false },
   { href: "/notifications", label: "Alertes", Icon: Bell, match: (p: string) => p.startsWith("/notifications"), live: false },
@@ -46,10 +47,10 @@ export function SideNav() {
     <aside className="fixed inset-y-0 left-0 z-50 hidden w-[88px] flex-col items-center justify-between border-r border-bone/10 bg-ink/70 py-7 backdrop-blur-xl md:flex">
       <Link
         href="/"
-        className="grid size-11 place-items-center rounded-full bg-bone text-ink transition-transform duration-300 hover:scale-110"
+        className="grid size-11 place-items-center transition-transform duration-300 hover:scale-110"
         aria-label="Accueil"
       >
-        <SMark className="size-6" />
+        <LogoMark variant="white" className="size-8" />
       </Link>
 
       <nav className="flex flex-1 flex-col items-center justify-center gap-2">
@@ -105,7 +106,7 @@ export function SideNav() {
             aria-haspopup="menu"
             aria-expanded={composeOpen}
             onClick={() => setComposeOpen((v) => !v)}
-            className="group grid size-12 place-items-center rounded-full bg-bone text-ink shadow-[0_6px_24px_-8px_rgba(0,0,0,0.6)] transition-transform duration-300 hover:scale-110 active:scale-95"
+            className="group grid size-12 place-items-center rounded-none bg-bone text-ink transition-transform duration-300 hover:scale-110 active:scale-95"
           >
             <Plus
               className={`size-6 transition-transform duration-300 ${composeOpen ? "rotate-45" : ""}`}
@@ -121,7 +122,7 @@ export function SideNav() {
                 animate={{ opacity: 1, x: 0, scale: 1 }}
                 exit={{ opacity: 0, x: -6, scale: 0.96 }}
                 transition={{ type: "spring", stiffness: 460, damping: 34 }}
-                className="glass-bone absolute left-[calc(100%+14px)] top-1/2 z-50 w-44 -translate-y-1/2 overflow-hidden rounded-2xl p-1.5 shadow-[0_12px_40px_-12px_rgba(0,0,0,0.7)]"
+                className="glass-bone absolute left-[calc(100%+14px)] top-1/2 z-50 w-44 -translate-y-1/2 overflow-hidden rounded-none p-1.5"
               >
                 <Link
                   href="/vendre"

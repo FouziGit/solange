@@ -33,7 +33,7 @@ export function PageHeader({
             href={back}
             data-cursor="link"
             aria-label="Retour"
-            className="glass mb-4 grid size-11 place-items-center rounded-full text-bone transition-transform active:scale-90"
+            className="glass mb-4 grid size-11 place-items-center rounded-none text-bone transition-transform active:scale-90"
           >
             <ArrowLeft className="size-5" />
           </Link>

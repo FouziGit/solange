@@ -1,6 +1,7 @@
 "use client";
 
 import { PageShell } from "@/components/ui/PageShell";
+import { LogoMark } from "@/components/chrome/Brandmark";
 
 export default function Error({
   error,
@@ -12,6 +13,7 @@ export default function Error({
   return (
     <PageShell marginWord="Incident" className="grid place-items-center">
       <div className="flex max-w-md flex-col items-center text-center">
+        <LogoMark variant="white" className="mb-8 size-12 opacity-90" />
         <span className="overline text-[11px] text-ash">Erreur</span>
         <h1 className="font-editorial mt-4 text-4xl font-semibold tracking-tight text-bone md:text-5xl">
           Quelque chose s’est cassé
@@ -30,7 +32,7 @@ export default function Error({
           type="button"
           onClick={() => reset()}
           data-cursor="link"
-          className="mt-8 rounded-full bg-bone px-6 py-3 text-sm font-semibold text-ink transition-transform active:scale-95"
+          className="mt-8 rounded-none bg-bone px-6 py-3 text-sm font-semibold text-ink transition-transform active:scale-95"
         >
           Réessayer
         </button>

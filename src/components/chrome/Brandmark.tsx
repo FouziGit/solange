@@ -1,4 +1,29 @@
+import Image from "next/image";
 import { cn } from "@/lib/utils";
+
+/**
+ * The real SOLANGE brandmark — the "S" swirl PNG from /branding (512px,
+ * transparent). `variant="white"` on dark surfaces (the app is dark-native),
+ * `variant="black"` reserved for bone/light surfaces. Size via className.
+ */
+export function LogoMark({
+  variant = "white",
+  className,
+}: {
+  variant?: "white" | "black";
+  className?: string;
+}) {
+  return (
+    <Image
+      src={`/branding/logo-${variant}.png`}
+      alt="SOLANGE"
+      width={512}
+      height={512}
+      draggable={false}
+      className={cn("block select-none object-contain", className)}
+    />
+  );
+}
 
 /**
  * The SOLANGE "S" monogram — a couture high-contrast Didone glyph drawn with an

@@ -8,7 +8,8 @@ import { cn } from "@/lib/utils";
  * Real photo layer with a graceful fallback: renders an <img> over whatever
  * generative gradient its parent already draws; on load error it removes
  * itself so the gradient shows through — the demo can never look broken.
- * Desaturated to keep the strict noir & blanc editorial ADN.
+ * Media renders in natural colour — the monochrome treatment lives in the UI
+ * chrome only, not on photography.
  */
 export function Photo({
   src,
@@ -35,7 +36,7 @@ export function Photo({
       decoding="async"
       onError={() => setFailedSrc(src)}
       className={cn(
-        "absolute inset-0 size-full object-cover grayscale contrast-[1.05]",
+        "absolute inset-0 size-full object-cover",
         className,
       )}
     />

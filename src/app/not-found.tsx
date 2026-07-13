@@ -1,10 +1,12 @@
 import Link from "next/link";
 import { PageShell } from "@/components/ui/PageShell";
+import { LogoMark } from "@/components/chrome/Brandmark";
 
 export default function NotFound() {
   return (
     <PageShell marginWord="Égarée" className="grid place-items-center">
       <div className="flex max-w-md flex-col items-center text-center">
+        <LogoMark variant="white" className="mb-8 size-12 opacity-90" />
         <span className="font-editorial text-[5.5rem] italic leading-none text-bone/85 md:text-[8rem]">
           404
         </span>
@@ -19,7 +21,7 @@ export default function NotFound() {
         <Link
           href="/"
           data-cursor="link"
-          className="mt-8 rounded-full bg-bone px-6 py-3 text-sm font-semibold text-ink transition-transform active:scale-95"
+          className="mt-8 rounded-none bg-bone px-6 py-3 text-sm font-semibold text-ink transition-transform active:scale-95"
         >
           Retour à l’accueil
         </Link>

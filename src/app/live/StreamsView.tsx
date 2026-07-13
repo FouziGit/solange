@@ -56,10 +56,7 @@ function StreamVideo({
       autoPlay
       preload={eager ? "auto" : "metadata"}
       onError={() => setFailed(true)}
-      className={cn(
-        "size-full object-cover grayscale contrast-[1.05]",
-        className,
-      )}
+      className={cn("size-full object-cover", className)}
     />
   );
 }

@@ -164,7 +164,7 @@ export default function VendrePage() {
                 </p>
                 <button
                   onClick={() => setListed(false)}
-                  className="mt-6 rounded-full border border-bone/30 px-5 py-2.5 text-sm font-semibold text-bone transition-colors hover:bg-bone/10"
+                  className="mt-6 rounded-none border border-bone/30 px-5 py-2.5 text-sm font-semibold text-bone transition-colors hover:bg-bone/10"
                 >
                   Déposer une autre pièce
                 </button>
@@ -279,7 +279,7 @@ export default function VendrePage() {
                 <button
                   onClick={() => ready && setListed(true)}
                   disabled={!ready}
-                  className={`mt-4 flex w-full items-center justify-center gap-2 rounded-full py-3.5 text-sm font-semibold transition-transform active:scale-95 ${
+                  className={`mt-4 flex w-full items-center justify-center gap-2 rounded-none py-3.5 text-sm font-semibold transition-transform active:scale-95 ${
                     ready
                       ? "bg-bone text-ink"
                       : "cursor-default border border-bone/15 text-ash"

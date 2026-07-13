@@ -12,7 +12,7 @@ import { Photo } from "./Photo";
  *   2. top key-light radial                    (composition-driven)
  *   3. draped-light blurred form               (composition-driven)
  *   4. centered Bodoni brand watermark + hairline rule (optional)
- *   5. real B&W <Photo> overlay (grayscale, fails open to the gradient)
+ *   5. real <Photo> overlay in natural colour (fails open to the gradient)
  *   6. bottom scrim gradient
  *   7. inset vignette
  *
