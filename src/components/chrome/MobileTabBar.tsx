@@ -4,19 +4,23 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { AnimatePresence, motion } from "motion/react";
-import { Home, Compass, Plus, Chat, User, X } from "./icons";
+import { Home, Compass, Live, Plus, User, X } from "./icons";
+import { streams } from "@/lib/mock";
 
 type TabItem = {
   href: string;
   label: string;
   Icon: (p: React.SVGProps<SVGSVGElement>) => React.JSX.Element;
   match: (p: string) => boolean;
+  live?: boolean;
 };
+
+const anyLive = streams.some((s) => s.live);
 
 const items: TabItem[] = [
   { href: "/", label: "Feed", Icon: Home, match: (p) => p === "/" },
+  { href: "/live", label: "Live", Icon: Live, match: (p) => p.startsWith("/live"), live: anyLive },
   { href: "/decouvrir", label: "Découvrir", Icon: Compass, match: (p) => p.startsWith("/decouvrir") },
-  { href: "/messages", label: "Messages", Icon: Chat, match: (p) => p.startsWith("/messages") },
   { href: "/profil", label: "Profil", Icon: User, match: (p) => p.startsWith("/profil") },
 ];
 
@@ -42,8 +46,8 @@ export function MobileTabBar() {
       <nav className="pb-safe fixed inset-x-0 bottom-0 z-50 flex items-end justify-around px-6 pt-3 md:hidden">
         <div className="glass pointer-events-none absolute inset-x-3 bottom-3 top-1 rounded-[26px]" />
 
-        {left.map(({ href, label, Icon, match }) => (
-          <TabLink key={href} href={href} label={label} Icon={Icon} on={match(pathname)} />
+        {left.map(({ href, label, Icon, match, live }) => (
+          <TabLink key={href} href={href} label={label} Icon={Icon} on={match(pathname)} live={live} />
         ))}
 
         <button
@@ -60,8 +64,8 @@ export function MobileTabBar() {
           />
         </button>
 
-        {right.map(({ href, label, Icon, match }) => (
-          <TabLink key={href} href={href} label={label} Icon={Icon} on={match(pathname)} />
+        {right.map(({ href, label, Icon, match, live }) => (
+          <TabLink key={href} href={href} label={label} Icon={Icon} on={match(pathname)} live={live} />
         ))}
       </nav>
 
@@ -136,20 +140,30 @@ function TabLink({
   label,
   Icon,
   on,
+  live,
 }: {
   href: string;
   label: string;
   Icon: (p: React.SVGProps<SVGSVGElement>) => React.JSX.Element;
   on: boolean;
+  live?: boolean;
 }) {
   return (
     <Link
       href={href}
       className="relative z-10 flex flex-1 flex-col items-center gap-1 py-1.5"
     >
-      <Icon
-        className={`size-[22px] transition-colors ${on ? "text-bone" : "text-ash"}`}
-      />
+      <span className="relative">
+        <Icon
+          className={`size-[22px] transition-colors ${on ? "text-bone" : "text-ash"}`}
+        />
+        {live && (
+          <span className="absolute -right-1 -top-0.5 flex size-1.5">
+            <span className="absolute inline-flex size-full animate-ping rounded-full bg-bone opacity-70" />
+            <span className="relative inline-flex size-1.5 rounded-full bg-bone" />
+          </span>
+        )}
+      </span>
       <span
         className={`text-[9px] font-medium tracking-wide transition-colors ${on ? "text-bone" : "text-ash/60"}`}
       >

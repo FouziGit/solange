@@ -219,3 +219,10 @@ export const Bell = (p: P) => (
     <path d="M10 20.5a2.2 2.2 0 0 0 4 0" />
   </svg>
 );
+
+export const Live = (p: P) => (
+  <svg {...base} {...p}>
+    <circle cx="12" cy="12" r="2.2" />
+    <path d="M8.5 8.5a5 5 0 0 0 0 7M15.5 8.5a5 5 0 0 1 0 7M6 6a8.5 8.5 0 0 0 0 12M18 6a8.5 8.5 0 0 1 0 12" />
+  </svg>
+);

@@ -941,3 +941,97 @@ export const invite: {
     },
   ],
 };
+
+/* ---------- Live shopping (streaming) ---------- */
+
+export type ChatLine = { handle: string; seed: string; text: string };
+export type Stream = {
+  id: string;
+  creator: Creator;
+  title: string;
+  viewers: number;
+  live: boolean;
+  startsIn?: string;
+  seed: string;
+  video: string; // preview clip path
+  poster: string;
+  productIds: string[]; // shoppable during the live
+  chat: ChatLine[];
+};
+
+export const streams: Stream[] = [
+  {
+    id: "s1",
+    creator: creators.lou,
+    title: "Vente live · Archive cuir 90s",
+    viewers: 1240,
+    live: true,
+    seed: "solange-look-leather-01",
+    video: "/video/l1.mp4",
+    poster: "/video/l1.jpg",
+    productIds: ["k1", "k8", "k15"],
+    chat: [
+      { handle: "maya.curates", seed: "maya-d-55", text: "La veste est incroyable 🖤" },
+      { handle: "theo.grail", seed: "theo-grail-3", text: "Elle taille comment ?" },
+      { handle: "neige.vintage", seed: "neige-77", text: "Je prends le 501 !" },
+      { handle: "yuki.paris", seed: "yuki-p-12", text: "Drop de folie" },
+    ],
+  },
+  {
+    id: "s2",
+    creator: creators.maya,
+    title: "Margiela & pièces couture en direct",
+    viewers: 3420,
+    live: true,
+    seed: "solange-look-margiela-03",
+    video: "/video/l3.mp4",
+    poster: "/video/l3.jpg",
+    productIds: ["k2", "k12", "k9"],
+    chat: [
+      { handle: "lou.archive", seed: "lou-mercier-21", text: "Le manteau 😍" },
+      { handle: "samir.fits", seed: "samir-b-09", text: "Combien le sac Prada ?" },
+      { handle: "theo.grail", seed: "theo-grail-3", text: "Première 🙌" },
+    ],
+  },
+  {
+    id: "s3",
+    creator: creators.theo,
+    title: "Grails & archives rares",
+    viewers: 890,
+    live: true,
+    seed: "solange-look-gaultier-04",
+    video: "/video/l4.mp4",
+    poster: "/video/l4.jpg",
+    productIds: ["k4", "k10"],
+    chat: [
+      { handle: "yuki.paris", seed: "yuki-p-12", text: "Le Gaultier est dispo ?" },
+      { handle: "maya.curates", seed: "maya-d-55", text: "Patrimoine 🔥" },
+    ],
+  },
+  {
+    id: "s4",
+    creator: creators.samir,
+    title: "Sélection streetwear · drop du soir",
+    viewers: 0,
+    live: false,
+    startsIn: "Dans 32 min",
+    seed: "solange-look-street-02",
+    video: "/video/l2.mp4",
+    poster: "/video/l2.jpg",
+    productIds: ["k3", "k7", "k14"],
+    chat: [],
+  },
+  {
+    id: "s5",
+    creator: creators.yuki,
+    title: "Gorpcore & technique",
+    viewers: 0,
+    live: false,
+    startsIn: "Ce soir · 20h00",
+    seed: "solange-look-gorp-06",
+    video: "/video/l6.mp4",
+    poster: "/video/l6.jpg",
+    productIds: ["k6", "k16"],
+    chat: [],
+  },
+];

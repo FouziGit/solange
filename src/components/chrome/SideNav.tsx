@@ -6,14 +6,18 @@ import { usePathname } from "next/navigation";
 import { AnimatePresence, motion } from "motion/react";
 import { SMark } from "./Brandmark";
 import { Avatar } from "./Avatar";
-import { Home, Compass, Plus, Chat, Heart, Bell } from "./icons";
+import { Home, Compass, Live, Plus, Chat, Heart, Bell } from "./icons";
+import { streams } from "@/lib/mock";
+
+const anyLive = streams.some((s) => s.live);
 
 const items = [
-  { href: "/", label: "Feed", Icon: Home, match: (p: string) => p === "/" },
-  { href: "/decouvrir", label: "Découvrir", Icon: Compass, match: (p: string) => p.startsWith("/decouvrir") },
-  { href: "/favoris", label: "Favoris", Icon: Heart, match: (p: string) => p.startsWith("/favoris") },
-  { href: "/messages", label: "Messages", Icon: Chat, match: (p: string) => p.startsWith("/messages") },
-  { href: "/notifications", label: "Alertes", Icon: Bell, match: (p: string) => p.startsWith("/notifications") },
+  { href: "/", label: "Feed", Icon: Home, match: (p: string) => p === "/", live: false },
+  { href: "/live", label: "Live", Icon: Live, match: (p: string) => p.startsWith("/live"), live: anyLive },
+  { href: "/decouvrir", label: "Découvrir", Icon: Compass, match: (p: string) => p.startsWith("/decouvrir"), live: false },
+  { href: "/favoris", label: "Favoris", Icon: Heart, match: (p: string) => p.startsWith("/favoris"), live: false },
+  { href: "/messages", label: "Messages", Icon: Chat, match: (p: string) => p.startsWith("/messages"), live: false },
+  { href: "/notifications", label: "Alertes", Icon: Bell, match: (p: string) => p.startsWith("/notifications"), live: false },
 ];
 
 export function SideNav() {
@@ -49,7 +53,7 @@ export function SideNav() {
       </Link>
 
       <nav className="flex flex-1 flex-col items-center justify-center gap-2">
-        {items.map(({ href, label, Icon, match }) => {
+        {items.map(({ href, label, Icon, match, live }) => {
           const on = match(pathname);
           return (
             <Link
@@ -70,11 +74,19 @@ export function SideNav() {
                   className="absolute -left-[18px] top-1/2 h-7 w-[3px] -translate-y-1/2 rounded-full bg-bone"
                 />
               )}
-              <Icon
-                className={`relative size-[22px] transition-all duration-300 group-hover:-translate-y-0.5 ${
-                  on ? "text-bone" : "text-ash group-hover:text-bone"
-                }`}
-              />
+              <span className="relative">
+                <Icon
+                  className={`relative size-[22px] transition-all duration-300 group-hover:-translate-y-0.5 ${
+                    on ? "text-bone" : "text-ash group-hover:text-bone"
+                  }`}
+                />
+                {live && (
+                  <span className="absolute -right-1 -top-0.5 flex size-2">
+                    <span className="absolute inline-flex size-full animate-ping rounded-full bg-bone opacity-70" />
+                    <span className="relative inline-flex size-2 rounded-full bg-bone ring-2 ring-ink" />
+                  </span>
+                )}
+              </span>
               <span
                 className={`relative text-[10px] font-medium tracking-wide transition-colors ${
                   on ? "text-bone" : "text-ash/70 group-hover:text-bone"

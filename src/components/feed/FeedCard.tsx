@@ -8,7 +8,7 @@ import {
   type Variants,
 } from "motion/react";
 import type { Look } from "@/lib/mock";
-import { imgLook } from "@/lib/img";
+import { imgLook, videoLook, videoPoster } from "@/lib/img";
 import { useStore } from "@/lib/store";
 import { KenBurnsMedia } from "./KenBurnsMedia";
 import { ProductHotspots } from "./ProductHotspots";
@@ -47,8 +47,14 @@ export function FeedCard({
   inView: boolean;
 }) {
   const reduce = useReducedMotion();
-  const { isLiked, toggleLike, isSaved, toggleSave, isFollowing, toggleFollow } =
-    useStore();
+  const {
+    isLiked,
+    toggleLike,
+    isSaved,
+    toggleSave,
+    isFollowing,
+    toggleFollow,
+  } = useStore();
   const liked = isLiked(look.id);
   const saved = isSaved(look.id);
   const following = isFollowing(look.creator.handle);
@@ -150,6 +156,8 @@ export function FeedCard({
                 active={active}
                 paused={paused}
                 image={imgLook(look.id)}
+                video={videoLook(look.id)}
+                poster={videoPoster(look.id)}
               />
             </div>
 
