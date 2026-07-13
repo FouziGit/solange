@@ -16,7 +16,7 @@ type TabItem = {
 
 const items: TabItem[] = [
   { href: "/", label: "Feed", Icon: Home, match: (p) => p === "/" },
-  { href: "/decouvrir", label: "Découvrir", Icon: Compass, match: (p) => p.startsWith("/decouvrir") },
+  { href: "/decouvrir", label: "Marché", Icon: Compass, match: (p) => p.startsWith("/decouvrir") },
   { href: "/journal", label: "Journal", Icon: Grid, match: (p) => p.startsWith("/journal") || p.startsWith("/article") },
   { href: "/profil", label: "Profil", Icon: User, match: (p) => p.startsWith("/profil") },
 ];
@@ -76,7 +76,7 @@ export function MobileTabBar() {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setComposeOpen(false)}
-              className="absolute inset-0 bg-ink/70 backdrop-blur-[2px]"
+              className="absolute inset-0 bg-ink/60 backdrop-blur-md"
             />
             <motion.div
               role="dialog"
@@ -100,28 +100,38 @@ export function MobileTabBar() {
               </div>
               <div className="mb-1 h-px bg-bone/10" />
               <Link
-                href="/vendre"
+                href="/creer"
                 onClick={() => setComposeOpen(false)}
-                className="flex items-center justify-between rounded-2xl px-2 py-4 transition-colors hover:bg-bone/10"
+                className="flex items-center justify-between px-2 py-5 transition-colors hover:bg-bone/10"
               >
-                <span className="flex flex-col">
-                  <span className="text-base font-semibold text-bone">
-                    Déposer une pièce
+                <span className="flex flex-col gap-0.5">
+                  <span className="text-base font-semibold tracking-wide text-bone">
+                    Publier du contenu
                   </span>
-                  <span className="text-[12px] text-ash">Mettre en vente</span>
+                  <span className="text-[12px] text-ash">
+                    Photos, vidéos, inspiration — sans vente
+                  </span>
+                </span>
+                <span aria-hidden="true" className="text-ash">
+                  →
                 </span>
               </Link>
               <div className="h-px bg-bone/10" />
               <Link
-                href="/creer"
+                href="/vendre"
                 onClick={() => setComposeOpen(false)}
-                className="flex items-center justify-between rounded-2xl px-2 py-4 transition-colors hover:bg-bone/10"
+                className="flex items-center justify-between px-2 py-5 transition-colors hover:bg-bone/10"
               >
-                <span className="flex flex-col">
-                  <span className="text-base font-semibold text-bone">
-                    Créer un look
+                <span className="flex flex-col gap-0.5">
+                  <span className="text-base font-semibold tracking-wide text-bone">
+                    Vendre un vêtement
                   </span>
-                  <span className="text-[12px] text-ash">Publier un édito</span>
+                  <span className="text-[12px] text-ash">
+                    Photos, marque, taille, état, prix
+                  </span>
+                </span>
+                <span aria-hidden="true" className="text-ash">
+                  →
                 </span>
               </Link>
             </motion.div>

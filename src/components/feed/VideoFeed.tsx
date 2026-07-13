@@ -2,7 +2,8 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import { looks, feedTabs, followedHandles } from "@/lib/mock";
+import { looks, feedTabs } from "@/lib/mock";
+import { useStore } from "@/lib/store";
 import { FeedCard } from "./FeedCard";
 import { FeedTopBar } from "./FeedTopBar";
 import { ChevronUp } from "../chrome/icons";
@@ -12,14 +13,15 @@ export function VideoFeed() {
   const [active, setActive] = useState(0);
   const [tab, setTab] = useState<string>(feedTabs[0]);
   const reduce = useReducedMotion();
+  const { isFollowing } = useStore();
 
-  // filter the feed by the active tab (functional FeedTopBar)
+  // "Pour vous" = everything; "Abonnements" = live store follows, so
+  // following someone in the feed updates this tab instantly (retention).
   const visibleLooks = useMemo(() => {
-    if (tab === "Drops") return looks.filter((l) => l.badge === "DROP");
-    if (tab === "Suivis")
-      return looks.filter((l) => followedHandles.includes(l.creator.handle));
+    if (tab === "Abonnements")
+      return looks.filter((l) => isFollowing(l.creator.handle));
     return looks;
-  }, [tab]);
+  }, [tab, isFollowing]);
 
   // switching tab changes the list — reset to the top of the new feed
   const handleTabChange = (next: string) => {

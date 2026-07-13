@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { Suspense, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { PageShell } from "@/components/ui/PageShell";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -38,9 +39,11 @@ const DIMENSIONS: { key: Dimension; label: string }[] = [
   { key: "contenu", label: "Contenu" },
 ];
 
-export default function DecouvrirPage() {
+function DecouvrirInner() {
+  // ?q= lets the feed's quiet "pièces similaires" bridge land pre-filtered
+  const params = useSearchParams();
   const [cat, setCat] = useState<string>("Tout");
-  const [q, setQ] = useState("");
+  const [q, setQ] = useState(() => params.get("q") ?? "");
   const [tab, setTab] = useState<Dimension>("pieces");
   const [focused, setFocused] = useState(false);
   const [drawer, setDrawer] = useState(false);
@@ -385,5 +388,14 @@ export default function DecouvrirPage() {
         resultCount={items.length}
       />
     </PageShell>
+  );
+}
+
+/** useSearchParams needs a Suspense boundary for static prerender. */
+export default function DecouvrirPage() {
+  return (
+    <Suspense fallback={null}>
+      <DecouvrirInner />
+    </Suspense>
   );
 }

@@ -356,7 +356,7 @@ export const looks: Look[] = [
   },
 ];
 
-export const feedTabs = ["Pour toi", "Suivis", "Drops"] as const;
+export const feedTabs = ["Pour vous", "Abonnements"] as const;
 
 export const trendingTags = [
   "#archive",

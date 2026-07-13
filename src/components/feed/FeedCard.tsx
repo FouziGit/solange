@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import {
   AnimatePresence,
   motion,
@@ -8,21 +8,14 @@ import {
   type Variants,
 } from "motion/react";
 import Link from "next/link";
-import type { CatalogItem, Look } from "@/lib/mock";
-import { getCatalogItem } from "@/lib/data";
+import type { Look } from "@/lib/mock";
 import { imgItem, imgLook, videoLook, videoPoster } from "@/lib/img";
-import { euro } from "@/lib/utils";
 import { useStore } from "@/lib/store";
-import { Photo } from "../ui/Photo";
 import { KenBurnsMedia } from "./KenBurnsMedia";
-import { ProductHotspots } from "./ProductHotspots";
 import { CreatorHeader } from "./CreatorHeader";
 import { ActionRail } from "./ActionRail";
-import { ShopTheLook } from "./ShopTheLook";
 import { CommentSheet } from "./CommentSheet";
 import { Heart, Play, Music, Pin, Mute, Volume } from "../chrome/icons";
-
-const COACH_FLAG = "solange.coach";
 
 type Burst = { id: number; x: number; y: number };
 
@@ -70,45 +63,18 @@ export function FeedCard({
     isPost && look.linkedProductIds?.length
       ? imgItem(look.linkedProductIds[0])
       : undefined;
-  // linked-products rail replaces the Shop-the-look trigger when the post
-  // references catalog pieces without on-media hotspots
-  const linkedItems: CatalogItem[] =
-    isPost && look.products.length === 0
-      ? (look.linkedProductIds ?? [])
-          .map(getCatalogItem)
-          .filter((p): p is CatalogItem => Boolean(p))
-      : [];
+  // Discreet content→marketplace bridge: the feed carries no prices or
+  // transactions — just one quiet link towards similar pieces for sale.
+  const bridgeBrand =
+    look.products[0]?.brand ?? look.brandTags?.[0] ?? undefined;
 
   const [paused, setPaused] = useState(false);
   const [muted, setMuted] = useState(true);
-  const [shopOpen, setShopOpen] = useState(false);
   const [commentsOpen, setCommentsOpen] = useState(false);
-  const [highlight, setHighlight] = useState<string | null>(null);
   const [bursts, setBursts] = useState<Burst[]>([]);
-  const [coach, setCoach] = useState(false);
 
   const clickTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const burstId = useRef(0);
-
-  // first-run coachmark near a hotspot — shown once, gated by reduced-motion.
-  // State flips happen inside timers (not synchronously in the effect body) so
-  // the card has settled before the tooltip appears, then auto-dismisses.
-  useEffect(() => {
-    if (!active || reduce) return;
-    if (typeof window === "undefined") return;
-    try {
-      if (localStorage.getItem(COACH_FLAG)) return;
-      localStorage.setItem(COACH_FLAG, "1");
-    } catch {
-      return; // storage unavailable — skip silently
-    }
-    const show = setTimeout(() => setCoach(true), 700);
-    const hide = setTimeout(() => setCoach(false), 4200);
-    return () => {
-      clearTimeout(show);
-      clearTimeout(hide);
-    };
-  }, [active, reduce]);
 
   const spawnHeart = (x: number, y: number) => {
     if (reduce) return; // no burst animation under reduced-motion
@@ -133,11 +99,6 @@ export function FeedCard({
         setPaused((p) => !p);
       }, 230);
     }
-  };
-
-  const openShop = (productId: string) => {
-    setHighlight(productId);
-    setShopOpen(true);
   };
 
   return (
@@ -185,11 +146,6 @@ export function FeedCard({
               />
             </div>
 
-            {/* shoppable hotspots */}
-            {active && (
-              <ProductHotspots products={look.products} onOpen={openShop} />
-            )}
-
             {/* pause overlay */}
             <AnimatePresence>
               {paused && active && (
@@ -226,24 +182,6 @@ export function FeedCard({
                   <Heart filled className="size-16 text-bone drop-shadow-lg" />
                 </motion.div>
               ))}
-            </AnimatePresence>
-
-            {/* first-run coachmark — glass tooltip near a hotspot, once */}
-            <AnimatePresence>
-              {coach && active && (
-                <motion.div
-                  initial={{ opacity: 0, y: 8, scale: 0.96 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  exit={{ opacity: 0, y: 8, scale: 0.96 }}
-                  transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-                  className="pointer-events-none absolute left-1/2 top-1/3 z-30 -translate-x-1/2"
-                >
-                  <span className="glass flex items-center gap-2 rounded-full px-4 py-2 text-[12px] font-medium text-bone shadow-[0_10px_40px_-10px_rgba(0,0,0,0.7)]">
-                    <span className="size-1.5 animate-pulse rounded-full bg-bone" />
-                    Touche un point pour shopper
-                  </span>
-                </motion.div>
-              )}
             </AnimatePresence>
 
             {/* top: creator + mute — clears the floating feed top bar via safe-area */}
@@ -398,52 +336,23 @@ export function FeedCard({
                 </div>
               </motion.div>
 
-              {/* hotspot looks keep the Shop-the-look drawer; posts swap it
-                  for a compact rail of the catalog pieces they reference */}
-              {look.products.length > 0 && (
+              {/* Content→marketplace bridge — one quiet link, no price, no
+                  cart. The feed stays pure inspiration (dissociation rule). */}
+              {bridgeBrand && (
                 <motion.div variants={item}>
-                  <ShopTheLook
-                    products={look.products}
-                    open={shopOpen}
-                    onOpenChange={(v) => {
-                      setShopOpen(v);
-                      if (!v) setHighlight(null);
-                    }}
-                    highlightId={highlight}
-                  />
-                </motion.div>
-              )}
-              {linkedItems.length > 0 && (
-                <motion.div variants={item} className="space-y-1.5">
-                  <span className="overline block text-[9px] text-bone/55">
-                    Pièces liées
-                  </span>
-                  {linkedItems.map((p) => (
-                    <Link
-                      key={p.id}
-                      href={`/article/${p.id}`}
-                      data-cursor="link"
-                      className="glass flex min-h-11 items-center gap-3 px-3 py-2 transition-colors hover:bg-bone/15"
+                  <Link
+                    href={`/decouvrir?q=${encodeURIComponent(bridgeBrand)}`}
+                    data-cursor="link"
+                    className="group inline-flex min-h-11 items-center gap-1.5 text-[12.5px] tracking-wide text-ash transition-colors hover:text-bone"
+                  >
+                    Voir des pièces similaires en vente
+                    <span
+                      aria-hidden="true"
+                      className="transition-transform duration-300 group-hover:translate-x-1"
                     >
-                      <span
-                        aria-hidden="true"
-                        className="relative size-9 shrink-0 overflow-hidden border border-bone/15 bg-coal"
-                      >
-                        <Photo src={imgItem(p.id)} />
-                      </span>
-                      <span className="min-w-0 flex-1">
-                        <span className="overline block text-[8px] text-bone/55">
-                          {p.brand}
-                        </span>
-                        <span className="block truncate text-[12.5px] font-medium text-bone">
-                          {p.name}
-                        </span>
-                      </span>
-                      <span className="shrink-0 font-display text-[13px] font-bold text-bone">
-                        {euro(p.priceEUR)}
-                      </span>
-                    </Link>
-                  ))}
+                      →
+                    </span>
+                  </Link>
                 </motion.div>
               )}
             </motion.div>

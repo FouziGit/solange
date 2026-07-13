@@ -127,13 +127,13 @@ body {
   background: rgba(20, 20, 22, 0.5);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
-  border: 1px solid rgba(244, 241, 233, 0.16);
+  border: 1px solid rgba(244, 241, 233, 0.12);
 }
 .glass-bone {
   background: rgba(244, 241, 233, 0.07);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
-  border: 1px solid rgba(244, 241, 233, 0.16);
+  border: 1px solid rgba(244, 241, 233, 0.12);
 }
 .hairline {
   border-color: rgba(244, 241, 233, 0.1);
