@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   AnimatePresence,
   motion,
@@ -73,8 +73,20 @@ export function FeedCard({
   const [commentsOpen, setCommentsOpen] = useState(false);
   const [bursts, setBursts] = useState<Burst[]>([]);
 
+  // caption "afficher plus / moins" — clamped to 2 lines, the toggle only
+  // shows when the text actually overflows (measured in the clamped state).
+  const [captionExpanded, setCaptionExpanded] = useState(false);
+  const [captionOverflows, setCaptionOverflows] = useState(false);
+  const captionRef = useRef<HTMLParagraphElement>(null);
+
   const clickTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const burstId = useRef(0);
+
+  useEffect(() => {
+    const el = captionRef.current;
+    if (!el) return;
+    setCaptionOverflows(el.scrollHeight > el.clientHeight + 1);
+  }, [look.caption, inView]);
 
   const spawnHeart = (x: number, y: number) => {
     if (reduce) return; // no burst animation under reduced-motion
@@ -287,12 +299,26 @@ export function FeedCard({
                 {look.location}
               </motion.div>
 
-              <motion.p
-                variants={item}
-                className="max-w-[34ch] text-[13.5px] leading-relaxed text-bone/95"
-              >
-                {look.caption}
-              </motion.p>
+              <motion.div variants={item} className="max-w-[34ch]">
+                <p
+                  ref={captionRef}
+                  className={`text-[13.5px] leading-relaxed text-bone/95 ${
+                    captionExpanded ? "" : "line-clamp-2"
+                  }`}
+                >
+                  {look.caption}
+                </p>
+                {captionOverflows && (
+                  <button
+                    type="button"
+                    onClick={() => setCaptionExpanded((v) => !v)}
+                    aria-expanded={captionExpanded}
+                    className="mt-0.5 inline-flex min-h-9 items-center text-[12px] font-medium tracking-wide text-ash transition-colors hover:text-bone"
+                  >
+                    {captionExpanded ? "afficher moins" : "afficher plus"}
+                  </button>
+                )}
+              </motion.div>
 
               {/* brands discussed in the post — sharp outline chips */}
               {isPost && look.brandTags?.length ? (
