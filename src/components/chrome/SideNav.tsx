@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 import { AnimatePresence, motion } from "motion/react";
 import { LogoMark } from "./Brandmark";
 import { Avatar } from "./Avatar";
-import { Home, Compass, Live, Plus, Chat, Heart, Bell, Grid } from "./icons";
+import { Home, Compass, Live, Plus, Chat, Heart, Bell, Grid, Users } from "./icons";
 import { streams } from "@/lib/mock";
 
 const anyLive = streams.some((s) => s.live);
@@ -16,6 +16,7 @@ const items = [
   { href: "/live", label: "Live", Icon: Live, match: (p: string) => p.startsWith("/live"), live: anyLive },
   { href: "/decouvrir", label: "Marché", Icon: Compass, match: (p: string) => p.startsWith("/decouvrir"), live: false },
   { href: "/journal", label: "Journal", Icon: Grid, match: (p: string) => p.startsWith("/journal") || p.startsWith("/article"), live: false },
+  { href: "/communaute", label: "Cercles", Icon: Users, match: (p: string) => p.startsWith("/communaute"), live: false },
   { href: "/favoris", label: "Favoris", Icon: Heart, match: (p: string) => p.startsWith("/favoris"), live: false },
   { href: "/messages", label: "Messages", Icon: Chat, match: (p: string) => p.startsWith("/messages"), live: false },
   { href: "/notifications", label: "Alertes", Icon: Bell, match: (p: string) => p.startsWith("/notifications"), live: false },
@@ -50,7 +51,7 @@ export function SideNav() {
         className="grid size-11 place-items-center transition-transform duration-300 hover:scale-110"
         aria-label="Accueil"
       >
-        <LogoMark variant="white" className="size-8" />
+        <LogoMark className="size-8" />
       </Link>
 
       <nav className="flex flex-1 flex-col items-center justify-center gap-2">

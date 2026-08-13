@@ -16,7 +16,7 @@ export const metadata: Metadata = {
 
 export default function Home() {
   return (
-    <div id="top" className="relative">
+    <div id="top" className="theme-dark relative bg-noir">
       {/* desktop editorial flourish in the letterbox voids */}
       <div
         aria-hidden="true"

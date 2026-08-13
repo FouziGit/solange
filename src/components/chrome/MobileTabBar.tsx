@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { AnimatePresence, motion } from "motion/react";
-import { Home, Compass, Grid, Plus, User, X } from "./icons";
+import { Home, Compass, Users, Plus, User, X } from "./icons";
 
 type TabItem = {
   href: string;
@@ -17,7 +17,7 @@ type TabItem = {
 const items: TabItem[] = [
   { href: "/", label: "Feed", Icon: Home, match: (p) => p === "/" },
   { href: "/decouvrir", label: "Marché", Icon: Compass, match: (p) => p.startsWith("/decouvrir") },
-  { href: "/journal", label: "Journal", Icon: Grid, match: (p) => p.startsWith("/journal") || p.startsWith("/article") },
+  { href: "/communaute", label: "Commu", Icon: Users, match: (p) => p.startsWith("/communaute") },
   { href: "/profil", label: "Profil", Icon: User, match: (p) => p.startsWith("/profil") },
 ];
 

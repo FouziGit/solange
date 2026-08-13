@@ -12,10 +12,13 @@ import type { Look } from "@/lib/mock";
 import { imgItem, imgLook, videoLook, videoPoster } from "@/lib/img";
 import { useStore } from "@/lib/store";
 import { KenBurnsMedia } from "./KenBurnsMedia";
+import { CarouselMedia } from "./CarouselMedia";
 import { CreatorHeader } from "./CreatorHeader";
 import { ActionRail } from "./ActionRail";
 import { CommentSheet } from "./CommentSheet";
-import { Heart, Play, Music, Pin, Mute, Volume } from "../chrome/icons";
+import { ShopHotspots } from "./ShopHotspots";
+import { ShopTheLook } from "./ShopTheLook";
+import { Heart, Play, Music, Mute, Volume } from "../chrome/icons";
 
 type Burst = { id: number; x: number; y: number };
 
@@ -72,6 +75,19 @@ export function FeedCard({
   const [muted, setMuted] = useState(true);
   const [commentsOpen, setCommentsOpen] = useState(false);
   const [bursts, setBursts] = useState<Burst[]>([]);
+
+  // Shop-the-look drawer state. `highlightId` scrolls-to / rings the piece the
+  // shopper tapped on the media so the pin and the drawer row stay connected.
+  const [shopOpen, setShopOpen] = useState(false);
+  const [highlightId, setHighlightId] = useState<string | null>(null);
+  const hasShop = look.products.length > 0;
+  // Multi-image posts render an Instagram-style swipeable carousel instead of
+  // the single video/photo hero.
+  const hasGallery = (look.gallery?.length ?? 0) > 1;
+  const openShop = (id: string | null) => {
+    setHighlightId(id);
+    setShopOpen(true);
+  };
 
   // caption "afficher plus / moins" — clamped to 2 lines, the toggle only
   // shows when the text actually overflows (measured in the clamped state).
@@ -141,21 +157,43 @@ export function FeedCard({
               onClick={onMediaClick}
               className="absolute inset-0"
             >
-              <KenBurnsMedia
-                seed={look.seed}
-                title={look.title}
-                house={
-                  isPost
-                    ? (look.brandTags?.[0] ?? look.creator.name)
-                    : (look.products[0]?.brand ?? look.creator.name)
-                }
-                active={active}
-                paused={paused}
-                image={isPost ? postHero : imgLook(look.id)}
-                video={isPost ? undefined : videoLook(look.id)}
-                poster={isPost ? undefined : videoPoster(look.id)}
-              />
+              {hasGallery ? (
+                <CarouselMedia
+                  images={look.gallery!}
+                  title={look.title}
+                  house={
+                    look.products[0]?.brand ??
+                    look.brandTags?.[0] ??
+                    look.creator.name
+                  }
+                />
+              ) : (
+                <KenBurnsMedia
+                  seed={look.seed}
+                  title={look.title}
+                  house={
+                    isPost
+                      ? (look.brandTags?.[0] ?? look.creator.name)
+                      : (look.products[0]?.brand ?? look.creator.name)
+                  }
+                  active={active}
+                  paused={paused}
+                  image={isPost ? postHero : imgLook(look.id)}
+                  video={isPost ? undefined : videoLook(look.id)}
+                  poster={isPost ? undefined : videoPoster(look.id)}
+                />
+              )}
             </div>
+
+            {/* shoppable pins — skipped on carousel posts (hotspots are placed
+                for the single hero, not per slide). */}
+            {hasShop && !hasGallery && (
+              <ShopHotspots
+                products={look.products}
+                active={active && !paused}
+                onSelect={openShop}
+              />
+            )}
 
             {/* pause overlay */}
             <AnimatePresence>
@@ -205,7 +243,7 @@ export function FeedCard({
                 delay: active ? 0.1 : 0,
               }}
               style={{
-                paddingTop: "calc(env(safe-area-inset-top) + 3.5rem)",
+                paddingTop: "calc(env(safe-area-inset-top) + 6.75rem)",
               }}
               className="absolute inset-x-0 top-0 z-20 flex items-start justify-between gap-3 p-4"
             >
@@ -269,35 +307,8 @@ export function FeedCard({
               }}
               className="absolute inset-x-0 bottom-0 z-20 space-y-3 p-4 pr-20 md:!pb-9"
             >
-              {/* kind overline for social posts; classic badge otherwise.
-                  Sharp chips — brutalist DA, circles reserved for dots. */}
-              {isPost ? (
-                <motion.span
-                  variants={item}
-                  className="inline-flex items-center gap-2 border border-bone/25 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.24em] text-bone/80"
-                >
-                  <span className="size-1.5 rounded-full bg-bone" />
-                  {look.kind === "actu" ? "Actu" : "Achats"}
-                </motion.span>
-              ) : (
-                look.badge && (
-                  <motion.span
-                    variants={item}
-                    className="inline-flex items-center gap-2 border border-bone/25 px-3 py-1 text-[10px] font-semibold tracking-[0.24em] text-bone/80"
-                  >
-                    <span className="size-1.5 rounded-full bg-bone" />
-                    {look.badge}
-                  </motion.span>
-                )
-              )}
-
-              <motion.div
-                variants={item}
-                className="flex items-center gap-1.5 text-[11px] text-ash"
-              >
-                <Pin className="size-3.5" />
-                {look.location}
-              </motion.div>
+              {/* Cleaner feed: badge/kind chip and location line removed for a
+                  more épuré look — the caption and creator carry the context. */}
 
               <motion.div variants={item} className="max-w-[34ch]">
                 <p
@@ -361,9 +372,20 @@ export function FeedCard({
                 </div>
               </motion.div>
 
-              {/* Content→marketplace bridge — one quiet link, no price, no
-                  cart. The feed stays pure inspiration (dissociation rule). */}
-              {bridgeBrand && (
+              {/* Shoppable look → Shop-the-look pill. Content-only posts keep
+                  the quiet marketplace bridge (no price, no cart), so the two
+                  post types stay visibly distinct as you scroll. */}
+              {hasShop ? (
+                <motion.div variants={item} className="max-w-[19rem]">
+                  <ShopTheLook
+                    variant="trigger"
+                    products={look.products}
+                    open={shopOpen}
+                    onOpenChange={setShopOpen}
+                    highlightId={highlightId}
+                  />
+                </motion.div>
+              ) : bridgeBrand ? (
                 <motion.div variants={item}>
                   <Link
                     href={`/decouvrir?q=${encodeURIComponent(bridgeBrand)}`}
@@ -379,8 +401,20 @@ export function FeedCard({
                     </span>
                   </Link>
                 </motion.div>
-              )}
+              ) : null}
             </motion.div>
+
+            {/* Shop-the-look drawer — mounted at the card root so it fills the
+                whole card, not just the caption strip. */}
+            {hasShop && (
+              <ShopTheLook
+                variant="drawer"
+                products={look.products}
+                open={shopOpen}
+                onOpenChange={setShopOpen}
+                highlightId={highlightId}
+              />
+            )}
 
             {/* comment thread bottom-sheet */}
             <CommentSheet

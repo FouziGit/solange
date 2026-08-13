@@ -7,14 +7,17 @@
    ============================================================ */
 
 @theme inline {
-  --color-ink: #060607; /* feed / true black */
-  --color-noir: #0b0b0c; /* base canvas */
-  --color-coal: #141416; /* raised surfaces */
-  --color-smoke: #1d1d20; /* borders / hairlines base */
-  --color-bone: #f3f0e8; /* primary type / warm ivory */
-  --color-ash: #8a8782; /* muted type */
-  /* Brand is strict noir & blanc — the single "accent" is pure white. */
-  --color-pure: #ffffff;
+  /* Tokens resolve to runtime CSS vars so the whole app can flip between the
+     dark (default) and light OS themes — see :root / prefers-color-scheme /
+     .theme-dark below. Semantics are constant: `bone` = foreground, `ink`/
+     `noir`/`coal` = backgrounds; only the values swap per theme. */
+  --color-ink: var(--c-ink); /* feed / true black */
+  --color-noir: var(--c-noir); /* base canvas */
+  --color-coal: var(--c-coal); /* raised surfaces */
+  --color-smoke: var(--c-smoke); /* borders / hairlines base */
+  --color-bone: var(--c-bone); /* primary type / warm ivory */
+  --color-ash: var(--c-ash); /* muted type */
+  --color-pure: var(--c-pure); /* accent: pure white (dark) / pure black (light) */
 
   --font-display: var(--font-archivo);
   --font-serif: var(--font-bodoni);
@@ -36,10 +39,82 @@
 }
 
 :root {
+  /* ---- Theme tokens — DARK is the default ---- */
+  --c-ink: #060607;
+  --c-noir: #0b0b0c;
+  --c-coal: #141416;
+  --c-smoke: #1d1d20;
+  --c-bone: #f3f0e8;
+  --c-ash: #8a8782;
+  --c-pure: #ffffff;
+
+  /* semantic surfaces (frosted glass, hairlines, form fields) */
+  --glass-bg: rgba(20, 20, 22, 0.5);
+  --glass-border: rgba(244, 241, 233, 0.12);
+  --glass-bone-bg: rgba(244, 241, 233, 0.07);
+  --hairline: rgba(244, 241, 233, 0.1);
+  --field-bg: rgba(243, 240, 232, 0.03);
+  --field-border: rgba(243, 240, 232, 0.15);
+  --field-border-focus: rgba(243, 240, 232, 0.4);
+
   --background: #0b0b0c;
   --foreground: #f4f1e9;
   /* clearance for the floating mobile tab bar (safe-area + bar height) */
   --tabbar-clearance: calc(env(safe-area-inset-bottom) + 5.5rem);
+
+  color-scheme: dark;
+}
+
+/* ---- LIGHT theme — follows the OS. The immersive feed opts back out to
+   dark via .theme-dark so its on-video overlays never invert. ---- */
+@media (prefers-color-scheme: light) {
+  :root {
+    --c-ink: #ffffff;
+    --c-noir: #f4f1e9;
+    --c-coal: #fbf9f4;
+    --c-smoke: #e4dfd2;
+    --c-bone: #1a1813;
+    --c-ash: #6b6862;
+    --c-pure: #000000;
+
+    --glass-bg: rgba(255, 255, 255, 0.62);
+    --glass-border: rgba(20, 20, 20, 0.12);
+    --glass-bone-bg: rgba(20, 20, 20, 0.045);
+    --hairline: rgba(20, 20, 20, 0.12);
+    --field-bg: rgba(20, 20, 20, 0.03);
+    --field-border: rgba(20, 20, 20, 0.15);
+    --field-border-focus: rgba(20, 20, 20, 0.4);
+
+    --background: #f4f1e9;
+    --foreground: #1a1813;
+
+    color-scheme: light;
+  }
+}
+
+/* Force-dark scope — applied to the video feed (html.theme-dark) so it stays
+   dark in every OS theme. Defined AFTER the light media query so it wins. */
+.theme-dark {
+  --c-ink: #060607;
+  --c-noir: #0b0b0c;
+  --c-coal: #141416;
+  --c-smoke: #1d1d20;
+  --c-bone: #f3f0e8;
+  --c-ash: #8a8782;
+  --c-pure: #ffffff;
+
+  --glass-bg: rgba(20, 20, 22, 0.5);
+  --glass-border: rgba(244, 241, 233, 0.12);
+  --glass-bone-bg: rgba(244, 241, 233, 0.07);
+  --hairline: rgba(244, 241, 233, 0.1);
+  --field-bg: rgba(243, 240, 232, 0.03);
+  --field-border: rgba(243, 240, 232, 0.15);
+  --field-border-focus: rgba(243, 240, 232, 0.4);
+
+  --background: #0b0b0c;
+  --foreground: #f4f1e9;
+
+  color-scheme: dark;
 }
 
 @media (min-width: 768px) {
@@ -88,7 +163,7 @@ body {
 
 ::selection {
   background: var(--color-bone);
-  color: #060607;
+  color: var(--color-ink);
 }
 
 ::-webkit-scrollbar {
@@ -124,27 +199,27 @@ body {
 
 /* ---------- Surfaces ---------- */
 .glass {
-  background: rgba(20, 20, 22, 0.5);
+  background: var(--glass-bg);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
-  border: 1px solid rgba(244, 241, 233, 0.12);
+  border: 1px solid var(--glass-border);
 }
 .glass-bone {
-  background: rgba(244, 241, 233, 0.07);
+  background: var(--glass-bone-bg);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
-  border: 1px solid rgba(244, 241, 233, 0.12);
+  border: 1px solid var(--glass-border);
 }
 .hairline {
-  border-color: rgba(244, 241, 233, 0.1);
+  border-color: var(--hairline);
 }
 
 /* ---------- Form input (glass field) ---------- */
 .field {
   width: 100%;
   border-radius: 0; /* brutalist: sharp fields */
-  border: 1px solid rgba(243, 240, 232, 0.15);
-  background: rgba(243, 240, 232, 0.03);
+  border: 1px solid var(--field-border);
+  background: var(--field-bg);
   padding: 0.75rem 1rem;
   font-size: 0.875rem;
   line-height: 1.25rem;
@@ -156,7 +231,7 @@ body {
   color: var(--color-ash);
 }
 .field:focus {
-  border-color: rgba(243, 240, 232, 0.4);
+  border-color: var(--field-border-focus);
 }
 
 /* ---------- Horizontal scroller (momentum + edge fade) ---------- */
@@ -203,6 +278,26 @@ body {
 .kenburns {
   animation: kenburns 16s ease-out both;
   will-change: transform;
+}
+
+/* ---------- Route entrance (CSS-only, JS-independent) ---------- */
+/* Load-bearing: this MUST be CSS, not Motion. A Motion `initial={opacity:0}`
+   bakes opacity:0 into the SSR HTML and only clears it once the client bundle
+   boots — leaving a black page on any browser where JS fails (seen on Safari).
+   `both` fill-mode guarantees the element ends visible even if the animation
+   never runs, so content can never be trapped invisible. */
+@keyframes page-enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.page-enter {
+  animation: page-enter 0.45s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 /* ---------- Keyframes ---------- */
@@ -331,6 +426,10 @@ body {
   .sweep,
   .pulse-ring,
   .spin-disc {
+    animation: none !important;
+  }
+  /* keep content visible (opacity 1) — just skip the fade-up */
+  .page-enter {
     animation: none !important;
   }
   html {

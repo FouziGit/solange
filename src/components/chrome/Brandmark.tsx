@@ -1,26 +1,41 @@
-import Image from "next/image";
 import { cn } from "@/lib/utils";
 
 /**
- * The real SOLANGE brandmark — the "S" swirl PNG from /branding (512px,
- * transparent). `variant="white"` on dark surfaces (the app is dark-native),
- * `variant="black"` reserved for bone/light surfaces. Size via className.
+ * The real SOLANGE brandmark — the "S" swirl (512px, square). Rendered as a CSS
+ * mask filled with a colour token so it follows the light/dark theme
+ * automatically: `variant="auto"` (default) paints it with `bone`, which is
+ * white on dark surfaces and near-black on light ones. `variant="white"` /
+ * `"black"` force a fixed colour (e.g. always-white over the dark video feed).
+ * Size via className — use a SQUARE size (e.g. `size-8`); the mark is square.
  */
 export function LogoMark({
-  variant = "white",
+  variant = "auto",
   className,
 }: {
-  variant?: "white" | "black";
+  variant?: "auto" | "white" | "black";
   className?: string;
 }) {
+  const fill =
+    variant === "white"
+      ? "bg-white"
+      : variant === "black"
+        ? "bg-black"
+        : "bg-bone";
   return (
-    <Image
-      src={`/branding/logo-${variant}.png`}
-      alt="SOLANGE"
-      width={512}
-      height={512}
-      draggable={false}
-      className={cn("block select-none object-contain", className)}
+    <span
+      role="img"
+      aria-label="SOLANGE"
+      className={cn("block select-none", fill, className)}
+      style={{
+        WebkitMaskImage: "url(/branding/logo-black.png)",
+        maskImage: "url(/branding/logo-black.png)",
+        WebkitMaskRepeat: "no-repeat",
+        maskRepeat: "no-repeat",
+        WebkitMaskPosition: "center",
+        maskPosition: "center",
+        WebkitMaskSize: "contain",
+        maskSize: "contain",
+      }}
     />
   );
 }

@@ -13,14 +13,23 @@ export function ShopTheLook({
   open,
   onOpenChange,
   highlightId,
+  variant = "both",
 }: {
   products: Product[];
   open: boolean;
   onOpenChange: (v: boolean) => void;
   highlightId: string | null;
+  /**
+   * "trigger" renders only the pill (place it in flow), "drawer" only the
+   * bottom sheet (mount it at the card root so it fills the card), "both" is
+   * the standalone default.
+   */
+  variant?: "trigger" | "drawer" | "both";
 }) {
   const minPrice = Math.min(...products.map((p) => p.priceEUR));
   const [added, setAdded] = useState(false);
+  const showTrigger = variant !== "drawer";
+  const showDrawer = variant !== "trigger";
 
   // reset the micro-state whenever the drawer is dismissed so re-opening
   // always shows the actionable "Tout ajouter" label again
@@ -38,32 +47,34 @@ export function ShopTheLook({
   return (
     <>
       {/* trigger pill */}
-      <motion.button
-        onClick={() => onOpenChange(true)}
-        data-cursor="link"
-        whileHover={{ y: -2, scale: 1.01 }}
-        whileTap={{ scale: 0.99 }}
-        transition={{ type: "spring", stiffness: 420, damping: 26 }}
-        className="glass flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-left transition-colors hover:bg-bone/15"
-      >
-        <span className="grid size-9 shrink-0 place-items-center rounded-full bg-bone text-ink">
-          <Bag className="size-5" />
-        </span>
-        <span className="min-w-0 flex-1">
-          <span className="block text-sm font-semibold text-bone">
-            Shop the look
+      {showTrigger && (
+        <motion.button
+          onClick={() => onOpenChange(true)}
+          data-cursor="link"
+          whileHover={{ y: -2, scale: 1.01 }}
+          whileTap={{ scale: 0.99 }}
+          transition={{ type: "spring", stiffness: 420, damping: 26 }}
+          className="glass flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-left transition-colors hover:bg-bone/15"
+        >
+          <span className="grid size-9 shrink-0 place-items-center rounded-full bg-bone text-ink">
+            <Bag className="size-5" />
           </span>
-          <span className="block text-[11px] text-ash">
-            {products.length} pièce{products.length > 1 ? "s" : ""} · dès{" "}
-            {euro(minPrice)}
+          <span className="min-w-0 flex-1">
+            <span className="block text-sm font-semibold text-bone">
+              Shop the look
+            </span>
+            <span className="block text-[11px] text-ash">
+              {products.length} pièce{products.length > 1 ? "s" : ""} · dès{" "}
+              {euro(minPrice)}
+            </span>
           </span>
-        </span>
-        <ChevronUp className="size-5 text-bone/80" />
-      </motion.button>
+          <ChevronUp className="size-5 text-bone/80" />
+        </motion.button>
+      )}
 
       {/* drawer */}
       <AnimatePresence>
-        {open && (
+        {showDrawer && open && (
           <>
             <motion.div
               initial={{ opacity: 0 }}

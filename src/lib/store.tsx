@@ -19,6 +19,7 @@ import {
 import {
   catalogItem,
   followedHandles,
+  joinedCommunityIds,
   savedIds,
   type CatalogItem,
 } from "@/lib/mock";
@@ -31,6 +32,8 @@ type Store = {
   isFollowing(handle: string): boolean;
   toggleFollow(handle: string): void;
   savedItems(): CatalogItem[];
+  isJoined(communityId: string): boolean;
+  toggleJoin(communityId: string): void;
 };
 
 const StoreContext = createContext<Store | null>(null);
@@ -48,6 +51,9 @@ export function SolangeProvider({ children }: { children: ReactNode }) {
   const [saved, setSaved] = useState<Set<string>>(() => new Set(savedIds));
   const [following, setFollowing] = useState<Set<string>>(
     () => new Set(followedHandles),
+  );
+  const [joined, setJoined] = useState<Set<string>>(
+    () => new Set(joinedCommunityIds),
   );
 
   const isLiked = useCallback((id: string) => liked.has(id), [liked]);
@@ -79,6 +85,15 @@ export function SolangeProvider({ children }: { children: ReactNode }) {
     [saved],
   );
 
+  const isJoined = useCallback(
+    (communityId: string) => joined.has(communityId),
+    [joined],
+  );
+  const toggleJoin = useCallback(
+    (communityId: string) => setJoined((s) => toggle(s, communityId)),
+    [],
+  );
+
   const value = useMemo<Store>(
     () => ({
       isLiked,
@@ -88,6 +103,8 @@ export function SolangeProvider({ children }: { children: ReactNode }) {
       isFollowing,
       toggleFollow,
       savedItems,
+      isJoined,
+      toggleJoin,
     }),
     [
       isLiked,
@@ -97,6 +114,8 @@ export function SolangeProvider({ children }: { children: ReactNode }) {
       isFollowing,
       toggleFollow,
       savedItems,
+      isJoined,
+      toggleJoin,
     ],
   );
 

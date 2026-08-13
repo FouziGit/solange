@@ -5,6 +5,7 @@ import { CustomCursor } from "@/components/chrome/CustomCursor";
 import { GrainOverlay } from "@/components/chrome/GrainOverlay";
 import { SideNav } from "@/components/chrome/SideNav";
 import { MobileTabBar } from "@/components/chrome/MobileTabBar";
+import { FeedThemeLock } from "@/components/chrome/FeedThemeLock";
 import { SolangeProvider } from "@/lib/store";
 
 const archivo = Archivo({
@@ -59,8 +60,11 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#0b0b0c",
-  colorScheme: "dark",
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#f4f1e9" },
+    { media: "(prefers-color-scheme: dark)", color: "#0b0b0c" },
+  ],
+  colorScheme: "light dark",
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
@@ -76,6 +80,7 @@ export default function RootLayout({
     >
       <body className="bg-noir text-bone">
         <SolangeProvider>
+          <FeedThemeLock />
           <GrainOverlay />
           <CustomCursor />
           <SideNav />
