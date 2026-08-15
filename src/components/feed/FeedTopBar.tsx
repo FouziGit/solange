@@ -1,40 +1,40 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
 import { motion } from "motion/react";
-import { feedTabs, streams } from "@/lib/mock";
+import { streams } from "@/lib/mock";
 import { LogoMark } from "../chrome/Brandmark";
-import { Bell } from "../chrome/icons";
+import { Bell, Play, Bag } from "../chrome/icons";
+import type { FeedMode } from "./FeedModeShell";
 
 const anyLive = streams.some((s) => s.live);
 
+const MODES: { id: FeedMode; label: string; Icon: typeof Play }[] = [
+  { id: "scroll", label: "Feed", Icon: Play },
+  { id: "shop", label: "Boutique", Icon: Bag },
+];
+
 /**
- * Feed top bar — ONE quiet row, sized for 375px:
- *   [logo · live-dot]  ——  Pour vous | Abonnements  ——  [bell]
- * No search here (the Marché tab owns discovery), no hanging badges, and the
- * whole row sits under the notch via safe-area padding. Tabs are a real ARIA
- * tablist. Controlled when `tab`/`onTabChange` are supplied.
+ * Feed top bar:
+ *   row 1  [live dot]  ·  logo  ·  [bell]
+ *   row 2  interactive Scroll ↔ Boutique switch (sliding pill, not a dropdown)
+ * The switch is the primary top-level navigation of the home experience — it
+ * flips the whole screen between the video scroll and the shop feed.
  */
 export function FeedTopBar({
-  tab,
-  onTabChange,
+  mode,
+  onModeChange,
 }: {
-  tab?: string;
-  onTabChange?: (tab: string) => void;
-} = {}) {
-  const [localTab, setLocalTab] = useState<string>(feedTabs[0]);
-  const current = tab ?? localTab;
-  const setTab = onTabChange ?? setLocalTab;
-
+  mode: FeedMode;
+  onModeChange: (m: FeedMode) => void;
+}) {
   return (
     <header
       style={{ paddingTop: "calc(env(safe-area-inset-top) + 0.75rem)" }}
-      className="pointer-events-none absolute inset-x-0 top-0 z-40 flex flex-col items-center gap-1.5 px-4 md:px-8"
+      className="pointer-events-none absolute inset-x-0 top-0 z-40 flex flex-col items-center gap-2 px-4 md:px-8"
     >
-      {/* row 1 — [live dot] · logo centered · [bell]. A 3-col grid keeps the
-          brandmark optically centred whatever the side icons do. Hidden on md:
-          the desktop SideNav already carries the logo. */}
+      {/* row 1 — [live dot] · logo centered · [bell]. Hidden on md (SideNav
+          carries the logo there). */}
       <div className="grid w-full grid-cols-[1fr_auto_1fr] items-center md:hidden">
         <div className="flex items-center justify-self-start">
           {anyLive && (
@@ -68,46 +68,44 @@ export function FeedTopBar({
         </Link>
       </div>
 
-      {/* row 2 — feed tabs (also the whole bar on desktop). On md the bell
-          returns to the right so no action is lost. */}
+      {/* row 2 — the interactive mode switch */}
       <div className="relative flex w-full items-center justify-center">
-        <nav
+        <div
           role="tablist"
-          aria-label="Filtrer le feed"
-          className="pointer-events-auto flex items-center gap-6"
+          aria-label="Mode : feed ou boutique"
+          className="glass pointer-events-auto flex items-center gap-0.5 rounded-full p-1"
         >
-          {feedTabs.map((t) => {
-            const on = current === t;
+          {MODES.map(({ id, label, Icon }) => {
+            const on = mode === id;
             return (
               <button
-                key={t}
+                key={id}
                 role="tab"
                 aria-selected={on}
-                onClick={() => setTab(t)}
-                className="relative whitespace-nowrap py-2 text-[13.5px] tracking-wide transition-colors"
+                onClick={() => onModeChange(id)}
+                className="relative rounded-full px-4 py-1.5"
               >
-                <span
-                  className={
-                    on
-                      ? "font-semibold text-bone"
-                      : "font-medium text-bone/55 hover:text-bone/80"
-                  }
-                >
-                  {t}
-                </span>
                 {on && (
                   <motion.span
-                    layoutId="tab-pill"
-                    className="absolute -bottom-0.5 left-1/2 h-px w-6 -translate-x-1/2 bg-bone"
+                    layoutId="mode-pill"
+                    className="absolute inset-0 rounded-full bg-bone"
                     transition={{ type: "spring", stiffness: 420, damping: 34 }}
                   />
                 )}
+                <span
+                  className={`relative z-10 flex items-center gap-1.5 text-[13px] font-semibold tracking-wide transition-colors ${
+                    on ? "text-ink" : "text-bone/70"
+                  }`}
+                >
+                  <Icon className="size-4" />
+                  {label}
+                </span>
               </button>
             );
           })}
-        </nav>
+        </div>
 
-        {/* desktop-only notifications action, kept out of the mobile row */}
+        {/* desktop-only notifications action */}
         <Link
           href="/notifications"
           className="pointer-events-auto absolute right-0 hidden size-11 place-items-center text-bone/85 transition-colors hover:text-bone md:grid"

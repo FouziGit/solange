@@ -1,0 +1,35 @@
+╔══════════════════════════════════════════════════════════╗
+║   SOLANGE  —  NE PAS SUPPRIMER CE DOSSIER                 ║
+╚══════════════════════════════════════════════════════════╝
+
+Ce dossier contient TOUT le projet SOLANGE (le site web + l'app
+consultée sur téléphone). Ne le déplace pas dans la corbeille.
+
+────────────────────────────────────────────
+POUR LANCER LE SITE / L'APP
+────────────────────────────────────────────
+1. Double-clique le fichier :  « ▶ DÉMARRER SOLANGE.command »
+2. Une fenêtre noire (Terminal) s'ouvre et affiche 2 adresses :
+      • Sur ce Mac      →  http://localhost:3000
+      • Sur ton iPhone  →  http://192.168.x.x:3000  (adresse affichée)
+3. Le site s'ouvre tout seul sur le Mac.
+   Sur le téléphone, ouvre Safari et tape l'adresse affichée.
+4. Pour ARRÊTER : ferme simplement la fenêtre noire.
+
+⚠️ Le Mac et le téléphone doivent être sur le MÊME réseau Wi-Fi
+   (ou le même partage de connexion).
+
+────────────────────────────────────────────
+LE METTRE SUR LE DOCK
+────────────────────────────────────────────
+Fais glisser CE dossier vers la partie DROITE du Dock
+(à côté de la corbeille). Un clic dessus depuis le Dock ouvrira
+son contenu, où tu retrouveras le lanceur.
+
+────────────────────────────────────────────
+SAUVEGARDE / PARTAGE AVEC FOUZI
+────────────────────────────────────────────
+Une copie de sauvegarde est aussi en ligne sur GitHub :
+   https://github.com/FouziGit/solange
+Même si ce dossier était supprimé, le projet pourrait être
+récupéré depuis GitHub.

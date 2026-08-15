@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { VideoFeed } from "@/components/feed/VideoFeed";
+import { FeedModeShell } from "@/components/feed/FeedModeShell";
 
 export const metadata: Metadata = {
   title: "Feed",
@@ -33,7 +33,7 @@ export default function Home() {
         </span>
       </div>
 
-      <VideoFeed />
+      <FeedModeShell />
     </div>
   );
 }
