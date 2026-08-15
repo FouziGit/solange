@@ -4,9 +4,10 @@ import Link from "next/link";
 import { motion } from "motion/react";
 import { ArrowLeft } from "@/components/chrome/icons";
 
-/** Canonical H1 scale — single source of truth for page titles across views. */
+/** Canonical H1 scale — single source of truth for page titles across views.
+ *  Montserrat (font-display) for a minimalist-luxe, modern feel. */
 export const PAGE_TITLE =
-  "font-editorial text-5xl font-semibold leading-[0.95] tracking-tight text-bone md:text-7xl";
+  "font-display text-[2.7rem] font-bold uppercase leading-[0.95] tracking-tight text-bone md:text-6xl";
 
 export function PageHeader({
   eyebrow,
@@ -16,7 +17,7 @@ export function PageHeader({
   back,
   sectionNo,
 }: {
-  eyebrow: string;
+  eyebrow?: string;
   title: string;
   subtitle?: string;
   right?: React.ReactNode;
@@ -38,14 +39,16 @@ export function PageHeader({
             <ArrowLeft className="size-5" />
           </Link>
         )}
-        <motion.p
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-          className="eyebrow text-sm text-bone/55"
-        >
-          {eyebrow}
-        </motion.p>
+        {eyebrow && (
+          <motion.p
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+            className="eyebrow text-sm text-bone/55"
+          >
+            {eyebrow}
+          </motion.p>
+        )}
         <motion.h1
           initial={{ opacity: 0, y: 14 }}
           animate={{ opacity: 1, y: 0 }}
@@ -54,7 +57,6 @@ export function PageHeader({
         >
           {title}
         </motion.h1>
-        <span className="mt-4 block h-px w-16 bg-bone/15" />
         {subtitle && (
           <motion.p
             initial={{ opacity: 0 }}

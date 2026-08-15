@@ -1,7 +1,7 @@
 "use client";
 
 import { motion, useReducedMotion } from "motion/react";
-import { Heart, Comment, Share, Bookmark, Music } from "../chrome/icons";
+import { Heart, Comment, Share, Bookmark, Music, Bag } from "../chrome/icons";
 import { Avatar } from "../chrome/Avatar";
 import { compact } from "@/lib/utils";
 
@@ -54,6 +54,8 @@ export function ActionRail({
   onLike,
   onSave,
   onComment,
+  onShop,
+  shopCount,
   creatorSeed,
   creatorName,
   active,
@@ -66,6 +68,9 @@ export function ActionRail({
   onLike: () => void;
   onSave: () => void;
   onComment?: () => void;
+  /** Opens the Shop-the-look drawer. When set, a cart bubble tops the rail. */
+  onShop?: () => void;
+  shopCount?: number;
   creatorSeed: string;
   creatorName: string;
   active?: boolean;
@@ -76,6 +81,20 @@ export function ActionRail({
 
   return (
     <div className="flex flex-col items-center gap-5">
+      {/* Shop bubble — same format as the other actions, cart glyph, opens the
+          Shop-the-look drawer (only on shoppable posts). */}
+      {onShop && (
+        <Action
+          label={
+            shopCount && shopCount > 0 ? `${shopCount} pièce${shopCount > 1 ? "s" : ""}` : "Shop"
+          }
+          onClick={onShop}
+          ariaLabel="Voir les pièces à shopper"
+        >
+          <Bag className="size-6 text-bone" />
+        </Action>
+      )}
+
       <Action
         label={compact(likes + (liked ? 1 : 0))}
         onClick={onLike}

@@ -4,7 +4,17 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { AnimatePresence, motion } from "motion/react";
-import { Home, Compass, Users, Plus, User, X } from "./icons";
+import {
+  Home,
+  Compass,
+  Users,
+  Plus,
+  User,
+  X,
+  Camera,
+  Bag,
+  ChevronRight,
+} from "./icons";
 
 type TabItem = {
   href: string;
@@ -53,7 +63,7 @@ export function MobileTabBar() {
           aria-haspopup="dialog"
           aria-expanded={composeOpen}
           onClick={() => setComposeOpen((v) => !v)}
-          className="relative -mt-4 grid size-14 place-items-center rounded-none bg-bone text-ink transition-transform active:scale-90"
+          className="relative -mt-4 grid size-14 place-items-center rounded-full bg-bone text-ink shadow-[0_8px_24px_-6px_rgba(0,0,0,0.5)] transition-transform active:scale-90"
         >
           <Plus
             className={`size-7 transition-transform duration-300 ${composeOpen ? "rotate-45" : ""}`}
@@ -85,55 +95,41 @@ export function MobileTabBar() {
               animate={{ y: 0 }}
               exit={{ y: "100%" }}
               transition={{ type: "spring", stiffness: 360, damping: 36 }}
-              className="pb-safe absolute inset-x-0 bottom-0 rounded-none border-t border-bone/20 bg-coal/95 px-5 pt-4 backdrop-blur-2xl"
+              className="pb-safe absolute inset-x-0 bottom-0 rounded-t-3xl border-t border-bone/15 bg-coal/95 px-5 pb-4 pt-5 backdrop-blur-2xl"
             >
-              <div className="flex items-center justify-between pb-3">
-                <p className="eyebrow text-sm text-bone">Créer</p>
+              {/* grabber */}
+              <span className="mx-auto mb-4 block h-1 w-10 rounded-full bg-bone/20" />
+
+              <div className="mb-4 flex items-center justify-between">
+                <p className="font-display text-lg font-bold uppercase tracking-tight text-bone">
+                  Créer
+                </p>
                 <button
                   type="button"
                   onClick={() => setComposeOpen(false)}
-                  className="grid size-9 place-items-center rounded-none bg-bone/10 text-bone"
+                  className="grid size-9 place-items-center rounded-full bg-bone/10 text-bone transition-colors hover:bg-bone/20"
                   aria-label="Fermer"
                 >
                   <X className="size-5" />
                 </button>
               </div>
-              <div className="mb-1 h-px bg-bone/10" />
-              <Link
-                href="/creer"
-                onClick={() => setComposeOpen(false)}
-                className="flex items-center justify-between px-2 py-5 transition-colors hover:bg-bone/10"
-              >
-                <span className="flex flex-col gap-0.5">
-                  <span className="text-base font-semibold tracking-wide text-bone">
-                    Publier du contenu
-                  </span>
-                  <span className="text-[12px] text-ash">
-                    Photos, vidéos, inspiration — sans vente
-                  </span>
-                </span>
-                <span aria-hidden="true" className="text-ash">
-                  →
-                </span>
-              </Link>
-              <div className="h-px bg-bone/10" />
-              <Link
-                href="/vendre"
-                onClick={() => setComposeOpen(false)}
-                className="flex items-center justify-between px-2 py-5 transition-colors hover:bg-bone/10"
-              >
-                <span className="flex flex-col gap-0.5">
-                  <span className="text-base font-semibold tracking-wide text-bone">
-                    Vendre un vêtement
-                  </span>
-                  <span className="text-[12px] text-ash">
-                    Photos, marque, taille, état, prix
-                  </span>
-                </span>
-                <span aria-hidden="true" className="text-ash">
-                  →
-                </span>
-              </Link>
+
+              <div className="grid gap-3">
+                <ComposeOption
+                  href="/creer"
+                  Icon={Camera}
+                  title="Publier du contenu"
+                  hint="Photos, vidéos, inspiration"
+                  onClick={() => setComposeOpen(false)}
+                />
+                <ComposeOption
+                  href="/vendre"
+                  Icon={Bag}
+                  title="Vendre une pièce"
+                  hint="Marque, taille, état, prix"
+                  onClick={() => setComposeOpen(false)}
+                />
+              </div>
             </motion.div>
           </div>
         )}
@@ -182,6 +178,39 @@ function TabLink({
           className="absolute -top-0.5 h-1 w-1 rounded-full bg-bone"
         />
       )}
+    </Link>
+  );
+}
+
+function ComposeOption({
+  href,
+  Icon,
+  title,
+  hint,
+  onClick,
+}: {
+  href: string;
+  Icon: (p: React.SVGProps<SVGSVGElement>) => React.JSX.Element;
+  title: string;
+  hint: string;
+  onClick: () => void;
+}) {
+  return (
+    <Link
+      href={href}
+      onClick={onClick}
+      className="group flex items-center gap-4 rounded-2xl border border-bone/12 bg-bone/[0.03] p-3.5 transition-colors hover:border-bone/30 hover:bg-bone/[0.07]"
+    >
+      <span className="grid size-12 shrink-0 place-items-center rounded-full bg-bone text-ink">
+        <Icon className="size-6" />
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block text-[15px] font-semibold text-bone">
+          {title}
+        </span>
+        <span className="block text-[12px] text-ash">{hint}</span>
+      </span>
+      <ChevronRight className="size-5 shrink-0 text-ash transition-colors group-hover:text-bone" />
     </Link>
   );
 }

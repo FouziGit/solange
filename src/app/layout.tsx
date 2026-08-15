@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Archivo, Bodoni_Moda, Hanken_Grotesk } from "next/font/google";
+import { Montserrat, Bodoni_Moda, Hanken_Grotesk } from "next/font/google";
 import "./globals.css";
 import { CustomCursor } from "@/components/chrome/CustomCursor";
 import { GrainOverlay } from "@/components/chrome/GrainOverlay";
@@ -8,10 +8,11 @@ import { MobileTabBar } from "@/components/chrome/MobileTabBar";
 import { FeedThemeLock } from "@/components/chrome/FeedThemeLock";
 import { SolangeProvider } from "@/lib/store";
 
-const archivo = Archivo({
+// Display / titles — Montserrat: geometric, minimalist-luxe, modern.
+const montserrat = Montserrat({
   subsets: ["latin"],
-  variable: "--font-archivo",
-  weight: ["700", "900"],
+  variable: "--font-montserrat",
+  weight: ["400", "500", "600", "700", "800", "900"],
   display: "swap",
 });
 
@@ -76,7 +77,7 @@ export default function RootLayout({
   return (
     <html
       lang="fr"
-      className={`${archivo.variable} ${bodoni.variable} ${hanken.variable} antialiased`}
+      className={`${montserrat.variable} ${bodoni.variable} ${hanken.variable} antialiased`}
     >
       <body className="bg-noir text-bone">
         <SolangeProvider>

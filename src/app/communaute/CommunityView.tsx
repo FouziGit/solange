@@ -16,10 +16,8 @@ export function CommunityView() {
   return (
     <PageShell marginWord="Communauté">
       <PageHeader
-        eyebrow="Les cercles"
         title="Communauté"
         subtitle="Rejoins des créateurs qui parlent mode, culture et archives — de l'impact des rappeurs sur le vestiaire aux pièces qui traversent les époques."
-        sectionNo={`${communities.length} cercles`}
       />
 
       <p className="mb-6 text-[12.5px] text-ash">
@@ -118,7 +116,7 @@ function CommunityCard({
         </div>
 
         {/* host + members + posts */}
-        <div className="flex items-center justify-between gap-3 border-t border-bone/10 pt-4">
+        <div className="flex items-center justify-between gap-3 pt-2">
           <div className="flex min-w-0 items-center gap-2">
             <Avatar name={c.host.name} seed={c.host.seed} className="size-8" />
             <div className="min-w-0 leading-tight">
@@ -156,7 +154,7 @@ function CommunityCard({
         </div>
 
         {/* thread preview */}
-        <div className="flex flex-col gap-2.5 border-t border-bone/10 pt-4">
+        <div className="flex flex-col gap-2.5 pt-1">
           <p className="overline text-[9px] text-bone/50">À la une</p>
           {c.threads.map((t) => (
             <div

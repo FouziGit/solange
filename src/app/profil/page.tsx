@@ -147,7 +147,7 @@ export default function ProfilPage() {
 
         <div className="mt-4 md:ml-7 md:mt-0 md:flex-1">
           <div className="flex items-center justify-center gap-2 md:justify-start">
-            <h1 className="font-editorial text-4xl font-semibold tracking-tight text-bone md:text-5xl">
+            <h1 className="font-display text-4xl font-bold tracking-tight text-bone md:text-5xl">
               {me.name}
             </h1>
             {me.verified && <Verified className="size-5 text-bone" />}

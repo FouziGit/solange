@@ -107,7 +107,7 @@ export function ShopCard({ item, index }: { item: CatalogItem; index: number }) 
           className="absolute inset-x-0 bottom-0 z-20 space-y-2.5 p-4 pr-20 md:!pb-9"
         >
           <p className="overline text-[10px] text-bone/70">{item.brand}</p>
-          <p className="max-w-[24ch] text-[15px] font-medium leading-snug text-bone">
+          <p className="font-display max-w-[24ch] text-[16px] font-semibold leading-snug tracking-tight text-bone">
             {item.name}
           </p>
 

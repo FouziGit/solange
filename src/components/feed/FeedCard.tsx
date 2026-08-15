@@ -18,7 +18,7 @@ import { ActionRail } from "./ActionRail";
 import { CommentSheet } from "./CommentSheet";
 import { ShopHotspots } from "./ShopHotspots";
 import { ShopTheLook } from "./ShopTheLook";
-import { Heart, Play, Music, Mute, Volume } from "../chrome/icons";
+import { Heart, Play, Mute, Volume } from "../chrome/icons";
 
 type Burst = { id: number; x: number; y: number };
 
@@ -290,6 +290,8 @@ export function FeedCard({
                 onLike={() => toggleLike(look.id)}
                 onSave={() => toggleSave(look.id)}
                 onComment={() => setCommentsOpen(true)}
+                onShop={hasShop ? () => openShop(null) : undefined}
+                shopCount={look.products.length}
                 creatorSeed={look.creator.seed}
                 creatorName={look.creator.name}
                 active={active}
@@ -359,33 +361,10 @@ export function FeedCard({
                 ))}
               </motion.div>
 
-              <motion.div
-                variants={item}
-                className="flex items-center gap-2 text-[11px] text-bone/75"
-              >
-                <Music className="size-3.5 shrink-0" />
-                <div className="relative w-44 overflow-hidden whitespace-nowrap">
-                  <div className="marquee inline-block">
-                    <span className="pr-8">{look.soundtrack}</span>
-                    <span className="pr-8">{look.soundtrack}</span>
-                  </div>
-                </div>
-              </motion.div>
-
-              {/* Shoppable look → Shop-the-look pill. Content-only posts keep
-                  the quiet marketplace bridge (no price, no cart), so the two
-                  post types stay visibly distinct as you scroll. */}
-              {hasShop ? (
-                <motion.div variants={item} className="max-w-[19rem]">
-                  <ShopTheLook
-                    variant="trigger"
-                    products={look.products}
-                    open={shopOpen}
-                    onOpenChange={setShopOpen}
-                    highlightId={highlightId}
-                  />
-                </motion.div>
-              ) : bridgeBrand ? (
+              {/* Shoppable posts open the Shop-the-look drawer from the round
+                  cart bubble in the action rail (freeing space here). Only
+                  content-only posts keep a quiet marketplace text link. */}
+              {!hasShop && bridgeBrand ? (
                 <motion.div variants={item}>
                   <Link
                     href={`/decouvrir?q=${encodeURIComponent(bridgeBrand)}`}

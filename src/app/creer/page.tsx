@@ -26,29 +26,11 @@ function Label({ children }: { children: React.ReactNode }) {
 /** Catalog pieces offered as taggable / linkable items in the composer. */
 const taggable = catalog.slice(0, 8);
 
-/** The three post types of the composer. */
+/** The composer publishes a single post kind (a shoppable look). */
 type PostKind = "look" | "actu" | "achats";
 
-const KINDS: { id: PostKind; label: string; hint: string }[] = [
-  {
-    id: "look",
-    label: "Look shoppable",
-    hint: "Mise en scène 9:16, pièces taguées — shoppable dans le feed.",
-  },
-  {
-    id: "actu",
-    label: "Actu / collection",
-    hint: "Un drop, une collection, une actu mode — texte + marques taguées.",
-  },
-  {
-    id: "achats",
-    label: "Mes achats",
-    hint: "Partage tes trouvailles et lie les pièces de la marketplace.",
-  },
-];
-
 export default function CreerPage() {
-  const [kind, setKind] = useState<PostKind>("look");
+  const [kind] = useState<PostKind>("look");
   const [title, setTitle] = useState("");
   const [caption, setCaption] = useState("");
   const [tagged, setTagged] = useState<string[]>(["k1"]);
@@ -66,11 +48,6 @@ export default function CreerPage() {
     setter((cur) =>
       cur.includes(value) ? cur.filter((v) => v !== value) : [...cur, value],
     );
-
-  const switchKind = (k: PostKind) => {
-    setKind(k);
-    setPublished(false);
-  };
 
   const seed = useMemo(
     () => `solange-creer-${kind}-${title.trim() || "edito"}`,
@@ -105,36 +82,16 @@ export default function CreerPage() {
         ? "Publier l'actu"
         : "Publier mes achats";
 
-  const kindMeta = KINDS.find((k) => k.id === kind)!;
-
   return (
     <PageShell marginWord="Créer">
       <PageHeader
-        eyebrow="Créer = publier dans le feed"
         title="Créer"
-        subtitle="Look shoppable, actu de collection ou haul de tes derniers achats — compose, et il part dans le feed."
+        subtitle="Compose ton look, tague tes pièces — et il part dans le feed."
       />
 
       <div className="grid gap-8 lg:grid-cols-[1fr_360px]">
         {/* composer form */}
         <div className="space-y-6">
-          {/* post type — segmented row */}
-          <div>
-            <Label>Type de post</Label>
-            <div className="flex flex-wrap gap-2">
-              {KINDS.map((k) => (
-                <Chip
-                  key={k.id}
-                  active={kind === k.id}
-                  onClick={() => switchKind(k.id)}
-                >
-                  {k.label}
-                </Chip>
-              ))}
-            </div>
-            <p className="mt-2 text-[11px] text-ash">{kindMeta.hint}</p>
-          </div>
-
           {/* media drop-zone — look only */}
           {kind === "look" && (
             <div>

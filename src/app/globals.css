@@ -19,7 +19,7 @@
   --color-ash: var(--c-ash); /* muted type */
   --color-pure: var(--c-pure); /* accent: pure white (dark) / pure black (light) */
 
-  --font-display: var(--font-archivo);
+  --font-display: var(--font-montserrat);
   --font-serif: var(--font-bodoni);
   --font-sans: var(--font-hanken);
 
@@ -172,10 +172,11 @@ body {
 }
 
 /* ---------- Typography helpers ---------- */
+/* Montserrat — titles, prices, brand/piece names (minimalist-luxe). */
 .font-display {
-  font-family: var(--font-archivo), sans-serif;
-  font-stretch: 125%;
+  font-family: var(--font-montserrat), ui-sans-serif, system-ui, sans-serif;
 }
+/* Bodoni — decorative editorial flourishes + the serif monogram only. */
 .font-serif,
 .font-editorial {
   font-family: var(--font-bodoni), "Didot", "Bodoni MT", serif;
