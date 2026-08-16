@@ -126,20 +126,22 @@ export function AuthScreen({ onComplete }: { onComplete: () => void }) {
           </motion.div>
         </motion.div>
 
-        {/* wordmark — reveals letter by letter */}
-        <div className="mt-6 flex" aria-label="SOLANGE">
+        {/* wordmark — thin, wide-tracked Montserrat (refined / luxe), revealed
+            letter by letter. Left inset balances the last letter's trailing
+            tracking so the word stays optically centred. */}
+        <div className="mt-7 flex pl-[0.42em]" aria-label="SOLANGE">
           {"SOLANGE".split("").map((ch, i) => (
             <motion.span
               key={i}
               aria-hidden
-              initial={{ opacity: 0, y: 16, filter: "blur(8px)" }}
+              initial={{ opacity: 0, y: 14, filter: "blur(8px)" }}
               animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
               transition={{
                 delay: 0.55 + i * 0.09,
-                duration: 0.55,
+                duration: 0.6,
                 ease: [0.16, 1, 0.3, 1],
               }}
-              className="font-display text-2xl font-bold tracking-[0.34em] text-bone"
+              className="font-display text-[1.7rem] font-light tracking-[0.42em] text-bone"
             >
               {ch}
             </motion.span>
