@@ -12,7 +12,7 @@ import { Avatar } from "@/components/chrome/Avatar";
 import { LuxeMedia } from "@/components/ui/LuxeMedia";
 import { ProductCard } from "@/components/ui/ProductCard";
 import { Chip } from "@/components/ui/Chip";
-import { Bag, Check, Heart, Send, Verified } from "@/components/chrome/icons";
+import { Bag, Heart, Send, Verified } from "@/components/chrome/icons";
 
 export function ArticleDetail({
   item,
@@ -24,16 +24,9 @@ export function ArticleDetail({
   const { isSaved, toggleSave } = useStore();
   const saved = isSaved(item.id);
   const [size, setSize] = useState(item.size);
-  const [bought, setBought] = useState(false);
   const discount = item.originalEUR
     ? Math.round((1 - item.priceEUR / item.originalEUR) * 100)
     : 0;
-
-  const buy = () => {
-    if (bought) return;
-    setBought(true);
-    track("buy", { id: item.id, brand: item.brand, priceEUR: item.priceEUR });
-  };
 
   // deterministic thumbnail variants off the base seed
   const thumbs = [`${item.seed}-a`, `${item.seed}-b`];
@@ -146,59 +139,41 @@ export function ArticleDetail({
           </Link>
 
           {/* actions */}
-          {bought ? (
-            <motion.div
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-              className="mt-5 flex items-center gap-3 rounded-2xl border border-bone/15 bg-bone/[0.05] px-5 py-4"
-              role="status"
-              aria-live="polite"
+          <div className="mt-5 flex flex-col gap-3 sm:flex-row">
+            <Link
+              href={`/checkout/${item.id}`}
+              onClick={() =>
+                track("checkout_start", {
+                  id: item.id,
+                  brand: item.brand,
+                  priceEUR: item.priceEUR,
+                })
+              }
+              data-cursor="link"
+              className="flex flex-1 items-center justify-center gap-2 rounded-none bg-bone px-6 py-3.5 text-sm font-semibold text-ink transition-transform active:scale-95"
             >
-              <span className="grid size-10 shrink-0 place-items-center rounded-full bg-bone text-ink">
-                <Check className="size-5" />
-              </span>
-              <span className="min-w-0">
-                <span className="block text-sm font-semibold text-bone">
-                  Commande confirmée ✓
-                </span>
-                <span className="block text-[12px] text-ash">
-                  Livraison 48h · paiement sécurisé
-                </span>
-              </span>
-            </motion.div>
-          ) : (
-            <div className="mt-5 flex flex-col gap-3 sm:flex-row">
-              <motion.button
-                type="button"
-                onClick={buy}
-                whileTap={{ scale: 0.97 }}
-                data-cursor="link"
-                className="flex flex-1 items-center justify-center gap-2 rounded-none bg-bone px-6 py-3.5 text-sm font-semibold text-ink transition-transform"
-              >
-                <Bag className="size-5" />
-                Acheter — {euro(item.priceEUR)}
-              </motion.button>
-              <Link
-                href={`/messages?item=${item.id}`}
-                data-cursor="link"
-                className="glass flex items-center justify-center gap-2 rounded-none px-6 py-3.5 text-sm font-semibold text-bone transition-colors hover:bg-bone/15"
-              >
-                <Send className="size-4" />
-                Faire une offre
-              </Link>
-              <button
-                type="button"
-                onClick={() => toggleSave(item.id)}
-                aria-label="Enregistrer"
-                aria-pressed={saved}
-                data-cursor="link"
-                className="glass grid size-[52px] shrink-0 place-items-center rounded-none text-bone transition-transform active:scale-90"
-              >
-                <Heart filled={saved} className="size-5" />
-              </button>
-            </div>
-          )}
+              <Bag className="size-5" />
+              Acheter — {euro(item.priceEUR)}
+            </Link>
+            <Link
+              href={`/messages?item=${item.id}`}
+              data-cursor="link"
+              className="glass flex items-center justify-center gap-2 rounded-none px-6 py-3.5 text-sm font-semibold text-bone transition-colors hover:bg-bone/15"
+            >
+              <Send className="size-4" />
+              Faire une offre
+            </Link>
+            <button
+              type="button"
+              onClick={() => toggleSave(item.id)}
+              aria-label="Enregistrer"
+              aria-pressed={saved}
+              data-cursor="link"
+              className="glass grid size-[52px] shrink-0 place-items-center rounded-none text-bone transition-transform active:scale-90"
+            >
+              <Heart filled={saved} className="size-5" />
+            </button>
+          </div>
 
           <p className="mt-6 text-[13px] leading-relaxed text-ash">
             Pièce authentifiée par la communauté SOLANGE. Paiement sécurisé,

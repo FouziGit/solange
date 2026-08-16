@@ -125,7 +125,7 @@ export function MobileTabBar() {
                 <ComposeOption
                   href="/vendre"
                   Icon={Bag}
-                  title="Vendre une pièce"
+                  title="Vendre un article"
                   hint="Marque, taille, état, prix"
                   onClick={() => setComposeOpen(false)}
                 />
@@ -205,7 +205,7 @@ function ComposeOption({
         <Icon className="size-6" />
       </span>
       <span className="min-w-0 flex-1">
-        <span className="block text-[15px] font-semibold text-bone">
+        <span className="font-display block text-[15px] font-bold uppercase tracking-tight text-bone">
           {title}
         </span>
         <span className="block text-[12px] text-ash">{hint}</span>

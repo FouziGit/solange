@@ -10,6 +10,8 @@ import { AnimatePresence } from "motion/react";
 import { invite, looks, me } from "@/lib/mock";
 import { forSale, liked } from "@/lib/data";
 import { EASE, compact, euro, gradientFor } from "@/lib/utils";
+import { useStore } from "@/lib/store";
+import { imgItem } from "@/lib/img";
 import {
   Verified,
   Star,
@@ -129,6 +131,7 @@ function ReferralCard() {
 export default function ProfilPage() {
   const [tab, setTab] = useState<string>("vente");
   const [referral, setReferral] = useState(false);
+  const { orders } = useStore();
   const saleItems = forSale();
   const likedItems = liked();
 
@@ -203,6 +206,52 @@ export default function ProfilPage() {
         <span className="h-8 w-px bg-bone/10" />
         <Stat value={String(me.sales)} label="Ventes" />
       </div>
+
+      {/* mes commandes — populated by the checkout flow */}
+      {orders.length > 0 && (
+        <div className="mt-8 md:max-w-md">
+          <p className="overline mb-3 text-[9px] text-ash">
+            Mes commandes · {orders.length}
+          </p>
+          <div className="flex flex-col gap-2">
+            {orders.map((o) => (
+              <div
+                key={o.id}
+                className="glass flex items-center gap-3 rounded-2xl p-2.5"
+              >
+                <span
+                  className="grid size-14 shrink-0 place-items-center overflow-hidden rounded-xl ring-1 ring-bone/10"
+                  style={{ background: gradientFor(o.item.id) }}
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={imgItem(o.item.id)}
+                    alt={o.item.name}
+                    className="size-full object-cover"
+                  />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="overline text-[9px] text-ash">{o.item.brand}</p>
+                  <p className="font-display truncate text-[14px] font-semibold tracking-tight text-bone">
+                    {o.item.name}
+                  </p>
+                  <p className="mt-0.5 text-[11px] text-ash">
+                    {o.id} · carte •••• {o.last4}
+                  </p>
+                </div>
+                <div className="flex flex-col items-end gap-1">
+                  <span className="font-display text-sm font-bold tracking-tight text-bone">
+                    {euro(o.total)}
+                  </span>
+                  <span className="inline-flex items-center gap-1 rounded-full bg-bone/10 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-bone/80">
+                    <Check className="size-2.5" /> Payé
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* tabs */}
       <div

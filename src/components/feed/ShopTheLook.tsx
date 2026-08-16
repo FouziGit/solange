@@ -156,7 +156,7 @@ export function ShopTheLook({
                           )}
                         </div>
                         <Link
-                          href={`/article/${p.id}`}
+                          href={`/checkout/${p.id}`}
                           data-cursor="link"
                           aria-label={`Acheter ${p.name}`}
                           className="rounded-full bg-bone px-3.5 py-1.5 text-[11px] font-semibold text-ink transition-transform active:scale-95"

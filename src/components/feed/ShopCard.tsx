@@ -138,7 +138,7 @@ export function ShopCard({ item, index }: { item: CatalogItem; index: number }) 
 
           <div className="flex items-center gap-2 pt-1">
             <Link
-              href={`/article/${item.id}`}
+              href={`/checkout/${item.id}`}
               data-cursor="link"
               className="flex items-center gap-2 whitespace-nowrap bg-bone px-6 py-2.5 text-sm font-semibold text-ink transition-transform active:scale-95"
             >

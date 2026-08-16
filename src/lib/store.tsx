@@ -24,6 +24,17 @@ import {
   type CatalogItem,
 } from "@/lib/mock";
 
+/** A completed (simulated) purchase — recorded for the profile order history. */
+export type Order = {
+  id: string;
+  item: CatalogItem;
+  protection: number;
+  shipping: number;
+  total: number;
+  last4: string;
+  date: string;
+};
+
 type Store = {
   isLiked(id: string): boolean;
   toggleLike(id: string): void;
@@ -34,6 +45,8 @@ type Store = {
   savedItems(): CatalogItem[];
   isJoined(communityId: string): boolean;
   toggleJoin(communityId: string): void;
+  orders: Order[];
+  addOrder(order: Order): void;
 };
 
 const StoreContext = createContext<Store | null>(null);
@@ -54,6 +67,11 @@ export function SolangeProvider({ children }: { children: ReactNode }) {
   );
   const [joined, setJoined] = useState<Set<string>>(
     () => new Set(joinedCommunityIds),
+  );
+  const [orders, setOrders] = useState<Order[]>([]);
+  const addOrder = useCallback(
+    (order: Order) => setOrders((cur) => [order, ...cur]),
+    [],
   );
 
   const isLiked = useCallback((id: string) => liked.has(id), [liked]);
@@ -105,6 +123,8 @@ export function SolangeProvider({ children }: { children: ReactNode }) {
       savedItems,
       isJoined,
       toggleJoin,
+      orders,
+      addOrder,
     }),
     [
       isLiked,
@@ -116,6 +136,8 @@ export function SolangeProvider({ children }: { children: ReactNode }) {
       savedItems,
       isJoined,
       toggleJoin,
+      orders,
+      addOrder,
     ],
   );
 

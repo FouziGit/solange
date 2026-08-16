@@ -227,6 +227,22 @@ export const Live = (p: P) => (
   </svg>
 );
 
+export const Lock = (p: P) => (
+  <svg {...base} {...p}>
+    <rect x="4.5" y="10.5" width="15" height="10" rx="2" />
+    <path d="M8 10.5V7a4 4 0 0 1 8 0v3.5" />
+    <circle cx="12" cy="15.5" r="1.2" fill="currentColor" stroke="none" />
+  </svg>
+);
+
+export const Card = (p: P) => (
+  <svg {...base} {...p}>
+    <rect x="3" y="5.5" width="18" height="13" rx="2" />
+    <path d="M3 9.5h18" />
+    <path d="M6.5 14.5h4" />
+  </svg>
+);
+
 export const Users = (p: P) => (
   <svg {...base} {...p}>
     <circle cx="9" cy="8" r="3.2" />
