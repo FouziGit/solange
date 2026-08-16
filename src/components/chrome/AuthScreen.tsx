@@ -83,25 +83,76 @@ export function AuthScreen({ onComplete }: { onComplete: () => void }) {
       />
 
       <div className="relative z-10 mx-auto flex min-h-[100dvh] max-w-md flex-col items-center justify-center px-7">
-        {/* logo */}
+        {/* logo — materialises out of blur, with a halo pulse + soft breathing */}
         <motion.div
-          initial={{ scale: 0.7, opacity: 0, y: 10 }}
-          animate={{ scale: 1, opacity: 1, y: 0 }}
-          transition={{ type: "spring", stiffness: 200, damping: 18 }}
+          initial={{ scale: 0.55, opacity: 0, filter: "blur(18px)" }}
+          animate={{ scale: 1, opacity: 1, filter: "blur(0px)" }}
+          transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1] }}
+          className="relative"
         >
-          <LogoMark variant="white" className="size-20" />
+          {/* halo bloom behind the mark */}
+          <motion.span
+            aria-hidden
+            className="absolute inset-0 -z-10 rounded-full bg-bone/30 blur-2xl"
+            initial={{ opacity: 0, scale: 0.5 }}
+            animate={{ opacity: [0, 0.55, 0.22], scale: [0.5, 1.5, 1.15] }}
+            transition={{ duration: 1.9, ease: "easeOut" }}
+          />
+          {/* expanding sonar ring on entrance */}
+          {!reduce && (
+            <motion.span
+              aria-hidden
+              className="absolute inset-0 rounded-full border border-bone/40"
+              initial={{ opacity: 0.6, scale: 0.7 }}
+              animate={{ opacity: 0, scale: 2.2 }}
+              transition={{ duration: 1.6, ease: "easeOut", delay: 0.3 }}
+            />
+          )}
+          {/* the mark — gentle breathing loop once it has arrived */}
+          <motion.div
+            animate={reduce ? undefined : { y: [0, -7, 0] }}
+            transition={
+              reduce
+                ? undefined
+                : {
+                    duration: 4.5,
+                    repeat: Infinity,
+                    ease: "easeInOut",
+                    delay: 1.2,
+                  }
+            }
+          >
+            <LogoMark variant="white" className="size-20" />
+          </motion.div>
         </motion.div>
-        <motion.p
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.15, duration: 0.6 }}
-          className="mt-5 text-center text-[13px] uppercase tracking-[0.34em] text-ash"
-        >
-          La mode circulaire
-        </motion.p>
 
-        {/* steps */}
-        <div className="mt-10 w-full">
+        {/* wordmark — reveals letter by letter */}
+        <div className="mt-6 flex" aria-label="SOLANGE">
+          {"SOLANGE".split("").map((ch, i) => (
+            <motion.span
+              key={i}
+              aria-hidden
+              initial={{ opacity: 0, y: 16, filter: "blur(8px)" }}
+              animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+              transition={{
+                delay: 0.55 + i * 0.09,
+                duration: 0.55,
+                ease: [0.16, 1, 0.3, 1],
+              }}
+              className="font-display text-2xl font-bold tracking-[0.34em] text-bone"
+            >
+              {ch}
+            </motion.span>
+          ))}
+        </div>
+
+        {/* steps — the whole block cascades in once, after the intro */}
+        <motion.div
+          initial={{ opacity: 0, y: 14 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.95, duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+          className="mt-10 w-full"
+        >
           <AnimatePresence mode="wait">
             {step === "email" && (
               <motion.div
@@ -236,7 +287,7 @@ export function AuthScreen({ onComplete }: { onComplete: () => void }) {
               </motion.div>
             )}
           </AnimatePresence>
-        </div>
+        </motion.div>
       </div>
 
       {/* skip — beta access */}
