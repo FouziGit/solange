@@ -332,6 +332,21 @@ export default function ProfilPage() {
       <p className="mt-10 text-center text-xs text-ash">
         Membre SOLANGE depuis 2026 · {euro(me.sales * 86)} de ventes cumulées
       </p>
+
+      <div className="mt-4 mb-2 text-center">
+        <button
+          type="button"
+          onClick={() => {
+            try {
+              localStorage.removeItem("solange:onboarded");
+            } catch {}
+            location.reload();
+          }}
+          className="text-[12px] text-ash/70 underline-offset-4 transition-colors hover:text-bone hover:underline"
+        >
+          Déconnexion
+        </button>
+      </div>
     </PageShell>
   );
 }
