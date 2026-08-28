@@ -1,22 +1,25 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useStore } from "@/lib/store";
 import { AuthScreen } from "./AuthScreen";
 import { LogoMark } from "./Brandmark";
 
 export const ONBOARD_KEY = "solange:onboarded";
 
 /**
- * Gates the whole app behind the onboarding screen. Persists the unlocked
- * state in localStorage so it only shows once. A brief branded splash covers
- * the first client tick so the app never flashes before we know the state.
- * To see it again: clear site data, or use the "Déconnexion" action.
+ * Gates the whole app behind the onboarding screen. Une vraie session
+ * serveur (cookie httpOnly, vérifiée par /api/me via le store) déverrouille
+ * directement ; sinon le flag localStorage garde le comportement « démo vue
+ * une fois ». A brief branded splash covers the first client tick.
  */
 export function AuthGate({ children }: { children: React.ReactNode }) {
+  const { user, authReady } = useStore();
   // One-time, hydration-safe read of the persisted onboarding flag (localStorage
   // is client-only, so we resolve it after mount rather than during SSR).
   const [state, setState] = useState({ ready: false, authed: false });
-  const { ready, authed } = state;
+  const ready = state.ready && authReady;
+  const authed = state.authed || user !== null;
 
   useEffect(() => {
     let onboarded = false;

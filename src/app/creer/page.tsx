@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { PageShell } from "@/components/ui/PageShell";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Chip } from "@/components/ui/Chip";
@@ -9,13 +9,18 @@ import { ProductCard } from "@/components/ui/ProductCard";
 import { catalog, trendingTags } from "@/lib/mock";
 import { catalogBrands } from "@/lib/data";
 import { euro, gradientFor } from "@/lib/utils";
+import { api, resizeImage } from "@/lib/api";
+import { useStore } from "@/lib/store";
 import {
   Camera,
   Bag,
   ChevronUp,
   Check,
   Sparkle,
+  X,
 } from "@/components/chrome/icons";
+
+const MAX_PHOTOS = 4;
 
 function Label({ children }: { children: React.ReactNode }) {
   return (
@@ -30,6 +35,8 @@ const taggable = catalog.slice(0, 8);
 type PostKind = "look" | "actu" | "achats";
 
 export default function CreerPage() {
+  const { user, authReady, refreshSession } = useStore();
+
   const [kind] = useState<PostKind>("look");
   const [title, setTitle] = useState("");
   const [caption, setCaption] = useState("");
@@ -38,6 +45,14 @@ export default function CreerPage() {
   const [brandSel, setBrandSel] = useState<string[]>([]);
   const [linked, setLinked] = useState<string[]>([]);
   const [published, setPublished] = useState(false);
+
+  const [photos, setPhotos] = useState<string[]>([]);
+  const [photoBusy, setPhotoBusy] = useState(false);
+  const [photoError, setPhotoError] = useState<string | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const brands = useMemo(() => catalogBrands(), []);
 
@@ -82,6 +97,95 @@ export default function CreerPage() {
         ? "Publier l'actu"
         : "Publier mes achats";
 
+  async function onFilesPicked(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files ?? []);
+    e.target.value = "";
+    if (files.length === 0) return;
+    setPhotoError(null);
+
+    const slots = MAX_PHOTOS - photos.length;
+    if (slots <= 0) {
+      setPhotoError(`Maximum ${MAX_PHOTOS} photos.`);
+      return;
+    }
+    const picked = files.slice(0, slots);
+
+    setPhotoBusy(true);
+    try {
+      const urls: string[] = [];
+      for (const f of picked) urls.push(await resizeImage(f));
+      setPhotos((cur) => [...cur, ...urls].slice(0, MAX_PHOTOS));
+      if (files.length > slots) {
+        setPhotoError(
+          `Maximum ${MAX_PHOTOS} photos — seules les ${slots === 1 ? "première a" : `${slots} premières ont`} été gardées.`,
+        );
+      }
+    } catch {
+      setPhotoError(
+        "Impossible de lire une des photos. Réessaie avec un autre fichier.",
+      );
+    } finally {
+      setPhotoBusy(false);
+    }
+  }
+
+  function removePhoto(index: number) {
+    setPhotos((cur) => cur.filter((_, i) => i !== index));
+    setPhotoError(null);
+  }
+
+  async function publish() {
+    if (!ready || submitting) return;
+    setSubmitting(true);
+    setSubmitError(null);
+
+    /* Seuls caption / brandTags / images partent au serveur : le titre et
+       les hashtags rejoignent la légende, les pièces taguées donnent leurs
+       marques. */
+    const brandTags =
+      kind === "look"
+        ? [...new Set(taggedItems.map((it) => it.brand))]
+        : brandSel;
+    const serverCaption = [
+      title.trim(),
+      caption.trim(),
+      kind === "look" ? hashtags.join(" ") : "",
+    ]
+      .filter(Boolean)
+      .join("\n\n");
+
+    const res = await api.createPost({
+      caption: serverCaption,
+      brandTags,
+      images: photos,
+    });
+    if (res.ok) {
+      setPublished(true);
+    } else if (res.status === 401) {
+      setSubmitError("Ta session a expiré — reconnecte-toi pour publier.");
+      void refreshSession();
+    } else {
+      setSubmitError(res.error);
+    }
+    setSubmitting(false);
+  }
+
+  function resetForm() {
+    setPublished(false);
+    setTitle("");
+    setCaption("");
+    setPhotos([]);
+    setPhotoError(null);
+    setSubmitError(null);
+  }
+
+  function goSignIn() {
+    try {
+      localStorage.removeItem("solange:onboarded");
+    } catch {}
+    location.reload();
+  }
+
   return (
     <PageShell marginWord="Créer">
       <PageHeader
@@ -92,19 +196,89 @@ export default function CreerPage() {
       <div className="grid gap-8 lg:grid-cols-[1fr_360px]">
         {/* composer form */}
         <div className="space-y-6">
-          {/* media drop-zone — look only */}
+          {/* photos — look only */}
           {kind === "look" && (
             <div>
-              <Label>Médias</Label>
-              <button className="flex aspect-[16/7] w-full flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-bone/25 text-ash transition-colors hover:border-bone/50 hover:text-bone">
-                <Camera className="size-8" />
-                <span className="text-[13px] font-medium">
-                  Dépose une vidéo ou des photos
-                </span>
-                <span className="text-[11px] text-ash">
-                  Format 9:16 conseillé · jusqu&apos;à 60 s
-                </span>
-              </button>
+              <Label>Photos</Label>
+              <input
+                ref={fileRef}
+                type="file"
+                accept="image/*"
+                multiple
+                onChange={(e) => void onFilesPicked(e)}
+                className="hidden"
+                aria-hidden="true"
+                tabIndex={-1}
+              />
+              <div className="grid grid-cols-4 gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => fileRef.current?.click()}
+                  disabled={photoBusy || photos.length >= MAX_PHOTOS}
+                  className={`col-span-2 row-span-2 flex aspect-square flex-col items-center justify-center gap-2 rounded-2xl border border-dashed text-ash transition-colors ${
+                    photos.length >= MAX_PHOTOS
+                      ? "cursor-default border-bone/10 text-ash/50"
+                      : "border-bone/25 hover:border-bone/50 hover:text-bone"
+                  }`}
+                >
+                  <Camera className="size-7" />
+                  <span className="text-[11px] font-medium">
+                    {photoBusy
+                      ? "Traitement…"
+                      : photos.length >= MAX_PHOTOS
+                        ? `${MAX_PHOTOS} photos max`
+                        : "Ajoute des photos"}
+                  </span>
+                </button>
+                {Array.from({ length: MAX_PHOTOS }).map((_, i) => {
+                  const src = photos[i];
+                  if (!src) {
+                    return (
+                      <div
+                        key={i}
+                        className="aspect-square rounded-xl border border-bone/10 bg-bone/[0.03]"
+                      />
+                    );
+                  }
+                  return (
+                    <div
+                      key={i}
+                      className="relative aspect-square overflow-hidden rounded-xl border border-bone/10"
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={src}
+                        alt={`Photo ${i + 1}${i === 0 ? " (couverture)" : ""}`}
+                        className="size-full object-cover"
+                      />
+                      {i === 0 && (
+                        <span className="absolute bottom-1 left-1 rounded bg-ink/75 px-1.5 py-0.5 text-[8px] uppercase tracking-[0.14em] text-bone">
+                          Couverture
+                        </span>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => removePhoto(i)}
+                        aria-label={`Retirer la photo ${i + 1}`}
+                        className="absolute right-0 top-0 grid size-11 place-items-start justify-items-end p-1.5"
+                      >
+                        <span className="grid size-6 place-items-center rounded-full bg-ink/80 text-bone ring-1 ring-bone/25 transition-colors hover:bg-ink">
+                          <X className="size-3.5" />
+                        </span>
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+              <p className="mt-2 text-[11px] text-ash">
+                Jusqu&apos;à {MAX_PHOTOS} photos · format 9:16 conseillé · la
+                première sert de couverture.
+              </p>
+              {photoError && (
+                <p className="mt-1 text-[11px] text-ash" role="alert">
+                  {photoError}
+                </p>
+              )}
             </div>
           )}
 
@@ -185,8 +359,8 @@ export default function CreerPage() {
               </div>
               <p className="mt-2 text-[11px] text-ash">
                 {linked.length} pièce{linked.length > 1 ? "s" : ""} liée
-                {linked.length > 1 ? "s" : ""} · elles s&apos;affichent sous ton
-                post, achetables en un tap.
+                {linked.length > 1 ? "s" : ""} · leurs marques sont taguées sur
+                ton post.
               </p>
             </div>
           )}
@@ -208,8 +382,8 @@ export default function CreerPage() {
               </div>
               <p className="mt-2 text-[11px] text-ash">
                 {tagged.length} pièce{tagged.length > 1 ? "s" : ""} taguée
-                {tagged.length > 1 ? "s" : ""} · elles apparaissent dans « Shop
-                the look ».
+                {tagged.length > 1 ? "s" : ""} · leurs marques sont taguées sur
+                ton post.
               </p>
             </div>
           )}
@@ -229,6 +403,9 @@ export default function CreerPage() {
                   </Chip>
                 ))}
               </div>
+              <p className="mt-2 text-[11px] text-ash">
+                Ajoutés à la fin de ta légende.
+              </p>
             </div>
           )}
         </div>
@@ -247,12 +424,12 @@ export default function CreerPage() {
                   Publié ✓
                 </p>
                 <p className="mt-1 max-w-[24ch] text-[13px] leading-relaxed text-ash">
-                  {title.trim() || "Ton post"} est parti dans le feed « Pour
-                  toi » et chez tes abonnés.
+                  {title.trim() || "Ton post"} est en ligne — visible dans le
+                  feed.
                 </p>
                 <button
-                  onClick={() => setPublished(false)}
-                  className="mt-6 rounded-none border border-bone/30 px-5 py-2.5 text-sm font-semibold text-bone transition-colors hover:bg-bone/10"
+                  onClick={resetForm}
+                  className="mt-6 min-h-11 rounded-none border border-bone/30 px-5 py-2.5 text-sm font-semibold text-bone transition-colors hover:bg-bone/10"
                 >
                   Créer un autre post
                 </button>
@@ -265,6 +442,16 @@ export default function CreerPage() {
                     className="relative aspect-[9/16] overflow-hidden rounded-2xl ring-1 ring-bone/10"
                     style={{ background: gradientFor(seed) }}
                   >
+                    {/* cover photo, once one is added */}
+                    {photos[0] && (
+                      /* eslint-disable-next-line @next/next/no-img-element */
+                      <img
+                        src={photos[0]}
+                        alt=""
+                        aria-hidden="true"
+                        className="absolute inset-0 size-full object-cover"
+                      />
+                    )}
                     {/* top key-light */}
                     <div
                       className="absolute inset-0"
@@ -371,29 +558,62 @@ export default function CreerPage() {
                   </div>
                 )}
 
-                {/* publish CTA — square brutalist */}
-                <button
-                  onClick={() => ready && setPublished(true)}
-                  disabled={!ready}
-                  className={`mt-3 flex w-full items-center justify-center gap-2 rounded-none py-3.5 text-sm font-semibold transition-transform active:scale-95 ${
-                    ready
-                      ? "bg-bone text-ink"
-                      : "cursor-default border border-bone/15 text-ash"
-                  }`}
-                >
-                  <Check className="size-4" /> {ctaLabel}
-                </button>
-                {!ready && (
-                  <p className="mt-2 text-center text-[11px] text-ash">
-                    Ajoute {missing.join(", ")} pour publier.
-                  </p>
+                {authReady && !user ? (
+                  /* invité — publier demande une session */
+                  <div className="mt-3 rounded-2xl border border-bone/12 bg-bone/[0.04] p-4 text-center">
+                    <p className="text-[13px] leading-relaxed text-bone/85">
+                      Connecte-toi pour publier.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={goSignIn}
+                      className="mt-3 flex min-h-11 w-full items-center justify-center rounded-none border border-bone/30 px-5 text-sm font-semibold text-bone transition-colors hover:bg-bone/10"
+                    >
+                      Se connecter / créer un compte
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    {/* publish CTA — square brutalist */}
+                    <button
+                      type="button"
+                      onClick={() => void publish()}
+                      disabled={!ready || submitting || !authReady}
+                      className={`mt-3 flex min-h-11 w-full items-center justify-center gap-2 rounded-none py-3.5 text-sm font-semibold transition-transform active:scale-95 ${
+                        ready && !submitting && authReady
+                          ? "bg-bone text-ink"
+                          : "cursor-default border border-bone/15 text-ash"
+                      }`}
+                    >
+                      {submitting ? (
+                        "Publication…"
+                      ) : (
+                        <>
+                          <Check className="size-4" /> {ctaLabel}
+                        </>
+                      )}
+                    </button>
+                    {!ready && (
+                      <p className="mt-2 text-center text-[11px] text-ash">
+                        Ajoute {missing.join(", ")} pour publier.
+                      </p>
+                    )}
+                    {submitError && (
+                      <p
+                        className="mt-2 rounded-xl border border-bone/25 bg-bone/[0.05] px-3 py-2 text-center text-[12px] leading-relaxed text-bone/90"
+                        role="alert"
+                      >
+                        {submitError}
+                      </p>
+                    )}
+                  </>
                 )}
                 <p className="mt-2.5 px-1 text-[10.5px] leading-relaxed text-ash">
                   {kind === "look"
-                    ? "Ton look part dans le feed « Pour toi » et chez tes abonnés. Les pièces taguées deviennent shoppables."
+                    ? "Ton look part dans le feed avec ta légende, tes photos et les marques taguées."
                     : kind === "actu"
                       ? "Ton actu part dans le feed en carte éditoriale, taguée aux marques choisies."
-                      : "Ton haul part dans le feed avec ses pièces liées, achetables en un tap."}
+                      : "Ton haul part dans le feed avec son texte et les marques choisies."}
                 </p>
               </>
             )}

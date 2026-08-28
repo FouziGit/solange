@@ -12,7 +12,7 @@ import { Avatar } from "@/components/chrome/Avatar";
 import { LuxeMedia } from "@/components/ui/LuxeMedia";
 import { ProductCard } from "@/components/ui/ProductCard";
 import { Chip } from "@/components/ui/Chip";
-import { Bag, Heart, Send, Verified } from "@/components/chrome/icons";
+import { Bag, Heart, Send } from "@/components/chrome/icons";
 
 export function ArticleDetail({
   item,
@@ -21,8 +21,9 @@ export function ArticleDetail({
   item: CatalogItem;
   similar: CatalogItem[];
 }) {
-  const { isSaved, toggleSave } = useStore();
+  const { isSaved, toggleSave, isSold } = useStore();
   const saved = isSaved(item.id);
+  const sold = isSold(item.id);
   const [size, setSize] = useState(item.size);
   const discount = item.originalEUR
     ? Math.round((1 - item.priceEUR / item.originalEUR) * 100)
@@ -114,9 +115,9 @@ export function ArticleDetail({
             </span>
           </div>
 
-          {/* seller row */}
+          {/* seller row — handle réel, sans badge de vérification factice */}
           <Link
-            href="/profil"
+            href={`/messages?item=${item.id}`}
             data-cursor="link"
             className="glass mt-7 flex items-center gap-3 rounded-2xl px-4 py-3 transition-colors hover:bg-bone/15"
           >
@@ -126,35 +127,43 @@ export function ArticleDetail({
               className="size-11 text-2xl ring-1 ring-bone/15"
             />
             <span className="min-w-0 flex-1">
-              <span className="flex items-center gap-1.5">
-                <span className="truncate text-sm font-semibold text-bone">
-                  @{item.seller}
-                </span>
-                <Verified className="size-4 shrink-0 text-bone" />
+              <span className="block truncate text-sm font-semibold text-bone">
+                @{item.seller}
               </span>
               <span className="block text-[11px] text-ash">
-                Vendeur vérifié · Voir la vitrine
+                Contacter le vendeur
               </span>
             </span>
           </Link>
 
           {/* actions */}
           <div className="mt-5 flex flex-col gap-3 sm:flex-row">
-            <Link
-              href={`/checkout/${item.id}`}
-              onClick={() =>
-                track("checkout_start", {
-                  id: item.id,
-                  brand: item.brand,
-                  priceEUR: item.priceEUR,
-                })
-              }
-              data-cursor="link"
-              className="flex flex-1 items-center justify-center gap-2 rounded-none bg-bone px-6 py-3.5 text-sm font-semibold text-ink transition-transform active:scale-95"
-            >
-              <Bag className="size-5" />
-              Acheter — {euro(item.priceEUR)}
-            </Link>
+            {sold ? (
+              <button
+                type="button"
+                disabled
+                className="flex min-h-[52px] flex-1 cursor-not-allowed items-center justify-center gap-2 rounded-none bg-bone/15 px-6 py-3.5 text-sm font-semibold text-bone/50"
+              >
+                <Bag className="size-5" />
+                Vendu
+              </button>
+            ) : (
+              <Link
+                href={`/checkout/${item.id}`}
+                onClick={() =>
+                  track("checkout_start", {
+                    id: item.id,
+                    brand: item.brand,
+                    priceEUR: item.priceEUR,
+                  })
+                }
+                data-cursor="link"
+                className="flex flex-1 items-center justify-center gap-2 rounded-none bg-bone px-6 py-3.5 text-sm font-semibold text-ink transition-transform active:scale-95"
+              >
+                <Bag className="size-5" />
+                Acheter — {euro(item.priceEUR)}
+              </Link>
+            )}
             <Link
               href={`/messages?item=${item.id}`}
               data-cursor="link"
@@ -176,8 +185,8 @@ export function ArticleDetail({
           </div>
 
           <p className="mt-6 text-[13px] leading-relaxed text-ash">
-            Pièce authentifiée par la communauté SOLANGE. Paiement sécurisé,
-            retour sous 14 jours. Commission dégressive reversée au vendeur.
+            Protection acheteur (démo) — paiement simulé, aucune transaction
+            réelle. Commission dégressive reversée au vendeur.
           </p>
         </motion.div>
       </div>

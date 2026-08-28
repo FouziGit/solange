@@ -9,7 +9,7 @@ import { Avatar } from "@/components/chrome/Avatar";
 import { AnimatePresence } from "motion/react";
 import { invite, looks, me } from "@/lib/mock";
 import { forSale, liked } from "@/lib/data";
-import { EASE, compact, euro, gradientFor } from "@/lib/utils";
+import { EASE, compact, euro, gradientFor, initials } from "@/lib/utils";
 import { useStore } from "@/lib/store";
 import { imgItem } from "@/lib/img";
 import {
@@ -131,9 +131,27 @@ function ReferralCard() {
 export default function ProfilPage() {
   const [tab, setTab] = useState<string>("vente");
   const [referral, setReferral] = useState(false);
-  const { orders } = useStore();
+  const { orders, user, authReady, signOut, savedItems, serverProducts } =
+    useStore();
   const saleItems = forSale();
   const likedItems = liked();
+  const isGuest = authReady && user === null;
+  const myListings = serverProducts.filter((p) => p.mine).length;
+
+  const reconnect = () => {
+    try {
+      localStorage.removeItem("solange:onboarded");
+    } catch {}
+    location.reload();
+  };
+
+  const disconnect = async () => {
+    await signOut();
+    try {
+      localStorage.removeItem("solange:onboarded");
+    } catch {}
+    location.assign("/");
+  };
 
   return (
     <PageShell>
@@ -141,32 +159,52 @@ export default function ProfilPage() {
       <div className="flex flex-col items-center text-center md:flex-row md:items-end md:text-left">
         <div className="relative">
           <span className="absolute -inset-1 rounded-full bg-gradient-to-tr from-bone/40 to-bone/10 blur-[2px]" />
-          <Avatar
-            name={me.name}
-            seed={me.seed}
-            className="relative size-28 text-6xl ring-2 ring-ink md:size-32"
-          />
+          {user ? (
+            /* membre connecté : monogramme réel, pas de fausse photo */
+            <span
+              role="img"
+              aria-label={user.name}
+              className="relative grid size-28 place-items-center rounded-full ring-2 ring-ink md:size-32"
+              style={{ background: gradientFor(user.handle) }}
+            >
+              <span className="font-display text-4xl font-bold tracking-wide text-bone/85">
+                {initials(user.name || user.handle)}
+              </span>
+            </span>
+          ) : (
+            <Avatar
+              name={me.name}
+              seed={me.seed}
+              className="relative size-28 text-6xl ring-2 ring-ink md:size-32"
+            />
+          )}
         </div>
 
         <div className="mt-4 md:ml-7 md:mt-0 md:flex-1">
           <div className="flex items-center justify-center gap-2 md:justify-start">
             <h1 className="font-display text-4xl font-bold tracking-tight text-bone md:text-5xl">
-              {me.name}
+              {user ? user.name : me.name}
             </h1>
-            {me.verified && <Verified className="size-5 text-bone" />}
+            {!user && me.verified && <Verified className="size-5 text-bone" />}
           </div>
-          <p className="mt-1 text-sm text-ash">@{me.handle}</p>
-          <p className="mx-auto mt-3 max-w-md text-[13.5px] leading-relaxed text-bone/85 md:mx-0">
-            {me.bio}
-          </p>
-          <div className="mt-3 flex items-center justify-center gap-3 text-[12px] text-ash md:justify-start">
-            <span className="inline-flex items-center gap-1">
-              <Pin className="size-3.5" /> {me.location}
-            </span>
-            <span className="inline-flex items-center gap-1">
-              <Star filled className="size-3.5 text-bone" /> {me.rating}
-            </span>
-          </div>
+          <p className="mt-1 text-sm text-ash">@{user ? user.handle : me.handle}</p>
+          {user ? (
+            <p className="mt-2 text-[13px] text-ash">{user.email}</p>
+          ) : (
+            <>
+              <p className="mx-auto mt-3 max-w-md text-[13.5px] leading-relaxed text-bone/85 md:mx-0">
+                {me.bio}
+              </p>
+              <div className="mt-3 flex items-center justify-center gap-3 text-[12px] text-ash md:justify-start">
+                <span className="inline-flex items-center gap-1">
+                  <Pin className="size-3.5" /> {me.location}
+                </span>
+                <span className="inline-flex items-center gap-1">
+                  <Star filled className="size-3.5 text-bone" /> {me.rating}
+                </span>
+              </div>
+            </>
+          )}
         </div>
 
         <div className="mt-5 flex items-center gap-2 md:mt-0">
@@ -198,14 +236,43 @@ export default function ProfilPage() {
         {referral && <ReferralCard />}
       </AnimatePresence>
 
-      {/* stats */}
+      {/* stats — réelles (store) pour un membre connecté, mock sinon */}
       <div className="mt-8 flex items-center justify-around rounded-2xl border border-bone/10 py-4 md:max-w-md">
-        <Stat value={compact(me.followers)} label="Abonnés" />
-        <span className="h-8 w-px bg-bone/10" />
-        <Stat value={compact(me.following)} label="Abonnements" />
-        <span className="h-8 w-px bg-bone/10" />
-        <Stat value={String(me.sales)} label="Ventes" />
+        {user ? (
+          <>
+            <Stat value={String(orders.length)} label="Commandes" />
+            <span className="h-8 w-px bg-bone/10" />
+            <Stat value={String(savedItems().length)} label="Favoris" />
+            <span className="h-8 w-px bg-bone/10" />
+            <Stat value={String(myListings)} label="Annonces" />
+          </>
+        ) : (
+          <>
+            <Stat value={compact(me.followers)} label="Abonnés" />
+            <span className="h-8 w-px bg-bone/10" />
+            <Stat value={compact(me.following)} label="Abonnements" />
+            <span className="h-8 w-px bg-bone/10" />
+            <Stat value={String(me.sales)} label="Ventes" />
+          </>
+        )}
       </div>
+
+      {/* invité : encart mode démo + reconnexion */}
+      {isGuest && (
+        <div className="mt-6 rounded-2xl border border-bone/12 bg-coal/60 p-5 md:max-w-md">
+          <p className="overline text-[9px] text-ash">Mode démo</p>
+          <p className="mt-1.5 text-[13.5px] leading-relaxed text-bone/85">
+            Connecte-toi pour garder tes achats et tes favoris.
+          </p>
+          <button
+            type="button"
+            onClick={reconnect}
+            className="mt-4 inline-flex min-h-11 w-full items-center justify-center rounded-full bg-bone px-5 text-sm font-semibold text-ink transition-transform active:scale-95 md:w-auto"
+          >
+            Se connecter / créer un compte
+          </button>
+        </div>
+      )}
 
       {/* mes commandes — populated by the checkout flow */}
       {orders.length > 0 && (
@@ -236,7 +303,10 @@ export default function ProfilPage() {
                     {o.item.name}
                   </p>
                   <p className="mt-0.5 text-[11px] text-ash">
-                    {o.id} · carte •••• {o.last4}
+                    {o.id} ·{" "}
+                    {/^\d{4}$/.test(o.last4)
+                      ? `carte •••• ${o.last4}`
+                      : "paiement simulé (démo)"}
                   </p>
                 </div>
                 <div className="flex flex-col items-end gap-1">
@@ -328,24 +398,29 @@ export default function ProfilPage() {
         )}
       </div>
 
-      {/* footer line */}
-      <p className="mt-10 text-center text-xs text-ash">
-        Membre SOLANGE depuis 2026 · {euro(me.sales * 86)} de ventes cumulées
-      </p>
+      {/* footer line — mock uniquement (pas de fausses ventes pour un membre réel) */}
+      {!user && (
+        <p className="mt-10 text-center text-xs text-ash">
+          Membre SOLANGE depuis 2026 · {euro(me.sales * 86)} de ventes cumulées
+        </p>
+      )}
 
-      <div className="mt-4 mb-2 text-center">
-        <button
-          type="button"
-          onClick={() => {
-            try {
-              localStorage.removeItem("solange:onboarded");
-            } catch {}
-            location.reload();
-          }}
-          className="text-[12px] text-ash/70 underline-offset-4 transition-colors hover:text-bone hover:underline"
+      <div className="mt-6 mb-2 flex flex-col items-center gap-1 text-center">
+        {user && (
+          <button
+            type="button"
+            onClick={disconnect}
+            className="inline-flex min-h-11 items-center px-4 text-[12px] text-ash/70 underline-offset-4 transition-colors hover:text-bone hover:underline"
+          >
+            Déconnexion
+          </button>
+        )}
+        <Link
+          href="/mentions-legales"
+          className="inline-flex min-h-11 items-center px-4 text-[11px] text-ash/60 underline-offset-4 transition-colors hover:text-bone hover:underline"
         >
-          Déconnexion
-        </button>
+          Mentions légales
+        </Link>
       </div>
     </PageShell>
   );

@@ -5,9 +5,10 @@ import Link from "next/link";
 import { AnimatePresence, motion } from "motion/react";
 import type { CatalogItem } from "@/lib/mock";
 import { useStore } from "@/lib/store";
+import { api, type ApiOrder } from "@/lib/api";
 import { PageShell } from "@/components/ui/PageShell";
 import { imgItem } from "@/lib/img";
-import { commission, euro, gradientFor } from "@/lib/utils";
+import { commission, commissionRate, euro, gradientFor } from "@/lib/utils";
 import {
   ArrowLeft,
   Lock,
@@ -19,61 +20,103 @@ import {
 
 type Step = "form" | "processing" | "done";
 
-/** Digits only, grouped 4-by-4, max 16 digits (19 chars w/ spaces). */
-function formatCard(v: string) {
-  return v
-    .replace(/\D/g, "")
-    .slice(0, 16)
-    .replace(/(.{4})/g, "$1 ")
-    .trim();
-}
-function formatExpiry(v: string) {
-  const d = v.replace(/\D/g, "").slice(0, 4);
-  return d.length <= 2 ? d : `${d.slice(0, 2)} / ${d.slice(2)}`;
-}
+/* Valeurs de démo figées — le formulaire ne peut JAMAIS recevoir
+   une vraie carte : tous les champs sont readOnly. */
+const DEMO_CARD = "4242 4242 4242 4242";
+const DEMO_EXP = "12 / 34";
+const DEMO_CVC = "123";
+const DEMO_NAME = "Démo SOLANGE";
 
 export function CheckoutView({ item }: { item: CatalogItem }) {
-  const { addOrder } = useStore();
+  const { addOrder, user, authReady, refreshProducts, refreshSession, isSold } =
+    useStore();
 
-  // Prefilled with the Stripe test card so the demo flows in one tap.
-  const [card, setCard] = useState("4242 4242 4242 4242");
-  const [exp, setExp] = useState("12 / 34");
-  const [cvc, setCvc] = useState("123");
-  const [name, setName] = useState("Nouh Benzidane");
   const [step, setStep] = useState<Step>("form");
   const [orderId, setOrderId] = useState("");
+  const [serverOrder, setServerOrder] = useState<ApiOrder | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [soldOut, setSoldOut] = useState(false); // 409 pendant le paiement
+
+  const alreadySold = isSold(item.id);
 
   const price = item.priceEUR;
-  const protection = Math.round(price * 0.05) + 0.7; // Vinted-style buyer protection
+  const protection = Math.round(price * 0.05) + 0.7; // protection acheteur (démo locale)
   const shipping = 4.9;
   const total = Math.round((price + protection + shipping) * 100) / 100;
-  const { rate, net } = commission(price); // Stripe Connect split
-  const last4 = card.replace(/\D/g, "").slice(-4) || "4242";
+  const { net } = commission(price);
+  const ratePct = (commissionRate(price) * 100).toLocaleString("fr-FR");
 
-  const pay = (e: React.FormEvent) => {
+  const signIn = () => {
+    try {
+      localStorage.removeItem("solange:onboarded");
+    } catch {}
+    location.reload();
+  };
+
+  const pay = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (step !== "form") return;
+    if (step !== "form" || soldOut || alreadySold || !authReady) return;
+    setError(null);
     setStep("processing");
-    const id =
-      "SLG-" + Math.random().toString(36).slice(2, 8).toUpperCase();
-    // Simulated Stripe payment intent latency.
-    setTimeout(() => {
-      setOrderId(id);
+
+    /* ---- invité : démo locale, rien n'est sauvegardé ---- */
+    if (!user) {
+      const id = "SLG-" + Math.random().toString(36).slice(2, 8).toUpperCase();
+      setTimeout(() => {
+        setOrderId(id);
+        addOrder({
+          id,
+          item,
+          protection,
+          shipping,
+          total,
+          last4: "4242",
+          date: new Date().toLocaleDateString("fr-FR"),
+        });
+        setStep("done");
+      }, 1700);
+      return;
+    }
+
+    /* ---- membre connecté : le serveur recalcule tout ---- */
+    const res = await api.order(item.id);
+    if (res.ok) {
+      const order = res.data.order;
+      setServerOrder(order);
+      setOrderId(order.id);
       addOrder({
-        id,
+        id: order.id,
         item,
-        protection,
-        shipping,
-        total,
-        last4,
-        date: new Date().toISOString(),
+        protection: order.protectionEUR,
+        shipping: order.shippingEUR,
+        total: order.totalEUR,
+        last4: "démo",
+        date: new Date().toLocaleDateString("fr-FR"),
       });
+      void refreshProducts();
       setStep("done");
-    }, 1700);
+      return;
+    }
+    if (res.status === 409) {
+      setSoldOut(true);
+      setError("Cette pièce vient d'être vendue.");
+      void refreshProducts();
+    } else if (res.status === 401) {
+      setError("Session expirée — reconnecte-toi pour finaliser la commande.");
+      void refreshSession();
+    } else {
+      setError(res.error);
+    }
+    setStep("form");
   };
 
   /* ---------------- success ---------------- */
   if (step === "done") {
+    const paidTotal = serverOrder ? serverOrder.totalEUR : total;
+    const paidProtection = serverOrder ? serverOrder.protectionEUR : protection;
+    const paidShipping = serverOrder ? serverOrder.shippingEUR : shipping;
+    const paidPrice = serverOrder ? serverOrder.priceEUR : price;
+
     return (
       <PageShell>
         <div className="mx-auto max-w-md">
@@ -87,12 +130,18 @@ export function CheckoutView({ item }: { item: CatalogItem }) {
           </motion.div>
 
           <h1 className="font-display mt-6 text-center text-3xl font-bold uppercase tracking-tight text-bone">
-            Paiement réussi
+            Commande enregistrée
           </h1>
           <p className="mt-2 text-center text-[13px] text-ash">
-            Commande <span className="text-bone">{orderId}</span> · payée{" "}
-            {euro(total)} · carte •••• {last4}
+            Commande <span className="text-bone">{orderId}</span> ·{" "}
+            {euro(paidTotal)} · paiement simulé
           </p>
+          {!serverOrder && (
+            <p className="mt-1.5 text-center text-[11.5px] text-ash">
+              Démo locale (non sauvegardée) — cette commande disparaîtra au
+              rechargement.
+            </p>
+          )}
 
           <div className="glass mt-7 flex items-center gap-3 rounded-2xl p-3">
             <span
@@ -117,12 +166,25 @@ export function CheckoutView({ item }: { item: CatalogItem }) {
             </div>
           </div>
 
+          {/* montants (serveur si connecté, locaux en démo invité) */}
+          <dl className="mt-4 space-y-2 rounded-2xl border border-bone/10 p-4 text-[13px]">
+            <Row label="Article">{euro(paidPrice)}</Row>
+            <Row label="Protection acheteur">{euro(paidProtection)}</Row>
+            <Row label="Livraison suivie">{euro(paidShipping)}</Row>
+            <div className="my-1 h-px bg-bone/10" />
+            <div className="flex items-center justify-between">
+              <dt className="font-semibold text-bone">Total</dt>
+              <dd className="font-display text-xl font-bold tracking-tight text-bone">
+                {euro(paidTotal)}
+              </dd>
+            </div>
+          </dl>
+
           <div className="mt-5 flex items-center gap-2 rounded-2xl border border-bone/12 bg-bone/[0.03] px-4 py-3 text-[12.5px] text-ash">
             <span className="grid size-7 shrink-0 place-items-center rounded-full bg-bone/10">
               <Bag className="size-4 text-bone" />
             </span>
-            Le vendeur <span className="text-bone">@{item.seller}</span> a été
-            notifié — expédition sous 48h.
+            Paiement simulé — aucun débit réel n&apos;a été effectué.
           </div>
 
           <div className="mt-7 flex flex-col gap-3">
@@ -137,6 +199,73 @@ export function CheckoutView({ item }: { item: CatalogItem }) {
               className="glass rounded-full py-3.5 text-center text-sm font-semibold text-bone transition-colors hover:bg-bone/10"
             >
               Retour au feed
+            </Link>
+          </div>
+        </div>
+      </PageShell>
+    );
+  }
+
+  /* ---------------- déjà vendue (au chargement) ---------------- */
+  if (alreadySold && !soldOut) {
+    return (
+      <PageShell>
+        <Link
+          href={`/article/${item.id}`}
+          data-cursor="link"
+          aria-label="Retour"
+          className="glass mb-5 inline-grid size-11 place-items-center rounded-full text-bone transition-transform active:scale-90"
+        >
+          <ArrowLeft className="size-5" />
+        </Link>
+
+        <div className="mx-auto max-w-md">
+          <h1 className="font-display text-3xl font-bold uppercase tracking-tight text-bone">
+            Déjà vendue
+          </h1>
+          <p className="mt-2 text-[13px] text-ash">
+            Cette pièce a trouvé preneur avant toi — elle n&apos;est plus
+            disponible à l&apos;achat.
+          </p>
+
+          <div className="glass mt-6 flex items-center gap-3 rounded-2xl p-3 opacity-70">
+            <span
+              className="grid size-20 shrink-0 place-items-center overflow-hidden rounded-xl ring-1 ring-bone/10"
+              style={{ background: gradientFor(item.id) }}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={imgItem(item.id)}
+                alt={item.name}
+                className="size-full object-cover"
+              />
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="overline text-[9px] text-ash">{item.brand}</p>
+              <p className="font-display truncate text-[16px] font-semibold tracking-tight text-bone">
+                {item.name}
+              </p>
+              <p className="mt-0.5 text-[11px] text-ash">
+                Taille {item.size} · {euro(price)}
+              </p>
+            </div>
+            <span className="shrink-0 rounded-full border border-bone/20 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-ash">
+              Vendue
+            </span>
+          </div>
+
+          <div className="mt-7 flex flex-col gap-3">
+            <Link
+              href="/"
+              className="rounded-full bg-bone py-3.5 text-center text-sm font-semibold text-ink transition-transform active:scale-95"
+            >
+              Retour au feed
+            </Link>
+            <Link
+              href={`/article/${item.id}`}
+              className="glass rounded-full py-3.5 text-center text-sm font-semibold text-bone transition-colors hover:bg-bone/10"
+            >
+              Revoir la pièce
             </Link>
           </div>
         </div>
@@ -160,7 +289,7 @@ export function CheckoutView({ item }: { item: CatalogItem }) {
         Paiement
       </h1>
 
-      {/* Test-mode banner — honest: nothing real is charged. */}
+      {/* Bandeau test — honnête : rien de réel n'est débité. */}
       <div className="mt-4 flex items-center gap-2.5 rounded-xl border border-bone/20 bg-bone/[0.04] px-3.5 py-2.5">
         <span className="rounded-md bg-bone px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-ink">
           Test
@@ -221,7 +350,7 @@ export function CheckoutView({ item }: { item: CatalogItem }) {
               Répartition · Stripe Connect
             </p>
             <Row label={`Le vendeur reçoit`}>{euro(net)}</Row>
-            <Row label={`Commission SOLANGE (${Math.round(rate * 100)}%)`}>
+            <Row label={`Commission SOLANGE (${ratePct} %)`}>
               {euro(price - net)}
             </Row>
           </div>
@@ -230,7 +359,7 @@ export function CheckoutView({ item }: { item: CatalogItem }) {
         {/* ---- payment card ---- */}
         <section className="order-1 lg:order-2">
           <form
-            onSubmit={pay}
+            onSubmit={(e) => void pay(e)}
             className="rounded-3xl border border-bone/12 bg-coal/70 p-5 backdrop-blur-xl"
           >
             <div className="mb-4 flex items-center justify-between">
@@ -242,19 +371,31 @@ export function CheckoutView({ item }: { item: CatalogItem }) {
               </span>
             </div>
 
+            {/* Encart sécurité — AVANT les champs, très visible. */}
+            <div
+              role="note"
+              className="mb-4 rounded-xl border-2 border-bone/50 bg-bone/[0.08] px-3.5 py-3"
+            >
+              <p className="text-[12.5px] font-semibold leading-snug text-bone">
+                Paiement simulé — aucun débit.
+              </p>
+              <p className="mt-0.5 text-[11.5px] leading-snug text-ash">
+                N&apos;entre jamais une vraie carte : les champs ci-dessous sont
+                figés sur une carte de démonstration.
+              </p>
+            </div>
+
             <Field label="Numéro de carte">
               <div className="relative">
                 <input
-                  inputMode="numeric"
-                  autoComplete="cc-number"
-                  value={card}
-                  onChange={(e) => setCard(formatCard(e.target.value))}
-                  placeholder="1234 1234 1234 1234"
-                  className="field pr-14"
-                  aria-label="Numéro de carte"
+                  readOnly
+                  autoComplete="off"
+                  value={DEMO_CARD}
+                  className="field pr-14 text-bone/80"
+                  aria-label="Numéro de carte (démo, non modifiable)"
                 />
                 <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] font-bold tracking-wide text-bone/70">
-                  {card.startsWith("4") ? "VISA" : "CARTE"}
+                  VISA
                 </span>
               </div>
             </Field>
@@ -262,48 +403,59 @@ export function CheckoutView({ item }: { item: CatalogItem }) {
             <div className="mt-3 grid grid-cols-2 gap-3">
               <Field label="Expiration">
                 <input
-                  inputMode="numeric"
-                  autoComplete="cc-exp"
-                  value={exp}
-                  onChange={(e) => setExp(formatExpiry(e.target.value))}
-                  placeholder="MM / AA"
-                  className="field"
-                  aria-label="Date d'expiration"
+                  readOnly
+                  autoComplete="off"
+                  value={DEMO_EXP}
+                  className="field text-bone/80"
+                  aria-label="Date d'expiration (démo, non modifiable)"
                 />
               </Field>
               <Field label="CVC">
                 <input
-                  inputMode="numeric"
-                  autoComplete="cc-csc"
-                  value={cvc}
-                  onChange={(e) =>
-                    setCvc(e.target.value.replace(/\D/g, "").slice(0, 4))
-                  }
-                  placeholder="123"
-                  className="field"
-                  aria-label="Cryptogramme CVC"
+                  readOnly
+                  autoComplete="off"
+                  value={DEMO_CVC}
+                  className="field text-bone/80"
+                  aria-label="Cryptogramme CVC (démo, non modifiable)"
                 />
               </Field>
             </div>
 
             <Field label="Nom sur la carte" className="mt-3">
               <input
-                autoComplete="cc-name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Prénom Nom"
-                className="field"
-                aria-label="Nom sur la carte"
+                readOnly
+                autoComplete="off"
+                value={DEMO_NAME}
+                className="field text-bone/80"
+                aria-label="Nom sur la carte (démo, non modifiable)"
               />
             </Field>
 
+            {error && (
+              <div
+                role="alert"
+                className="mt-4 rounded-xl border border-bone/25 bg-bone/[0.05] px-3.5 py-2.5 text-[12.5px] leading-snug text-bone"
+              >
+                {error}
+              </div>
+            )}
+
             <button
               type="submit"
-              disabled={step === "processing"}
-              className="mt-5 flex w-full items-center justify-center gap-2 rounded-full bg-bone py-3.5 text-sm font-semibold text-ink transition-transform active:scale-95 disabled:opacity-70"
+              disabled={step === "processing" || soldOut || !authReady}
+              className="mt-5 flex min-h-11 w-full items-center justify-center gap-2 rounded-full bg-bone py-3.5 text-sm font-semibold text-ink transition-transform active:scale-95 disabled:opacity-70"
             >
               <AnimatePresence mode="wait" initial={false}>
-                {step === "processing" ? (
+                {soldOut ? (
+                  <motion.span
+                    key="sold"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                  >
+                    Déjà vendue
+                  </motion.span>
+                ) : step === "processing" ? (
                   <motion.span
                     key="proc"
                     initial={{ opacity: 0 }}
@@ -312,7 +464,7 @@ export function CheckoutView({ item }: { item: CatalogItem }) {
                     className="flex items-center gap-2"
                   >
                     <span className="size-4 animate-spin rounded-full border-2 border-ink/30 border-t-ink" />
-                    Paiement en cours…
+                    Enregistrement…
                   </motion.span>
                 ) : (
                   <motion.span
@@ -322,15 +474,35 @@ export function CheckoutView({ item }: { item: CatalogItem }) {
                     exit={{ opacity: 0 }}
                     className="flex items-center gap-2"
                   >
-                    <Lock className="size-4" /> Payer {euro(total)}
+                    <Lock className="size-4" /> Payer {euro(total)} (simulé)
                   </motion.span>
                 )}
               </AnimatePresence>
             </button>
 
+            {/* Invité : démo locale + proposition de connexion. */}
+            {authReady && !user && (
+              <div className="mt-4 rounded-xl border border-bone/12 bg-bone/[0.03] p-3.5">
+                <p className="text-[11.5px] leading-snug text-ash">
+                  Mode invité — la commande sera une{" "}
+                  <span className="text-bone">
+                    démo locale (non sauvegardée)
+                  </span>
+                  . Connecte-toi pour l&apos;enregistrer sur ton compte.
+                </p>
+                <button
+                  type="button"
+                  onClick={signIn}
+                  className="mt-2.5 flex min-h-11 w-full items-center justify-center rounded-full border border-bone/25 px-4 text-[13px] font-semibold text-bone transition-colors active:bg-bone/10"
+                >
+                  Se connecter / créer un compte
+                </button>
+              </div>
+            )}
+
             <p className="mt-3 flex items-center justify-center gap-1.5 text-[11px] text-ash">
-              <Lock className="size-3" /> Paiement chiffré · protection acheteur
-              incluse
+              <Lock className="size-3" /> Démo — aucune donnée bancaire
+              n&apos;est saisie ni transmise
             </p>
           </form>
         </section>

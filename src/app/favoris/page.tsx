@@ -120,7 +120,7 @@ export default function FavorisPage() {
                     {c.verified && (
                       <Verified
                         className="size-4 shrink-0 text-bone"
-                        aria-label="Vendeur vérifié"
+                        aria-label="Profil démo"
                       />
                     )}
                   </span>

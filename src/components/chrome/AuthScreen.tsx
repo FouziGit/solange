@@ -2,6 +2,8 @@
 
 import { useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
+import { api } from "@/lib/api";
+import { useStore } from "@/lib/store";
 import { LogoMark } from "./Brandmark";
 import { Check } from "./icons";
 
@@ -10,46 +12,59 @@ type Step = "email" | "code" | "success";
 const emailRe = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 
 /**
- * Onboarding gate — a cinematic, motion-heavy landing (Vinted/Vestiaire vibe):
- * email → 6-digit code → access. Code is SIMULATED for now (shown on screen);
- * swapping in a real Resend email is a drop-in on `sendCode`. A "Passer" button
- * skips auth for beta testing. `onComplete` unlocks the app.
+ * Onboarding gate — cinematic landing: email → code 6 chiffres → accès.
+ * AUTH RÉELLE : le code est généré, haché et vérifié CÔTÉ SERVEUR
+ * (/api/auth/*) et envoyé par email (Resend). « Passer » = mode démo
+ * invité, sans compte : rien n'est persisté. `onComplete` déverrouille.
  */
 export function AuthScreen({ onComplete }: { onComplete: () => void }) {
   const reduce = useReducedMotion();
+  const { refreshSession } = useStore();
   const [step, setStep] = useState<Step>("email");
   const [email, setEmail] = useState("");
   const [code, setCode] = useState("");
-  const [demoCode, setDemoCode] = useState("");
-  const [emailErr, setEmailErr] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [codeErr, setCodeErr] = useState(false);
   const codeRef = useRef<HTMLInputElement>(null);
 
   const valid = emailRe.test(email.trim());
 
-  const sendCode = () => {
+  const sendCode = async () => {
     if (!valid) {
-      setEmailErr(true);
+      setError("Entre une adresse email valide.");
       return;
     }
-    // SIMULATED: generate a code and reveal it. (Real email → call an API here.)
-    setDemoCode(String(Math.floor(100000 + Math.random() * 900000)));
+    setBusy(true);
+    setError(null);
+    const res = await api.sendCode(email.trim().toLowerCase());
+    setBusy(false);
+    if (!res.ok) {
+      setError(res.error);
+      return;
+    }
     setCode("");
     setCodeErr(false);
     setStep("code");
     setTimeout(() => codeRef.current?.focus(), 450);
   };
 
-  const onCode = (raw: string) => {
+  const onCode = async (raw: string) => {
     const d = raw.replace(/\D/g, "").slice(0, 6);
     setCode(d);
     setCodeErr(false);
-    if (d.length === 6) {
-      if (d === demoCode) {
+    setError(null);
+    if (d.length === 6 && !busy) {
+      setBusy(true);
+      const res = await api.verify(email.trim().toLowerCase(), d);
+      setBusy(false);
+      if (res.ok) {
+        await refreshSession();
         setStep("success");
         setTimeout(onComplete, 1500);
       } else {
         setCodeErr(true);
+        setError(res.error);
         setTimeout(() => setCode(""), 550);
       }
     }
@@ -175,28 +190,28 @@ export function AuthScreen({ onComplete }: { onComplete: () => void }) {
                   value={email}
                   onChange={(e) => {
                     setEmail(e.target.value);
-                    setEmailErr(false);
+                    setError(null);
                   }}
-                  onKeyDown={(e) => e.key === "Enter" && sendCode()}
+                  onKeyDown={(e) => e.key === "Enter" && void sendCode()}
                   placeholder="ton@email.com"
                   aria-label="Adresse email"
                   className={`field mt-2 rounded-full text-center text-[15px] ${
-                    emailErr ? "border-bone/70" : ""
+                    error ? "border-bone/70" : ""
                   }`}
                 />
-                {emailErr && (
-                  <p className="text-center text-[11px] text-ash">
-                    Entre une adresse email valide.
+                {error && (
+                  <p className="text-center text-[11px] text-ash" role="alert">
+                    {error}
                   </p>
                 )}
                 <motion.button
-                  onClick={sendCode}
+                  onClick={() => void sendCode()}
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.97 }}
-                  disabled={!valid}
+                  disabled={!valid || busy}
                   className="mt-1 rounded-full bg-bone py-3.5 text-sm font-semibold text-ink transition-opacity disabled:opacity-40"
                 >
-                  Recevoir le code
+                  {busy ? "Envoi…" : "Recevoir le code"}
                 </motion.button>
               </motion.div>
             )}
@@ -245,26 +260,39 @@ export function AuthScreen({ onComplete }: { onComplete: () => void }) {
                 <input
                   ref={codeRef}
                   value={code}
-                  onChange={(e) => onCode(e.target.value)}
+                  onChange={(e) => void onCode(e.target.value)}
                   inputMode="numeric"
+                  autoComplete="one-time-code"
                   aria-label="Code de vérification à 6 chiffres"
                   className="sr-only"
                 />
 
-                {/* demo hint (removed once real email is wired) */}
-                <p className="mt-1 rounded-full border border-bone/15 bg-bone/[0.03] px-3 py-1.5 text-[11px] text-ash">
-                  Démo · ton code :{" "}
-                  <span className="font-display font-bold tracking-[0.3em] text-bone">
-                    {demoCode}
-                  </span>
-                </p>
+                {error && (
+                  <p className="mt-1 text-center text-[11px] text-ash" role="alert">
+                    {error}
+                  </p>
+                )}
+                {busy && (
+                  <p className="mt-1 text-center text-[11px] text-ash">
+                    Vérification…
+                  </p>
+                )}
 
-                <button
-                  onClick={() => setStep("email")}
-                  className="mt-1 text-[12px] text-ash transition-colors hover:text-bone"
-                >
-                  ← Modifier l&apos;email
-                </button>
+                <div className="mt-1 flex items-center gap-4">
+                  <button
+                    onClick={() => setStep("email")}
+                    className="min-h-11 text-[12px] text-ash transition-colors hover:text-bone"
+                  >
+                    ← Modifier l&apos;email
+                  </button>
+                  <button
+                    onClick={() => void sendCode()}
+                    disabled={busy}
+                    className="min-h-11 text-[12px] text-ash transition-colors hover:text-bone disabled:opacity-40"
+                  >
+                    Renvoyer le code
+                  </button>
+                </div>
               </motion.div>
             )}
 
@@ -299,9 +327,9 @@ export function AuthScreen({ onComplete }: { onComplete: () => void }) {
           animate={{ opacity: 1 }}
           transition={{ delay: 0.6 }}
           onClick={onComplete}
-          className="pb-safe absolute inset-x-0 bottom-6 z-10 mx-auto block w-fit text-[12.5px] tracking-wide text-ash transition-colors hover:text-bone"
+          className="pb-safe absolute inset-x-0 bottom-6 z-10 mx-auto block w-fit min-h-11 text-[12.5px] tracking-wide text-ash transition-colors hover:text-bone"
         >
-          Passer · accès beta test →
+          Passer · mode démo sans compte →
         </motion.button>
       )}
     </div>

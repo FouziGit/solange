@@ -1,0 +1,9 @@
+# SOLANGE — Netlify config (site: solange-beta)
+[build]
+  command = "npm run build"
+
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
+
+[functions]
+  node_bundler = "esbuild"

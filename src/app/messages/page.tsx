@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useState } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { motion } from "motion/react";
 import { Avatar } from "@/components/chrome/Avatar";
@@ -11,6 +11,8 @@ import {
   type Message,
   type Conversation,
 } from "@/lib/mock";
+import { api } from "@/lib/api";
+import { useStore } from "@/lib/store";
 import { EASE, euro } from "@/lib/utils";
 import {
   Verified,
@@ -20,24 +22,82 @@ import {
   Bag,
 } from "@/components/chrome/icons";
 
+/** Champs communs CatalogItem / ApiProduct dont le fil a besoin. */
+type ThreadItem = Pick<
+  CatalogItem,
+  "id" | "brand" | "name" | "priceEUR" | "seed" | "seller"
+>;
+
+/** Fil synthétique quand aucun fil n'existe encore avec ce vendeur. */
+function syntheticConv(item: ThreadItem): Conversation {
+  return {
+    id: `conv-${item.id}`,
+    name: item.seller,
+    handle: item.seller,
+    seed: item.seed,
+    itemBrand: item.brand,
+    itemName: item.name,
+    itemSeed: item.seed,
+    itemPriceEUR: item.priceEUR,
+    time: "maintenant",
+    unread: 0,
+    messages: [],
+  };
+}
+
 /**
- * When arriving from an article with ?item={id}, open the thread that already
- * discusses that piece (matched by its seed). If none exists, fall back to the
- * piece's seller, then the first conversation.
+ * When arriving from an article with ?item={id}, the offer thread MUST belong
+ * to the piece's seller: first a thread with that seller already about the
+ * piece, then any thread with that seller, then the synthetic thread created
+ * for them. Never conversations[0] — that sent offers to the wrong seller.
  */
 function threadForItem(
-  item: CatalogItem | undefined,
+  item: ThreadItem | undefined,
+  convs: readonly Conversation[],
 ): Conversation | undefined {
   if (!item) return undefined;
   return (
-    conversations.find((c) => c.itemSeed === item.seed) ??
-    conversations.find((c) => c.handle === item.seller) ??
-    conversations[0]
+    convs.find((c) => c.handle === item.seller && c.itemSeed === item.seed) ??
+    convs.find((c) => c.handle === item.seller) ??
+    convs.find((c) => c.id === `conv-${item.id}`)
   );
 }
 
+/** Conversation serveur (GET /api/messages) → shape UI, données validées. */
+function toConversation(raw: unknown): Conversation | null {
+  const c = raw as {
+    id?: unknown;
+    sellerHandle?: unknown;
+    itemBrand?: unknown;
+    itemName?: unknown;
+    itemPriceEUR?: unknown;
+    messages?: unknown;
+  } | null;
+  if (!c || typeof c.id !== "string" || typeof c.sellerHandle !== "string")
+    return null;
+  const msgs = Array.isArray(c.messages) ? c.messages : [];
+  return {
+    id: c.id,
+    name: c.sellerHandle,
+    handle: c.sellerHandle,
+    seed: c.sellerHandle,
+    itemBrand: typeof c.itemBrand === "string" ? c.itemBrand : "",
+    itemName: typeof c.itemName === "string" ? c.itemName : "",
+    itemSeed: "",
+    itemPriceEUR: typeof c.itemPriceEUR === "number" ? c.itemPriceEUR : 0,
+    time: "—",
+    unread: 0,
+    messages: msgs.flatMap((m): Message[] => {
+      const mm = m as { from?: unknown; text?: unknown } | null;
+      return mm && typeof mm.text === "string"
+        ? [{ from: mm.from === "me" ? "me" : "them", text: mm.text }]
+        : [];
+    }),
+  };
+}
+
 /** The opening offer message seeded into the thread (10 % below asking). */
-function offerMessage(item: CatalogItem): Message {
+function offerMessage(item: ThreadItem): Message {
   const offer = Math.round(item.priceEUR * 0.9);
   return {
     from: "me",
@@ -48,22 +108,76 @@ function offerMessage(item: CatalogItem): Message {
 function MessagesInner() {
   const params = useSearchParams();
   const itemId = params.get("item");
-  const item = itemId ? catalogItem(itemId) : undefined;
-  const targetConv = threadForItem(item);
+  const { user, serverProducts } = useStore();
 
-  // The ?item param is stable for the page's lifetime, so the seeded thread and
-  // pre-selection are derived once via lazy initializers — no effect, no
-  // cascading render. The user's own messages append on top from there.
-  const [selId, setSelId] = useState<string | null>(
-    () => targetConv?.id ?? null,
-  );
+  // Pièce visée : catalogue mock d'abord, sinon annonce membre (serveur).
+  const item: ThreadItem | undefined = itemId
+    ? (catalogItem(itemId) ?? serverProducts.find((p) => p.id === itemId))
+    : undefined;
+
+  // Conversations serveur du membre connecté, fusionnées AVANT les mock.
+  const [serverConvs, setServerConvs] = useState<Conversation[]>([]);
+  useEffect(() => {
+    if (!user) return;
+    let alive = true;
+    void api.conversations().then((res) => {
+      if (alive && res.ok)
+        setServerConvs(
+          res.data.conversations
+            .map(toConversation)
+            .filter((c): c is Conversation => c !== null),
+        );
+    });
+    return () => {
+      alive = false;
+    };
+  }, [user]);
+
+  const allConvs = useMemo(() => {
+    const merged: Conversation[] = [];
+    const seen = new Set<string>();
+    for (const c of [...serverConvs, ...conversations]) {
+      if (seen.has(c.id)) continue;
+      seen.add(c.id);
+      merged.push(c);
+    }
+    if (item && !merged.some((c) => c.handle === item.seller))
+      merged.unshift(syntheticConv(item));
+    return merged;
+  }, [serverConvs, item]);
+
+  // Une pièce du catalogue se résout de façon synchrone : fil + pré-sélection
+  // sont dérivés une seule fois via des initialiseurs lazy — pas de cascade.
+  // Une annonce membre arrive après hydratation du store : l'effet ci-dessous
+  // sème alors l'offre, une seule fois.
+  const [selId, setSelId] = useState<string | null>(() => {
+    const ci = itemId ? catalogItem(itemId) : undefined;
+    if (!ci) return null;
+    return (threadForItem(ci, conversations) ?? syntheticConv(ci)).id;
+  });
   const [draft, setDraft] = useState("");
-  const [extra, setExtra] = useState<Record<string, Message[]>>(() =>
-    item && targetConv ? { [targetConv.id]: [offerMessage(item)] } : {},
-  );
+  const [extra, setExtra] = useState<Record<string, Message[]>>(() => {
+    const ci = itemId ? catalogItem(itemId) : undefined;
+    if (!ci) return {};
+    const target = threadForItem(ci, conversations) ?? syntheticConv(ci);
+    return { [target.id]: [offerMessage(ci)] };
+  });
+  const seededRef = useRef(itemId ? Boolean(catalogItem(itemId)) : true);
+  useEffect(() => {
+    if (seededRef.current || !item) return;
+    seededRef.current = true;
+    const target = threadForItem(item, allConvs) ?? syntheticConv(item);
+    setSelId(target.id);
+    setExtra((e) => ({
+      ...e,
+      [target.id]: [offerMessage(item), ...(e[target.id] ?? [])],
+    }));
+  }, [item, allConvs]);
 
   const active =
-    conversations.find((c) => c.id === selId) ?? targetConv ?? conversations[0];
+    allConvs.find((c) => c.id === selId) ??
+    threadForItem(item, allConvs) ??
+    allConvs[0];
   const thread = [...active.messages, ...(extra[active.id] ?? [])];
 
   const send = () => {
@@ -74,6 +188,19 @@ function MessagesInner() {
       [active.id]: [...(e[active.id] ?? []), { from: "me", text }],
     }));
     setDraft("");
+    // Persistance serveur (fire-and-forget) — l'optimistic local reste seul
+    // maître de l'affichage. convId pour un fil serveur, productId pour un
+    // fil (mock ou synthétique) rattaché au vendeur de la pièce.
+    if (user) {
+      const isServerConv = serverConvs.some((c) => c.id === active.id);
+      const isItemThread = item !== undefined && active.handle === item.seller;
+      if (isServerConv || isItemThread)
+        void api.sendMessage({
+          convId: isServerConv ? active.id : undefined,
+          productId: !isServerConv && isItemThread ? item.id : undefined,
+          text,
+        });
+    }
   };
 
   return (
@@ -100,7 +227,7 @@ function MessagesInner() {
         </header>
 
         <div className="flex-1 overflow-y-auto px-3 pb-28 md:pb-4">
-          {conversations.map((c) => {
+          {allConvs.map((c) => {
             const on = active.id === c.id;
             const last = (extra[c.id] ?? []).at(-1) ?? c.messages.at(-1);
             return (

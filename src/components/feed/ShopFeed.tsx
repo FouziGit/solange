@@ -1,17 +1,35 @@
 "use client";
 
+import { useMemo } from "react";
 import { catalog } from "@/lib/mock";
+import { useStore } from "@/lib/store";
+import {
+  sortMemberProducts,
+  toDisplayItem,
+  type DisplayItem,
+} from "../ui/ProductCard";
 import { ShopCard } from "./ShopCard";
 
 /**
  * The "Boutique" side of the home feed: the same full-screen vertical snap as
  * the video scroll, but each screen is a shoppable catalog piece (Vinted-style
  * buy/sell in a TikTok format). Toggled from the top mode switch.
+ * Les annonces membres (backend) passent en tête, disponibles d'abord.
  */
 export function ShopFeed() {
+  const { serverProducts } = useStore();
+
+  const feed = useMemo<DisplayItem[]>(
+    () => [
+      ...sortMemberProducts(serverProducts).map(toDisplayItem),
+      ...catalog,
+    ],
+    [serverProducts],
+  );
+
   return (
     <div className="feed-scroll h-[100dvh] overflow-y-auto overflow-x-hidden">
-      {catalog.map((item, i) => (
+      {feed.map((item, i) => (
         <ShopCard key={item.id} item={item} index={i} />
       ))}
 

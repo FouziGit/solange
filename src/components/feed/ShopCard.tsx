@@ -4,22 +4,33 @@
 import { useState } from "react";
 import { motion } from "motion/react";
 import Link from "next/link";
-import type { CatalogItem } from "@/lib/mock";
 import { useStore } from "@/lib/store";
 import { euro, compact, gradientFor, initials } from "@/lib/utils";
 import { imgItem } from "@/lib/img";
+import type { DisplayItem } from "../ui/ProductCard";
 import { Heart, Bookmark, Share, Bag } from "../chrome/icons";
 
 /**
  * Full-screen shoppable product card — the Vinted-in-TikTok side of the feed.
  * Same immersive format as a look (snap, full-bleed), but the content is a
  * single catalog piece: photo, price, size, condition, seller, buy CTA.
+ * Accepte aussi les annonces membres (item.image + item.member) : photo réelle,
+ * CTA « Contacter » au lieu d'un checkout, badge « Vendu » quand c'est parti.
  */
-export function ShopCard({ item, index }: { item: CatalogItem; index: number }) {
-  const { isLiked, toggleLike, isSaved, toggleSave } = useStore();
+export function ShopCard({
+  item,
+  index,
+}: {
+  item: DisplayItem;
+  index: number;
+}) {
+  const { isLiked, toggleLike, isSaved, toggleSave, isSold } = useStore();
   const liked = isLiked(item.id);
   const saved = isSaved(item.id);
+  const sold = isSold(item.id);
   const [imgOk, setImgOk] = useState(true);
+  // Photo réelle (annonce membre) prioritaire ; sinon visuel par seed.
+  const src = item.image ?? imgItem(item.id);
   const off = item.originalEUR
     ? Math.round((1 - item.priceEUR / item.originalEUR) * 100)
     : null;
@@ -44,14 +55,14 @@ export function ShopCard({ item, index }: { item: CatalogItem; index: number }) 
           <>
             {/* blurred fill so portrait product shots aren't hard-cropped */}
             <img
-              src={imgItem(item.id)}
+              src={src}
               alt=""
               aria-hidden="true"
               draggable={false}
               className="absolute inset-0 size-full scale-110 object-cover blur-2xl brightness-[0.4]"
             />
             <img
-              src={imgItem(item.id)}
+              src={src}
               alt={`${item.brand} — ${item.name}`}
               draggable={false}
               loading={index < 2 ? "eager" : "lazy"}
@@ -65,8 +76,17 @@ export function ShopCard({ item, index }: { item: CatalogItem; index: number }) 
         <div className="pointer-events-none absolute inset-x-0 top-0 h-40 bg-gradient-to-b from-black/70 via-black/20 to-transparent" />
         <div className="pointer-events-none absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-black via-black/70 to-transparent" />
 
+        {/* état vendu — overlay sombre sur la photo, sous l'info et le rail */}
+        {sold && (
+          <div className="pointer-events-none absolute inset-0 z-10 grid place-items-center bg-black/55">
+            <span className="border border-bone/60 px-4 py-1.5 text-[12px] font-semibold uppercase tracking-widest text-bone">
+              Vendu
+            </span>
+          </div>
+        )}
+
         {/* discount badge — top-left, under the top bar */}
-        {off !== null && off > 0 && (
+        {off !== null && off > 0 && !sold && (
           <span
             style={{ top: "calc(env(safe-area-inset-top) + 6.75rem)" }}
             className="absolute left-4 z-20 bg-bone px-2.5 py-1 text-[11px] font-bold tracking-wide text-ink"
@@ -137,16 +157,37 @@ export function ShopCard({ item, index }: { item: CatalogItem; index: number }) 
           </p>
 
           <div className="flex items-center gap-2 pt-1">
-            <Link
-              href={`/checkout/${item.id}`}
-              data-cursor="link"
-              className="flex items-center gap-2 whitespace-nowrap bg-bone px-6 py-2.5 text-sm font-semibold text-ink transition-transform active:scale-95"
-            >
-              <Bag className="size-4" /> Acheter
-            </Link>
+            {sold ? (
+              <button
+                type="button"
+                disabled
+                aria-disabled="true"
+                className="flex cursor-not-allowed items-center gap-2 whitespace-nowrap bg-bone/25 px-6 py-2.5 text-sm font-semibold text-bone/50"
+              >
+                <Bag className="size-4" /> Vendu
+              </button>
+            ) : item.member ? (
+              /* Annonce membre : pas de page détail/checkout en beta. */
+              <Link
+                href={`/messages?item=${item.id}`}
+                data-cursor="link"
+                className="flex items-center gap-2 whitespace-nowrap bg-bone px-6 py-2.5 text-sm font-semibold text-ink transition-transform active:scale-95"
+              >
+                Contacter
+              </Link>
+            ) : (
+              <Link
+                href={`/checkout/${item.id}`}
+                data-cursor="link"
+                className="flex items-center gap-2 whitespace-nowrap bg-bone px-6 py-2.5 text-sm font-semibold text-ink transition-transform active:scale-95"
+              >
+                <Bag className="size-4" /> Acheter
+              </Link>
+            )}
             <button
               type="button"
-              className="whitespace-nowrap border border-bone/30 px-4 py-2.5 text-sm font-medium text-bone transition-colors hover:bg-bone/10 active:scale-95"
+              disabled={sold}
+              className="whitespace-nowrap border border-bone/30 px-4 py-2.5 text-sm font-medium text-bone transition-colors hover:bg-bone/10 active:scale-95 disabled:cursor-not-allowed disabled:border-bone/15 disabled:text-bone/40"
             >
               Faire une offre
             </button>

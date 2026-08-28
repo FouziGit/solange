@@ -5,7 +5,11 @@ import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { PageShell } from "@/components/ui/PageShell";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { ProductCard } from "@/components/ui/ProductCard";
+import {
+  ProductCard,
+  sortMemberProducts,
+  toDisplayItem,
+} from "@/components/ui/ProductCard";
 import { Chip } from "@/components/ui/Chip";
 import { FilterDrawer, type Filters } from "@/components/ui/FilterDrawer";
 import { Avatar } from "@/components/chrome/Avatar";
@@ -48,7 +52,7 @@ function DecouvrirInner() {
   const [focused, setFocused] = useState(false);
   const [drawer, setDrawer] = useState(false);
   const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS);
-  const { isFollowing, toggleFollow } = useStore();
+  const { isFollowing, toggleFollow, serverProducts } = useStore();
 
   const sizes = useMemo(() => catalogSizes(), []);
   const brands = useMemo(() => catalogBrands(), []);
@@ -69,6 +73,37 @@ function DecouvrirInner() {
     return priceMin != null ? out.filter((it) => it.priceEUR >= priceMin) : out;
   }, [cat, q, filters]);
 
+  // Annonces membres (backend) : mêmes filtres que le catalogue, disponibles
+  // d'abord, injectées EN TÊTE de la grille Pièces.
+  const memberItems = useMemo(() => {
+    const priceMax = filters.priceMax ? Number(filters.priceMax) : undefined;
+    const priceMin = filters.priceMin ? Number(filters.priceMin) : undefined;
+    const qn = q.trim().toLowerCase();
+    return sortMemberProducts(serverProducts)
+      .filter((p) => {
+        if (cat !== "Tout" && p.category !== cat) return false;
+        if (qn) {
+          const hay = `${p.brand} ${p.name} ${p.category}`.toLowerCase();
+          if (!hay.includes(qn)) return false;
+        }
+        if (filters.sizes.length && !filters.sizes.includes(p.size))
+          return false;
+        if (filters.conds.length && !filters.conds.includes(p.condition))
+          return false;
+        if (filters.brands.length && !filters.brands.includes(p.brand))
+          return false;
+        if (priceMax != null && p.priceEUR > priceMax) return false;
+        if (priceMin != null && p.priceEUR < priceMin) return false;
+        return true;
+      })
+      .map(toDisplayItem);
+  }, [serverProducts, cat, q, filters]);
+
+  const allItems = useMemo(
+    () => [...memberItems, ...items],
+    [memberItems, items],
+  );
+
   const hasQuery = q.trim().length > 0;
   const results = useMemo(() => searchAll(q), [q]);
 
@@ -86,7 +121,7 @@ function DecouvrirInner() {
     (filters.sort !== "recent" ? 1 : 0);
 
   const counts: Record<Dimension, number | null> = {
-    pieces: items.length,
+    pieces: allItems.length,
     profils: hasQuery ? results.profiles.length : null,
     contenu: hasQuery ? results.content.length : null,
   };
@@ -99,7 +134,7 @@ function DecouvrirInner() {
         subtitle="Le moteur de recherche de la mode de seconde main. Pièces, profils, contenus — filtre, chine, achète."
         right={
           <span className="hidden text-sm text-ash md:block">
-            {items.length} pièces
+            {allItems.length} pièces
           </span>
         }
       />
@@ -234,10 +269,10 @@ function DecouvrirInner() {
           ))}
         </div>
 
-        {/* masonry grid */}
-        {items.length > 0 ? (
+        {/* masonry grid — annonces membres en tête, puis catalogue */}
+        {allItems.length > 0 ? (
           <div className="mt-7 columns-2 gap-3 md:columns-3 xl:columns-4">
-            {items.map((it, i) => (
+            {allItems.map((it, i) => (
               <ProductCard key={it.id} item={it} index={i} />
             ))}
           </div>
@@ -385,7 +420,7 @@ function DecouvrirInner() {
         sizes={sizes}
         conditions={conditions}
         brands={brands}
-        resultCount={items.length}
+        resultCount={allItems.length}
       />
     </PageShell>
   );

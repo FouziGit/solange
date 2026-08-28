@@ -7,6 +7,10 @@ export function generateStaticParams() {
   return catalog.map((it) => ({ id: it.id }));
 }
 
+/* Beta : seules les pièces du catalogue (k*) ont une page checkout.
+   Les annonces membres ne passent pas par ici — tout autre id => 404. */
+export const dynamicParams = false;
+
 export default async function CheckoutPage({
   params,
 }: {
