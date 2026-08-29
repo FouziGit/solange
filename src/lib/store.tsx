@@ -78,7 +78,10 @@ function toggle<T>(set: Set<T>, key: T): Set<T> {
 
 /** Pseudo-CatalogItem pour une commande serveur dont l'item n'est pas local. */
 function orderItem(o: {
-  productId: string; brand: string; name: string; priceEUR: number;
+  productId: string;
+  brand: string;
+  name: string;
+  priceEUR: number;
 }): CatalogItem {
   return (
     catalogItem(o.productId) ?? {
@@ -114,31 +117,37 @@ export function SolangeProvider({ children }: { children: ReactNode }) {
   const [blocked, setBlocked] = useState<Set<string>>(() => new Set());
 
   const refreshSession = useCallback(async () => {
-    const res = await api.me();
-    if (res.ok && res.data.user) {
-      setUser(res.data.user);
-      const s = res.data.social;
-      if (s) {
-        // état serveur = source de vérité pour un membre connecté
-        setLiked(new Set(s.liked));
-        setBlocked(new Set(s.blocked ?? []));
-        setSaved(new Set([...savedIds, ...s.saved]));
-        setFollowing(new Set([...followedHandles, ...s.follows]));
-        setJoined(new Set([...joinedCommunityIds, ...s.joined]));
+    try {
+      const res = await api.me();
+      if (res.ok && res.data.user) {
+        setUser(res.data.user);
+        const s = res.data.social;
+        if (s) {
+          // état serveur = source de vérité pour un membre connecté
+          // Chaque clé peut manquer (le serveur ne stocke que les kinds touchés)
+          setLiked(new Set(s.liked ?? []));
+          setBlocked(new Set(s.blocked ?? []));
+          setSaved(new Set([...savedIds, ...(s.saved ?? [])]));
+          setFollowing(new Set([...followedHandles, ...(s.follows ?? [])]));
+          setJoined(new Set([...joinedCommunityIds, ...(s.joined ?? [])]));
+        }
+        const o = res.data.orders ?? [];
+        setOrders(
+          o.map((so) => ({
+            id: so.id,
+            item: orderItem(so),
+            protection: so.protectionEUR,
+            shipping: so.shippingEUR,
+            total: so.totalEUR,
+            last4: "démo",
+            date: new Date(so.createdAt).toLocaleDateString("fr-FR"),
+          })),
+        );
+      } else {
+        setUser(null);
       }
-      const o = res.data.orders ?? [];
-      setOrders(
-        o.map((so) => ({
-          id: so.id,
-          item: orderItem(so),
-          protection: so.protectionEUR,
-          shipping: so.shippingEUR,
-          total: so.totalEUR,
-          last4: "démo",
-          date: new Date(so.createdAt).toLocaleDateString("fr-FR"),
-        })),
-      );
-    } else {
+    } catch {
+      // un payload inattendu ne doit jamais bloquer l'app sur le splash
       setUser(null);
     }
     setAuthReady(true);

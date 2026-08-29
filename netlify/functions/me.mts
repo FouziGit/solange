@@ -25,11 +25,13 @@ export default async (req: Request) => {
       name: user.name,
       email: user.email,
     },
-    social: (social as object) ?? {
+    social: {
       liked: [],
       saved: [],
       follows: [],
       joined: [],
+      blocked: [],
+      ...((social as object) ?? {}),
     },
     orders,
   });
