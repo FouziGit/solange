@@ -250,3 +250,11 @@ export const Users = (p: P) => (
     <path d="M16 5.2a3.2 3.2 0 0 1 0 5.6M17.5 14.4A5.5 5.5 0 0 1 20.5 20" />
   </svg>
 );
+
+/** Cintre — indique les pièces portées dans un look. */
+export const Hanger = (p: P) => (
+  <svg {...base} {...p}>
+    <path d="M12 7.5a1.9 1.9 0 1 1 1.9-1.9c0 .9-.6 1.4-1.3 1.7-.4.2-.6.5-.6.9v.3" />
+    <path d="M12 8.5 3.6 14.2c-.9.6-.5 2 .6 2h15.6c1.1 0 1.5-1.4.6-2L12 8.5Z" />
+  </svg>
+);

@@ -69,7 +69,7 @@ export function CarouselMedia({
       {/* "n/N" counter — top-right, clears the feed top bar */}
       <div
         style={{ top: "calc(env(safe-area-inset-top) + 5.25rem)" }}
-        className="pointer-events-none absolute right-3 z-10 rounded-full bg-black/55 px-2.5 py-1 text-[11px] font-semibold tabular-nums text-bone backdrop-blur"
+        className="pointer-events-none absolute left-3 z-10 rounded-full bg-black/55 px-2.5 py-1 text-[11px] font-semibold tabular-nums text-bone backdrop-blur"
       >
         {index + 1}/{images.length}
       </div>

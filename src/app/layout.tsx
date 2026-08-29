@@ -1,5 +1,4 @@
 import type { Metadata, Viewport } from "next";
-import Link from "next/link";
 import { Montserrat, Bodoni_Moda, Hanken_Grotesk } from "next/font/google";
 import "./globals.css";
 import { CustomCursor } from "@/components/chrome/CustomCursor";
@@ -94,25 +93,10 @@ export default function RootLayout({
           <GrainOverlay />
           <CustomCursor />
           <AuthGate>
-            {/* bandeau beta global — fixe, discret, non dismissable */}
-            <div className="fixed left-0 right-0 top-0 z-40 border-b border-bone/10 bg-coal pt-[env(safe-area-inset-top)] md:left-[88px]">
-              <p className="flex h-7 items-center justify-center gap-1.5 px-4 text-[11px] tracking-wide text-ash">
-                <span className="truncate">
-                  Beta · démonstration — paiements simulés
-                </span>
-                <span aria-hidden="true">·</span>
-                <Link
-                  href="/mentions-legales"
-                  className="shrink-0 underline underline-offset-2 transition-colors hover:text-bone"
-                >
-                  Mentions légales
-                </Link>
-              </p>
-            </div>
+            {/* Pas de bandeau global : la nature démo est dite là où ça
+                compte (écran d'auth, checkout, mentions légales). */}
             <SideNav />
-            <main className="pt-[calc(28px_+_env(safe-area-inset-top))] md:pl-[88px]">
-              {children}
-            </main>
+            <main className="md:pl-[88px]">{children}</main>
             <MobileTabBar />
           </AuthGate>
         </SolangeProvider>

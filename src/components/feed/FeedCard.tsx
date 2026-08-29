@@ -16,7 +16,6 @@ import { CarouselMedia } from "./CarouselMedia";
 import { CreatorHeader } from "./CreatorHeader";
 import { ActionRail } from "./ActionRail";
 import { CommentSheet } from "./CommentSheet";
-import { ShopHotspots } from "./ShopHotspots";
 import { ShopTheLook } from "./ShopTheLook";
 import { Heart, Play, Mute, Volume } from "../chrome/icons";
 
@@ -185,15 +184,8 @@ export function FeedCard({
               )}
             </div>
 
-            {/* shoppable pins — skipped on carousel posts (hotspots are placed
-                for the single hero, not per slide). */}
-            {hasShop && !hasGallery && (
-              <ShopHotspots
-                products={look.products}
-                active={active && !paused}
-                onSelect={openShop}
-              />
-            )}
+            {/* Pas de pins sur le média (ils chevauchaient l'en-tête) : les
+                pièces du look s'ouvrent via le bouton cintre du rail. */}
 
             {/* pause overlay */}
             <AnimatePresence>
