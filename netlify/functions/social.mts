@@ -8,9 +8,10 @@ import {
   currentUser,
   sameOrigin,
   readJson,
+  pushNotif,
 } from "./_shared/core.mts";
 
-const KINDS = new Set(["liked", "saved", "follows", "joined"]);
+const KINDS = new Set(["liked", "saved", "follows", "joined", "blocked"]);
 
 export default async (req: Request) => {
   if (req.method !== "POST") return bad("Méthode non autorisée", 405);
@@ -35,6 +36,32 @@ export default async (req: Request) => {
   if (set.size > 2000) return bad("Limite atteinte", 429); // anti-spam simple
   state[kind] = [...set];
   await social.setJSON(`s:${user.id}`, state);
+
+  // Compteur global de likes (map unique — approximation assumée en beta).
+  if (kind === "liked") {
+    const counters = store("counters");
+    const map =
+      ((await counters.get("likes", { type: "json" })) as Record<
+        string,
+        number
+      >) ?? {};
+    map[id] = Math.max(0, (map[id] ?? 0) + (b?.on ? 1 : -1));
+    await counters.setJSON("likes", map);
+  }
+
+  // Follow d'un membre réel → notification cloche.
+  if (kind === "follows" && b?.on) {
+    const targetId = (await store("users").get(`handle:${id}`, {
+      type: "text",
+    })) as string | null;
+    if (targetId && targetId !== user.id)
+      await pushNotif(targetId, {
+        type: "follow",
+        text: `@${user.handle} te suit désormais`,
+        link: `/membre/${user.handle}`,
+      });
+  }
+
   return json({ ok: true });
 };
 

@@ -138,3 +138,44 @@ export async function userEmail(userId: string): Promise<string | null> {
   } | null;
   return u?.email ?? null;
 }
+
+/** Plafond glissant simple : max `max` actions par fenêtre. true = autorisé. */
+export async function rateLimit(
+  key: string,
+  max: number,
+  windowMs: number,
+): Promise<boolean> {
+  const rates = store("rates");
+  const now = Date.now();
+  const rec = (await rates.get(key, { type: "json" })) as {
+    n: number;
+    resetAt: number;
+  } | null;
+  if (!rec || now > rec.resetAt) {
+    await rates.setJSON(key, { n: 1, resetAt: now + windowMs });
+    return true;
+  }
+  if (rec.n >= max) return false;
+  await rates.setJSON(key, { ...rec, n: rec.n + 1 });
+  return true;
+}
+
+/** Notification in-app (cloche). Silent-fail. */
+export async function pushNotif(
+  userId: string,
+  notif: {
+    type: "sale" | "message" | "follow" | "report";
+    text: string;
+    link: string;
+  },
+): Promise<void> {
+  try {
+    const notifs = store("notifs");
+    const list =
+      ((await notifs.get(`n:${userId}`, { type: "json" })) as unknown[]) ?? [];
+    list.push({ id: newId("nt"), ...notif, at: Date.now(), read: false });
+    await notifs.setJSON(`n:${userId}`, list.slice(-50));
+  } catch {
+    console.error("notif_push_error");
+  }
+}

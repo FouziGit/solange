@@ -15,6 +15,8 @@ import {
   sendEmail,
   userEmail,
   APP_URL,
+  pushNotif,
+  rateLimit,
 } from "./_shared/core.mts";
 import { SEED_CATALOG } from "./_shared/seed-catalog.mts";
 
@@ -74,6 +76,8 @@ export default async (req: Request) => {
   }>(req);
   const text = (b?.text ?? "").trim().slice(0, 1000);
   if (!text) return bad("Message vide");
+  if (!(await rateLimit(`msg:${user.id}`, 60, 3_600_000)))
+    return bad("Trop de messages — réessaie dans une heure", 429);
 
   let convId = (b?.convId ?? "").trim();
   let conv: Conv | null = null;
@@ -125,6 +129,12 @@ export default async (req: Request) => {
 
   // Notifie l'autre participant réel par email, au plus 1 fois par heure.
   const recipientId = user.id === conv.buyerId ? conv.sellerId : conv.buyerId;
+  if (recipientId)
+    await pushNotif(recipientId, {
+      type: "message",
+      text: `@${user.handle} · ${conv.itemBrand} ${conv.itemName}`,
+      link: "/messages",
+    });
   if (recipientId && Date.now() - (conv.lastEmailAt ?? 0) > 3_600_000) {
     const to = await userEmail(recipientId);
     if (to) {

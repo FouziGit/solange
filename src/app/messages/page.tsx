@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { motion } from "motion/react";
 import { Avatar } from "@/components/chrome/Avatar";
@@ -98,7 +99,7 @@ function offerMessage(item: ThreadItem): Message {
 function MessagesInner() {
   const params = useSearchParams();
   const itemId = params.get("item");
-  const { user, serverProducts } = useStore();
+  const { user, serverProducts, isBlocked, toggleBlock } = useStore();
 
   // Pièce visée : catalogue mock d'abord, sinon annonce membre (serveur).
   const item: ThreadItem | undefined = itemId
@@ -162,15 +163,70 @@ function MessagesInner() {
     }));
   }, [item, allConvs]);
 
-  const active =
-    allConvs.find((c) => c.id === selId) ??
-    threadForItem(item, allConvs) ??
-    allConvs[0];
-  const thread = [...active.messages, ...(extra[active.id] ?? [])];
+  // Les fils dont le correspondant est bloqué sont masqués de la liste ET du
+  // fil actif. Si la conversation ouverte devient bloquée → retour à la liste.
+  const visibleConvs = useMemo(
+    () => allConvs.filter((c) => !isBlocked(c.handle)),
+    [allConvs, isBlocked],
+  );
+  const selConv = selId ? allConvs.find((c) => c.id === selId) : undefined;
+  const selBlocked = selConv !== undefined && isBlocked(selConv.handle);
+  useEffect(() => {
+    if (selBlocked) queueMicrotask(() => setSelId(null));
+  }, [selBlocked]);
+
+  const active: Conversation | undefined = selBlocked
+    ? undefined
+    : (visibleConvs.find((c) => c.id === selId) ??
+      threadForItem(item, visibleConvs) ??
+      visibleConvs[0]);
+  const thread = active
+    ? [...active.messages, ...(extra[active.id] ?? [])]
+    : [];
+
+  // Menu « ⋯ » du fil actif (state local) + feedback éphémère.
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [feedback, setFeedback] = useState<string | null>(null);
+  const feedbackTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(
+    () => () => {
+      if (feedbackTimer.current) clearTimeout(feedbackTimer.current);
+    },
+    [],
+  );
+  const showFeedback = (msg: string) => {
+    setFeedback(msg);
+    if (feedbackTimer.current) clearTimeout(feedbackTimer.current);
+    feedbackTimer.current = setTimeout(() => setFeedback(null), 3000);
+  };
+
+  const reportActive = () => {
+    if (!active) return;
+    setMenuOpen(false);
+    const reason = window.prompt(`Pourquoi signaler @${active.handle} ?`);
+    if (!reason?.trim()) return;
+    void api.report("user", active.handle, reason.trim()).then((res) => {
+      showFeedback(
+        res.ok
+          ? "Signalement envoyé. Merci."
+          : "Échec du signalement, réessaie plus tard.",
+      );
+    });
+  };
+
+  const blockActive = () => {
+    if (!active) return;
+    setMenuOpen(false);
+    const wasBlocked = isBlocked(active.handle);
+    toggleBlock(active.handle);
+    showFeedback(
+      wasBlocked ? `@${active.handle} débloqué.` : `@${active.handle} bloqué.`,
+    );
+  };
 
   const send = () => {
     const text = draft.trim();
-    if (!text) return;
+    if (!text || !active) return;
     setExtra((e) => ({
       ...e,
       [active.id]: [...(e[active.id] ?? []), { from: "me", text }],
@@ -215,13 +271,21 @@ function MessagesInner() {
         </header>
 
         <div className="flex-1 overflow-y-auto px-3 pb-28 md:pb-4">
-          {allConvs.map((c) => {
-            const on = active.id === c.id;
+          {visibleConvs.length === 0 && (
+            <p className="px-3 py-6 text-[13px] text-ash">
+              Aucune conversation pour le moment.
+            </p>
+          )}
+          {visibleConvs.map((c) => {
+            const on = active?.id === c.id;
             const last = (extra[c.id] ?? []).at(-1) ?? c.messages.at(-1);
             return (
               <button
                 key={c.id}
-                onClick={() => setSelId(c.id)}
+                onClick={() => {
+                  setSelId(c.id);
+                  setMenuOpen(false);
+                }}
                 className={`flex w-full items-center gap-3 rounded-2xl p-2.5 text-left transition-colors ${
                   on ? "bg-bone/[0.07]" : "hover:bg-bone/[0.04]"
                 }`}
@@ -261,83 +325,158 @@ function MessagesInner() {
       <section
         className={`flex-1 flex-col ${selId ? "flex" : "hidden md:flex"}`}
       >
-        {/* thread header */}
-        <header className="flex items-center gap-3 border-b border-bone/10 px-4 py-3 pt-10 md:pt-3">
-          <button
-            onClick={() => setSelId(null)}
-            className="grid size-9 place-items-center rounded-full text-bone hover:bg-bone/10 md:hidden"
-            aria-label="Retour"
-          >
-            <ArrowLeft className="size-5" />
-          </button>
-          <Avatar
-            name={active.name}
-            seed={active.seed}
-            className="size-10 text-lg"
-          />
-          <div className="min-w-0">
-            <div className="flex items-center gap-1">
-              <span className="truncate text-sm font-semibold text-bone">
-                {active.name}
+        {!active && (
+          <div className="flex flex-1 items-center justify-center px-6">
+            <p className="text-sm text-ash">Aucune conversation à afficher.</p>
+          </div>
+        )}
+        {active && (
+          <>
+            {/* thread header */}
+            <header className="flex items-center gap-3 border-b border-bone/10 px-4 py-3 pt-10 md:pt-3">
+              <button
+                onClick={() => setSelId(null)}
+                className="grid size-9 place-items-center rounded-full text-bone hover:bg-bone/10 md:hidden"
+                aria-label="Retour"
+              >
+                <ArrowLeft className="size-5" />
+              </button>
+              <Avatar
+                name={active.name}
+                seed={active.seed}
+                className="size-10 text-lg"
+              />
+              <Link
+                href={`/membre/${active.handle}`}
+                className="min-w-0"
+                aria-label={`Voir le profil de @${active.handle}`}
+              >
+                <div className="flex items-center gap-1">
+                  <span className="truncate text-sm font-semibold text-bone">
+                    {active.name}
+                  </span>
+                  {active.verified && (
+                    <Verified className="size-3.5 text-bone" />
+                  )}
+                </div>
+                <span className="text-[11px] text-ash">@{active.handle}</span>
+              </Link>
+              <div className="relative ml-auto">
+                <button
+                  onClick={() => setMenuOpen((o) => !o)}
+                  aria-label="Options de la conversation"
+                  aria-haspopup="menu"
+                  aria-expanded={menuOpen}
+                  className="grid size-11 place-items-center rounded-full text-bone hover:bg-bone/10"
+                >
+                  <span aria-hidden className="text-xl leading-none">
+                    ⋯
+                  </span>
+                </button>
+                {menuOpen && (
+                  <>
+                    <button
+                      aria-hidden
+                      tabIndex={-1}
+                      onClick={() => setMenuOpen(false)}
+                      className="fixed inset-0 z-40 cursor-default"
+                    />
+                    <div
+                      role="menu"
+                      className="absolute right-0 top-12 z-50 w-56 overflow-hidden rounded-2xl border border-bone/10 bg-coal shadow-xl"
+                    >
+                      <button
+                        role="menuitem"
+                        onClick={reportActive}
+                        className="flex min-h-11 w-full items-center px-4 text-left text-sm text-bone transition-colors hover:bg-bone/[0.06]"
+                      >
+                        Signaler
+                      </button>
+                      <button
+                        role="menuitem"
+                        onClick={blockActive}
+                        className="flex min-h-11 w-full items-center px-4 text-left text-sm text-bone transition-colors hover:bg-bone/[0.06]"
+                      >
+                        {isBlocked(active.handle)
+                          ? "Débloquer"
+                          : `Bloquer @${active.handle}`}
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
+            </header>
+
+            {/* product context */}
+            <div className="mx-4 mt-4 flex items-center gap-3 rounded-2xl border border-bone/10 bg-bone/[0.03] p-2.5">
+              <span className="grid size-11 place-items-center rounded-xl bg-coal text-bone/70">
+                <Bag className="size-5" />
               </span>
-              {active.verified && <Verified className="size-3.5 text-bone" />}
+              <div className="min-w-0 flex-1">
+                <p className="overline text-[9px] text-ash">
+                  {active.itemBrand}
+                </p>
+                <p className="truncate text-[13px] text-bone">
+                  {active.itemName}
+                </p>
+              </div>
+              <span className="font-display text-sm font-bold text-bone">
+                {euro(active.itemPriceEUR)}
+              </span>
             </div>
-            <span className="text-[11px] text-ash">@{active.handle}</span>
-          </div>
-        </header>
 
-        {/* product context */}
-        <div className="mx-4 mt-4 flex items-center gap-3 rounded-2xl border border-bone/10 bg-bone/[0.03] p-2.5">
-          <span className="grid size-11 place-items-center rounded-xl bg-coal text-bone/70">
-            <Bag className="size-5" />
-          </span>
-          <div className="min-w-0 flex-1">
-            <p className="overline text-[9px] text-ash">{active.itemBrand}</p>
-            <p className="truncate text-[13px] text-bone">{active.itemName}</p>
-          </div>
-          <span className="font-display text-sm font-bold text-bone">
-            {euro(active.itemPriceEUR)}
-          </span>
-        </div>
+            {/* messages */}
+            <div className="flex flex-1 flex-col gap-2 overflow-y-auto px-4 py-5">
+              {thread.map((m, i) => (
+                <motion.div
+                  key={i}
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3, ease: EASE.luxe }}
+                  className={`max-w-[78%] rounded-2xl px-3.5 py-2 text-[13.5px] leading-snug ${
+                    m.from === "me"
+                      ? "self-end rounded-br-md bg-bone text-ink"
+                      : "self-start rounded-bl-md bg-coal text-bone"
+                  }`}
+                >
+                  {m.text}
+                </motion.div>
+              ))}
+            </div>
 
-        {/* messages */}
-        <div className="flex flex-1 flex-col gap-2 overflow-y-auto px-4 py-5">
-          {thread.map((m, i) => (
-            <motion.div
-              key={i}
-              initial={{ opacity: 0, y: 6 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3, ease: EASE.luxe }}
-              className={`max-w-[78%] rounded-2xl px-3.5 py-2 text-[13.5px] leading-snug ${
-                m.from === "me"
-                  ? "self-end rounded-br-md bg-bone text-ink"
-                  : "self-start rounded-bl-md bg-coal text-bone"
-              }`}
-            >
-              {m.text}
-            </motion.div>
-          ))}
-        </div>
-
-        {/* composer — clears the floating mobile tab bar + home indicator */}
-        <div className="flex items-center gap-2 px-4 pb-[calc(6rem+env(safe-area-inset-bottom))] pt-2 md:pb-5">
-          <input
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && send()}
-            placeholder="Écris un message…"
-            aria-label="Écrire un message"
-            className="glass h-11 flex-1 rounded-full px-4 text-base text-bone outline-none placeholder:text-ash md:text-[13.5px]"
-          />
-          <button
-            onClick={send}
-            aria-label="Envoyer le message"
-            className="grid size-11 shrink-0 place-items-center rounded-full bg-bone text-ink transition-transform active:scale-90"
-          >
-            <Send className="size-5" />
-          </button>
-        </div>
+            {/* composer — clears the floating mobile tab bar + home indicator */}
+            <div className="flex items-center gap-2 px-4 pb-[calc(6rem+env(safe-area-inset-bottom))] pt-2 md:pb-5">
+              <input
+                value={draft}
+                onChange={(e) => setDraft(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && send()}
+                placeholder="Écris un message…"
+                aria-label="Écrire un message"
+                className="glass h-11 flex-1 rounded-full px-4 text-base text-bone outline-none placeholder:text-ash md:text-[13.5px]"
+              />
+              <button
+                onClick={send}
+                aria-label="Envoyer le message"
+                className="grid size-11 shrink-0 place-items-center rounded-full bg-bone text-ink transition-transform active:scale-90"
+              >
+                <Send className="size-5" />
+              </button>
+            </div>
+          </>
+        )}
       </section>
+
+      {/* feedback éphémère (signalement / blocage) */}
+      {feedback && (
+        <div
+          role="status"
+          className="pointer-events-none fixed inset-x-0 bottom-[calc(7rem+env(safe-area-inset-bottom))] z-50 flex justify-center px-4 md:bottom-24"
+        >
+          <span className="rounded-full border border-bone/10 bg-coal px-4 py-2 text-[13px] text-bone shadow-xl">
+            {feedback}
+          </span>
+        </div>
+      )}
     </div>
   );
 }

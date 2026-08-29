@@ -85,6 +85,22 @@ export type SocialState = {
   saved: string[];
   follows: string[];
   joined: string[];
+  blocked?: string[];
+};
+
+export type ApiNotif = {
+  id: string;
+  type: "sale" | "message" | "follow" | "report";
+  text: string;
+  link: string;
+  at: number;
+  read: boolean;
+};
+
+export type PublicProfile = {
+  user: { handle: string; name: string };
+  products: ApiProduct[];
+  posts: ApiPost[];
 };
 
 async function request<T>(
@@ -136,7 +152,7 @@ export const api = {
   logout: () =>
     request<{ ok: boolean }>("/api/auth/logout", { method: "POST" }),
   social: (
-    kind: "liked" | "saved" | "follows" | "joined",
+    kind: "liked" | "saved" | "follows" | "joined" | "blocked",
     id: string,
     on: boolean,
   ) =>
@@ -145,7 +161,11 @@ export const api = {
       body: JSON.stringify({ kind, id, on }),
     }),
   products: () =>
-    request<{ products: ApiProduct[]; soldSeeds: string[] }>("/api/products"),
+    request<{
+      products: ApiProduct[];
+      soldSeeds: string[];
+      likesMap: Record<string, number>;
+    }>("/api/products"),
   createProduct: (p: {
     name: string;
     brand: string;
@@ -171,6 +191,21 @@ export const api = {
     request<{ ok: boolean }>(`/api/products?id=${encodeURIComponent(id)}`, {
       method: "DELETE",
     }),
+  profile: (handle: string) =>
+    request<PublicProfile>(`/api/profile/${encodeURIComponent(handle)}`),
+  notifications: () =>
+    request<{ notifications: ApiNotif[]; unread: number }>(
+      "/api/notifications",
+    ),
+  markNotifsRead: () =>
+    request<{ ok: boolean }>("/api/notifications", { method: "POST" }),
+  report: (targetType: string, targetId: string, reason: string) =>
+    request<{ ok: boolean }>("/api/report", {
+      method: "POST",
+      body: JSON.stringify({ targetType, targetId, reason }),
+    }),
+  deleteAccount: () =>
+    request<{ ok: boolean }>("/api/account/delete", { method: "POST" }),
   posts: () => request<{ posts: ApiPost[] }>("/api/posts"),
   createPost: (p: { caption: string; brandTags: string[]; images: string[] }) =>
     request<{ ok: boolean; post: ApiPost }>("/api/posts", {

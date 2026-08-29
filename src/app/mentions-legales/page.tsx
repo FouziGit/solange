@@ -73,12 +73,18 @@ export default function MentionsLegalesPage() {
           </Section>
         </div>
 
-        <div className="mt-8">
+        <div className="mt-8 flex items-center gap-4">
           <Link
             href="/"
             className="inline-flex min-h-11 items-center text-[12px] text-ash underline-offset-4 transition-colors hover:text-bone hover:underline"
           >
             ← Retour à l&apos;accueil
+          </Link>
+          <Link
+            href="/confidentialite"
+            className="inline-flex min-h-11 items-center text-[12px] text-ash underline-offset-4 transition-colors hover:text-bone hover:underline"
+          >
+            Confidentialité
           </Link>
         </div>
       </div>

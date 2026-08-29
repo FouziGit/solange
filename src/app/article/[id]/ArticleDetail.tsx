@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { motion } from "motion/react";
 import type { CatalogItem } from "@/lib/mock";
-import { euro } from "@/lib/utils";
+import { compact, euro } from "@/lib/utils";
 import { imgItem } from "@/lib/img";
 import { track } from "@/lib/track";
 import { useStore } from "@/lib/store";
@@ -21,7 +21,7 @@ export function ArticleDetail({
   item: CatalogItem;
   similar: CatalogItem[];
 }) {
-  const { isSaved, toggleSave, isSold } = useStore();
+  const { isSaved, toggleSave, isSold, likeCount } = useStore();
   const saved = isSaved(item.id);
   const sold = isSold(item.id);
   const [size, setSize] = useState(item.size);
@@ -93,6 +93,16 @@ export function ArticleDetail({
             <span className="rounded-full border border-bone/25 px-2.5 py-0.5 text-[11px] font-medium uppercase tracking-[0.14em] text-bone/70">
               Pièce unique
             </span>
+            {/* compteur réel = base + likes membres agrégés serveur */}
+            <span
+              aria-label={`${likeCount(item.id, item.likes)} j'aime`}
+              className="inline-flex items-center gap-1 text-[12px] text-ash"
+            >
+              <Heart className="size-3.5" aria-hidden="true" />
+              <span className="tabular-nums">
+                {compact(likeCount(item.id, item.likes))}
+              </span>
+            </span>
           </div>
 
           {/* size + condition pills */}
@@ -115,26 +125,38 @@ export function ArticleDetail({
             </span>
           </div>
 
-          {/* seller row — handle réel, sans badge de vérification factice */}
-          <Link
-            href={`/messages?item=${item.id}`}
-            data-cursor="link"
-            className="glass mt-7 flex items-center gap-3 rounded-2xl px-4 py-3 transition-colors hover:bg-bone/15"
-          >
-            <Avatar
-              name={item.seller}
-              seed={item.seller}
-              className="size-11 text-2xl ring-1 ring-bone/15"
-            />
-            <span className="min-w-0 flex-1">
-              <span className="block truncate text-sm font-semibold text-bone">
-                @{item.seller}
+          {/* seller row — handle réel cliquable → profil public ; le lien
+              messages reste porté par « Contacter le vendeur » */}
+          <div className="glass mt-7 flex items-center gap-2 rounded-2xl p-2 pr-2.5">
+            <Link
+              href={`/membre/${encodeURIComponent(item.seller)}`}
+              data-cursor="link"
+              aria-label={`Voir le profil de @${item.seller}`}
+              className="flex min-h-11 min-w-0 flex-1 items-center gap-3 rounded-xl px-2 py-1 transition-colors hover:bg-bone/10"
+            >
+              <Avatar
+                name={item.seller}
+                seed={item.seller}
+                className="size-11 shrink-0 text-2xl ring-1 ring-bone/15"
+              />
+              <span className="min-w-0">
+                <span className="block truncate text-sm font-semibold text-bone">
+                  @{item.seller}
+                </span>
+                <span className="block text-[11px] text-ash">
+                  Voir le profil
+                </span>
               </span>
-              <span className="block text-[11px] text-ash">
-                Contacter le vendeur
-              </span>
-            </span>
-          </Link>
+            </Link>
+            <Link
+              href={`/messages?item=${item.id}`}
+              data-cursor="link"
+              className="inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-full border border-bone/25 px-4 text-center text-[12px] font-semibold leading-tight text-bone transition-colors hover:bg-bone/15"
+            >
+              <Send className="size-3.5 shrink-0" aria-hidden="true" />
+              Contacter le vendeur
+            </Link>
+          </div>
 
           {/* actions */}
           <div className="mt-5 flex flex-col gap-3 sm:flex-row">

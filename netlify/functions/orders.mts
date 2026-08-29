@@ -16,6 +16,7 @@ import {
   sendEmail,
   userEmail,
   APP_URL,
+  pushNotif,
 } from "./_shared/core.mts";
 import { SEED_CATALOG, commissionRate } from "./_shared/seed-catalog.mts";
 
@@ -149,6 +150,11 @@ export default async (req: Request) => {
     sales.push(orderId);
     await orders.setJSON(`sales:${record.sellerId}`, sales);
 
+    await pushNotif(record.sellerId, {
+      type: "sale",
+      text: `Vendu : ${item.brand} ${item.name} — net ${eur(net)} · @${user.handle}`,
+      link: "/profil",
+    });
     const to = await userEmail(record.sellerId);
     if (to) {
       await sendEmail(

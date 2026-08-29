@@ -3,14 +3,35 @@
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { looks } from "@/lib/mock";
+import { api, type ApiPost } from "@/lib/api";
+import { useStore } from "@/lib/store";
 import { FeedCard } from "./FeedCard";
+import { MemberPostCard } from "./MemberPostCard";
 import { ChevronUp } from "../chrome/icons";
 
 export function VideoFeed() {
   const containerRef = useRef<HTMLDivElement>(null);
   const [active, setActive] = useState(0);
   const reduce = useReducedMotion();
+  const { isBlocked } = useStore();
   const visibleLooks = looks;
+
+  // publications membres (backend) — prépendues avant les looks éditoriaux.
+  // En cas d'échec réseau le fil reste complet avec les looks : dégradation
+  // silencieuse, pas d'état d'erreur bloquant.
+  const [memberPosts, setMemberPosts] = useState<ApiPost[]>([]);
+  const visiblePosts = memberPosts.filter((p) => !isBlocked(p.authorHandle));
+  const total = visiblePosts.length + visibleLooks.length;
+
+  useEffect(() => {
+    let cancelled = false;
+    void api.posts().then((res) => {
+      if (!cancelled && res.ok) setMemberPosts(res.data.posts);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     const root = containerRef.current;
@@ -30,7 +51,9 @@ export function VideoFeed() {
     );
     sections.forEach((s) => io.observe(s));
     return () => io.disconnect();
-  }, []);
+    // re-observe quand des publications membres arrivent (ou sont filtrées) :
+    // de nouvelles sections [data-index] apparaissent dans le scroll
+  }, [total]);
 
   return (
     <>
@@ -38,15 +61,28 @@ export function VideoFeed() {
         ref={containerRef}
         className="feed-scroll h-[100dvh] overflow-y-auto overflow-x-hidden"
       >
-        {visibleLooks.map((look, i) => (
-          <FeedCard
-            key={look.id}
-            look={look}
+        {visiblePosts.map((post, i) => (
+          <MemberPostCard
+            key={post.id}
+            post={post}
             index={i}
             active={i === active}
             inView={Math.abs(i - active) <= 1}
           />
         ))}
+
+        {visibleLooks.map((look, i) => {
+          const idx = visiblePosts.length + i;
+          return (
+            <FeedCard
+              key={look.id}
+              look={look}
+              index={idx}
+              active={idx === active}
+              inView={Math.abs(idx - active) <= 1}
+            />
+          );
+        })}
 
         {/* end-of-feed marker after the last look */}
         <div className="feed-snap flex h-[60dvh] flex-col items-center justify-center gap-3 px-10 text-center">
@@ -58,11 +94,14 @@ export function VideoFeed() {
         </div>
       </div>
 
-      {/* desktop pagination rail */}
+      {/* desktop pagination rail — publications membres + looks */}
       <div className="fixed right-7 top-1/2 z-40 hidden -translate-y-1/2 flex-col items-center gap-2.5 md:flex">
-        {visibleLooks.map((look, i) => (
+        {[
+          ...visiblePosts.map((p) => p.id),
+          ...visibleLooks.map((l) => l.id),
+        ].map((id, i) => (
           <span
-            key={look.id}
+            key={id}
             className={`w-[3px] rounded-full transition-all duration-500 ${
               i === active ? "h-7 bg-bone" : "h-2.5 bg-bone/25"
             }`}
@@ -72,7 +111,7 @@ export function VideoFeed() {
 
       {/* scroll hint, fades after first scroll */}
       <AnimatePresence>
-        {active === 0 && visibleLooks.length > 1 && (
+        {active === 0 && total > 1 && (
           <motion.div
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}

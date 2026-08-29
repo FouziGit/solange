@@ -10,6 +10,7 @@ import {
   currentUser,
   sameOrigin,
   readJson,
+  rateLimit,
 } from "./_shared/core.mts";
 
 const IMG_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
@@ -38,6 +39,8 @@ export default async (req: Request) => {
     brandTags?: string[];
     images?: string[];
   }>(req);
+  if (!(await rateLimit(`post:${user.id}`, 10, 24 * 3_600_000)))
+    return bad("Limite de 10 publications par jour atteinte", 429);
   const caption = (b?.caption ?? "").trim().slice(0, 500);
   if (!caption) return bad("Écris une légende");
   const brandTags = (b?.brandTags ?? [])

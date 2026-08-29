@@ -1,8 +1,10 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import { motion } from "motion/react";
 import { streams } from "@/lib/mock";
+import { api } from "@/lib/api";
 import { LogoMark } from "../chrome/Brandmark";
 import { Bell, Play, Bag } from "../chrome/icons";
 import type { FeedMode } from "./FeedModeShell";
@@ -28,6 +30,23 @@ export function FeedTopBar({
   mode: FeedMode;
   onModeChange: (m: FeedMode) => void;
 }) {
+  // Pastille non-lu sur les cloches : un seul fetch au montage,
+  // silencieux si invité (401) ou en cas d'échec réseau.
+  const [hasUnread, setHasUnread] = useState(false);
+  useEffect(() => {
+    let cancelled = false;
+    void api.notifications().then((res) => {
+      if (!cancelled && res.ok && res.data.unread > 0) setHasUnread(true);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const bellLabel = hasUnread
+    ? "Notifications — non lues"
+    : "Notifications";
+
   return (
     <header
       style={{ paddingTop: "calc(env(safe-area-inset-top) + 0.75rem)" }}
@@ -61,10 +80,16 @@ export function FeedTopBar({
 
         <Link
           href="/notifications"
-          aria-label="Notifications"
-          className="pointer-events-auto grid size-11 place-items-center justify-self-end text-bone/85 transition-colors hover:text-bone"
+          aria-label={bellLabel}
+          className="pointer-events-auto relative grid size-11 place-items-center justify-self-end text-bone/85 transition-colors hover:text-bone"
         >
           <Bell className="size-[21px]" />
+          {hasUnread && (
+            <span
+              aria-hidden
+              className="absolute right-2.5 top-2.5 size-1.5 rounded-full bg-bone"
+            />
+          )}
         </Link>
       </div>
 
@@ -109,9 +134,15 @@ export function FeedTopBar({
         <Link
           href="/notifications"
           className="pointer-events-auto absolute right-0 hidden size-11 place-items-center text-bone/85 transition-colors hover:text-bone md:grid"
-          aria-label="Notifications"
+          aria-label={bellLabel}
         >
           <Bell className="size-[21px]" />
+          {hasUnread && (
+            <span
+              aria-hidden
+              className="absolute right-2.5 top-2.5 size-1.5 rounded-full bg-bone"
+            />
+          )}
         </Link>
       </div>
     </header>

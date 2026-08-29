@@ -11,6 +11,7 @@ import {
   currentUser,
   sameOrigin,
   readJson,
+  rateLimit,
 } from "./_shared/core.mts";
 
 const CATEGORIES = [
@@ -66,7 +67,12 @@ export default async (req: Request) => {
     // état vendu des pièces seed (shadows) pour griser le catalogue côté UI
     const soldSeeds =
       ((await products.get("sold-seeds", { type: "json" })) as string[]) ?? [];
-    return json({ products: out, soldSeeds });
+    const likesMap =
+      ((await store("counters").get("likes", { type: "json" })) as Record<
+        string,
+        number
+      >) ?? {};
+    return json({ products: out, soldSeeds, likesMap });
   }
 
   if (req.method === "DELETE") {
@@ -96,6 +102,8 @@ export default async (req: Request) => {
   const user = await currentUser(req);
   if (!user) return bad("Connecte-toi pour déposer une annonce", 401);
 
+  if (!(await rateLimit(`prod:${user.id}`, 10, 24 * 3_600_000)))
+    return bad("Limite de 10 annonces par jour atteinte", 429);
   const b = await readJson<CreateBody>(req);
   if (!b) return bad("Corps invalide");
   const name = (b.name ?? "").trim().slice(0, 80);

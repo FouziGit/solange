@@ -61,6 +61,9 @@ type Store = {
   soldSeeds: string[];
   refreshProducts(): Promise<void>;
   isSold(id: string): boolean;
+  isBlocked(handle: string): boolean;
+  toggleBlock(handle: string): void;
+  likeCount(id: string, base: number): number;
 };
 
 const StoreContext = createContext<Store | null>(null);
@@ -107,6 +110,8 @@ export function SolangeProvider({ children }: { children: ReactNode }) {
   const [authReady, setAuthReady] = useState(false);
   const [serverProducts, setServerProducts] = useState<ApiProduct[]>([]);
   const [soldSeeds, setSoldSeeds] = useState<string[]>([]);
+  const [likesMap, setLikesMap] = useState<Record<string, number>>({});
+  const [blocked, setBlocked] = useState<Set<string>>(() => new Set());
 
   const refreshSession = useCallback(async () => {
     const res = await api.me();
@@ -116,6 +121,7 @@ export function SolangeProvider({ children }: { children: ReactNode }) {
       if (s) {
         // état serveur = source de vérité pour un membre connecté
         setLiked(new Set(s.liked));
+        setBlocked(new Set(s.blocked ?? []));
         setSaved(new Set([...savedIds, ...s.saved]));
         setFollowing(new Set([...followedHandles, ...s.follows]));
         setJoined(new Set([...joinedCommunityIds, ...s.joined]));
@@ -143,6 +149,7 @@ export function SolangeProvider({ children }: { children: ReactNode }) {
     if (res.ok) {
       setServerProducts(res.data.products);
       setSoldSeeds(res.data.soldSeeds);
+      setLikesMap(res.data.likesMap ?? {});
     }
   }, []);
 
@@ -161,7 +168,11 @@ export function SolangeProvider({ children }: { children: ReactNode }) {
 
   /** Toggle optimiste + synchro serveur (fire-and-forget) si connecté. */
   const sync = useCallback(
-    (kind: "liked" | "saved" | "follows" | "joined", id: string, on: boolean) => {
+    (
+      kind: "liked" | "saved" | "follows" | "joined" | "blocked",
+      id: string,
+      on: boolean,
+    ) => {
       if (user) void api.social(kind, id, on);
     },
     [user],
@@ -225,6 +236,26 @@ export function SolangeProvider({ children }: { children: ReactNode }) {
     [sync],
   );
 
+  const isBlocked = useCallback(
+    (handle: string) => blocked.has(handle),
+    [blocked],
+  );
+  const toggleBlock = useCallback(
+    (handle: string) =>
+      setBlocked((s) => {
+        const next = toggle(s, handle);
+        sync("blocked", handle, next.has(handle));
+        return next;
+      }),
+    [sync],
+  );
+
+  /** Compteur affiché = base (mock/annonce) + likes membres agrégés serveur. */
+  const likeCount = useCallback(
+    (id: string, base: number) => base + (likesMap[id] ?? 0),
+    [likesMap],
+  );
+
   const signOut = useCallback(async () => {
     await api.logout();
     setUser(null);
@@ -263,6 +294,9 @@ export function SolangeProvider({ children }: { children: ReactNode }) {
       soldSeeds,
       refreshProducts,
       isSold,
+      isBlocked,
+      toggleBlock,
+      likeCount,
     }),
     [
       isLiked,
@@ -284,6 +318,9 @@ export function SolangeProvider({ children }: { children: ReactNode }) {
       soldSeeds,
       refreshProducts,
       isSold,
+      isBlocked,
+      toggleBlock,
+      likeCount,
     ],
   );
 

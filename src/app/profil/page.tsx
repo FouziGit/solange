@@ -143,6 +143,11 @@ export default function ProfilPage() {
   const [sales, setSales] = useState<ApiOrder[]>([]);
   const [withdrawing, setWithdrawing] = useState<string | null>(null);
 
+  // suppression de compte — confirmation en 2 temps
+  const [deleteArmed, setDeleteArmed] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+
   const loadMine = useCallback(async () => {
     const [p, s] = await Promise.all([api.myProducts(), api.sales()]);
     if (p.ok) setMyProds(p.data.products);
@@ -180,6 +185,21 @@ export default function ProfilPage() {
 
   const disconnect = async () => {
     await signOut();
+    try {
+      localStorage.removeItem("solange:onboarded");
+    } catch {}
+    location.assign("/");
+  };
+
+  const destroyAccount = async () => {
+    setDeleting(true);
+    setDeleteError(null);
+    const res = await api.deleteAccount();
+    if (!res.ok) {
+      setDeleting(false);
+      setDeleteError(res.error);
+      return;
+    }
     try {
       localStorage.removeItem("solange:onboarded");
     } catch {}
@@ -534,20 +554,76 @@ export default function ProfilPage() {
 
       <div className="mt-6 mb-2 flex flex-col items-center gap-1 text-center">
         {user && (
-          <button
-            type="button"
-            onClick={disconnect}
-            className="inline-flex min-h-11 items-center px-4 text-[12px] text-ash/70 underline-offset-4 transition-colors hover:text-bone hover:underline"
-          >
-            Déconnexion
-          </button>
+          <>
+            <button
+              type="button"
+              onClick={disconnect}
+              className="inline-flex min-h-11 items-center px-4 text-[12px] text-ash/70 underline-offset-4 transition-colors hover:text-bone hover:underline"
+            >
+              Déconnexion
+            </button>
+
+            {/* zone danger — suppression du compte, confirmation en 2 temps */}
+            {!deleteArmed ? (
+              <button
+                type="button"
+                onClick={() => setDeleteArmed(true)}
+                className="inline-flex min-h-11 items-center px-4 text-[11px] text-red-400/60 underline-offset-4 transition-colors hover:text-red-300 hover:underline"
+              >
+                Supprimer mon compte
+              </button>
+            ) : (
+              <div className="mt-2 w-full max-w-sm rounded-2xl border border-red-500/20 bg-red-950/25 p-4">
+                <p className="text-[13px] leading-relaxed text-bone/85">
+                  Sûr ? Toutes tes données seront effacées.
+                </p>
+                {deleteError && (
+                  <p role="alert" className="mt-2 text-[12px] text-red-300">
+                    {deleteError}
+                  </p>
+                )}
+                <div className="mt-3 flex items-center justify-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => void destroyAccount()}
+                    disabled={deleting}
+                    className="inline-flex min-h-11 items-center rounded-full bg-red-900 px-4 text-[13px] font-semibold text-red-50 transition-transform active:scale-95 disabled:opacity-60"
+                  >
+                    {deleting ? "Suppression…" : "Supprimer mon compte"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDeleteArmed(false);
+                      setDeleteError(null);
+                    }}
+                    disabled={deleting}
+                    className="inline-flex min-h-11 items-center rounded-full border border-bone/20 px-4 text-[13px] text-bone/80 transition-colors hover:border-bone/50 hover:text-bone disabled:opacity-40"
+                  >
+                    Annuler
+                  </button>
+                </div>
+              </div>
+            )}
+          </>
         )}
-        <Link
-          href="/mentions-legales"
-          className="inline-flex min-h-11 items-center px-4 text-[11px] text-ash/60 underline-offset-4 transition-colors hover:text-bone hover:underline"
-        >
-          Mentions légales
-        </Link>
+        <div className="flex items-center gap-1">
+          <Link
+            href="/mentions-legales"
+            className="inline-flex min-h-11 items-center px-2 text-[11px] text-ash/60 underline-offset-4 transition-colors hover:text-bone hover:underline"
+          >
+            Mentions légales
+          </Link>
+          <span aria-hidden="true" className="text-[11px] text-ash/40">
+            ·
+          </span>
+          <Link
+            href="/confidentialite"
+            className="inline-flex min-h-11 items-center px-2 text-[11px] text-ash/60 underline-offset-4 transition-colors hover:text-bone hover:underline"
+          >
+            Confidentialité
+          </Link>
+        </div>
       </div>
     </PageShell>
   );
