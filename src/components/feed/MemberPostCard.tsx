@@ -128,15 +128,15 @@ export function MemberPostCard({
 
   const onReport = async () => {
     if (reporting.current) return;
-    const reason = window.prompt(
-      "Pourquoi signales-tu cette publication ?",
-    );
+    const reason = window.prompt("Pourquoi signales-tu cette publication ?");
     if (!reason || !reason.trim()) return;
     reporting.current = true;
     const res = await api.report("post", post.id, reason.trim());
     reporting.current = false;
     showToast(
-      res.ok ? "Signalement envoyé. Merci." : `Échec du signalement : ${res.error}`,
+      res.ok
+        ? "Signalement envoyé. Merci."
+        : `Échec du signalement : ${res.error}`,
     );
   };
 
@@ -221,7 +221,7 @@ export function MemberPostCard({
               style={{
                 paddingTop: "calc(env(safe-area-inset-top) + 6.75rem)",
               }}
-              className="absolute inset-x-0 top-0 z-20 flex items-start justify-between gap-3 p-4"
+              className="absolute inset-x-0 top-0 z-20 hidden items-start justify-between gap-3 p-4 md:flex"
             >
               <Link
                 href={`/membre/${encodeURIComponent(post.authorHandle)}`}
@@ -317,6 +317,30 @@ export function MemberPostCard({
               }}
               className="absolute inset-x-0 bottom-0 z-20 space-y-3 p-4 pr-20 md:!pb-9"
             >
+              {/* auteur — rangée compacte en bas (mobile), profil cliquable */}
+              <motion.div
+                variants={item}
+                className="flex items-center gap-2.5 md:hidden"
+              >
+                <Link
+                  href={`/membre/${encodeURIComponent(post.authorHandle)}`}
+                  className="flex min-h-11 min-w-0 items-center gap-2.5"
+                  aria-label={`Profil de @${post.authorHandle}`}
+                >
+                  <span
+                    className="grid size-9 shrink-0 place-items-center rounded-full ring-1 ring-bone/25"
+                    style={{ background: gradientFor(post.authorHandle) }}
+                  >
+                    <span className="font-display text-[11px] font-bold tracking-wide text-bone/85">
+                      {initials(post.authorName)}
+                    </span>
+                  </span>
+                  <span className="truncate text-[14px] font-semibold text-bone">
+                    @{post.authorHandle}
+                  </span>
+                </Link>
+              </motion.div>
+
               {post.caption ? (
                 <motion.div variants={item} className="max-w-[34ch]">
                   <p

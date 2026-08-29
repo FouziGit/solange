@@ -14,6 +14,7 @@ import { useStore } from "@/lib/store";
 import { KenBurnsMedia } from "./KenBurnsMedia";
 import { CarouselMedia } from "./CarouselMedia";
 import { CreatorHeader } from "./CreatorHeader";
+import { Avatar } from "../chrome/Avatar";
 import { ActionRail } from "./ActionRail";
 import { CommentSheet } from "./CommentSheet";
 import { ShopTheLook } from "./ShopTheLook";
@@ -237,28 +238,15 @@ export function FeedCard({
               style={{
                 paddingTop: "calc(env(safe-area-inset-top) + 6.75rem)",
               }}
-              className="absolute inset-x-0 top-0 z-20 flex items-start justify-between gap-3 p-4"
+              className="absolute inset-x-0 top-0 z-20 hidden items-start justify-between gap-3 p-4 md:flex"
             >
+              {/* Desktop uniquement : en mobile le créateur vit EN BAS pour
+                  laisser tout l'écran à la vidéo. */}
               <CreatorHeader
                 creator={look.creator}
                 following={following}
                 onToggleFollow={() => toggleFollow(look.creator.handle)}
               />
-              {/* >=44px tap target around the mute glyph */}
-              <button
-                onClick={() => setMuted((m) => !m)}
-                className="-m-1.5 grid size-11 shrink-0 place-items-center rounded-full text-bone transition-transform active:scale-90"
-                aria-label={muted ? "Activer le son" : "Couper le son"}
-                aria-pressed={!muted}
-              >
-                <span className="grid size-9 place-items-center rounded-full glass">
-                  {muted ? (
-                    <Mute className="size-4" />
-                  ) : (
-                    <Volume className="size-4" />
-                  )}
-                </span>
-              </button>
             </motion.div>
 
             {/* action rail — bottom clears the floating tab bar + caption block */}
@@ -284,8 +272,6 @@ export function FeedCard({
                 onComment={() => setCommentsOpen(true)}
                 onShop={hasShop ? () => openShop(null) : undefined}
                 shopCount={look.products.length}
-                creatorSeed={look.creator.seed}
-                creatorName={look.creator.name}
                 active={active}
               />
             </motion.div>
@@ -301,8 +287,51 @@ export function FeedCard({
               }}
               className="absolute inset-x-0 bottom-0 z-20 space-y-3 p-4 pr-20 md:!pb-9"
             >
-              {/* Cleaner feed: badge/kind chip and location line removed for a
-                  more épuré look — the caption and creator carry the context. */}
+              {/* Créateur — rangée compacte TikTok-style au-dessus de la
+                  légende (mobile ; le desktop garde l'en-tête haut). Le mute
+                  vit ici, collé au contenu, plus rien ne flotte en haut. */}
+              <motion.div
+                variants={item}
+                className="flex items-center gap-2.5 md:hidden"
+              >
+                <Link
+                  href={`/membre/${look.creator.handle}`}
+                  className="flex min-h-11 min-w-0 items-center gap-2.5"
+                  aria-label={`Profil de @${look.creator.handle}`}
+                >
+                  <Avatar
+                    name={look.creator.name}
+                    seed={look.creator.seed}
+                    className="size-9 shrink-0 text-sm ring-1 ring-bone/25"
+                  />
+                  <span className="truncate text-[14px] font-semibold text-bone">
+                    @{look.creator.handle}
+                  </span>
+                </Link>
+                <button
+                  onClick={() => toggleFollow(look.creator.handle)}
+                  aria-pressed={following}
+                  className={`inline-flex h-8 shrink-0 items-center rounded-full px-3.5 text-[12px] font-semibold transition-colors ${
+                    following
+                      ? "border border-bone/30 text-bone/80"
+                      : "bg-bone text-ink"
+                  }`}
+                >
+                  {following ? "Suivi" : "Suivre"}
+                </button>
+                <button
+                  onClick={() => setMuted((m) => !m)}
+                  className="ml-auto grid size-9 shrink-0 place-items-center rounded-full glass text-bone active:scale-90"
+                  aria-label={muted ? "Activer le son" : "Couper le son"}
+                  aria-pressed={!muted}
+                >
+                  {muted ? (
+                    <Mute className="size-4" />
+                  ) : (
+                    <Volume className="size-4" />
+                  )}
+                </button>
+              </motion.div>
 
               <motion.div variants={item} className="max-w-[34ch]">
                 <p

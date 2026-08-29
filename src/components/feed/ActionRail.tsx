@@ -78,8 +78,8 @@ export function ActionRail({
   /** Opens the Shop-the-look drawer. When set, a cart bubble tops the rail. */
   onShop?: () => void;
   shopCount?: number;
-  creatorSeed: string;
-  creatorName: string;
+  creatorSeed?: string;
+  creatorName?: string;
   active?: boolean;
 }) {
   const reduce = useReducedMotion();
@@ -141,21 +141,24 @@ export function ActionRail({
         <Bookmark filled={saved} className="size-6 text-bone" />
       </Action>
 
-      {/* spinning sound disc — CSS keyframe (killed under reduced-motion) */}
-      <span
-        className={`relative mt-1 grid size-12 place-items-center rounded-full bg-ink ring-1 ring-bone/20 ${
-          spinning ? "spin-disc" : ""
-        }`}
-      >
-        <Avatar
-          name={creatorName}
-          seed={creatorSeed}
-          className="size-9 text-base opacity-80"
-        />
-        <span className="absolute inset-0 grid place-items-center">
-          <Music className="size-4 text-bone" />
+      {/* spinning sound disc — optionnel (retiré du feed mobile : le
+          créateur vit désormais en bas de la carte) */}
+      {creatorSeed && creatorName && (
+        <span
+          className={`relative mt-1 grid size-12 place-items-center rounded-full bg-ink ring-1 ring-bone/20 ${
+            spinning ? "spin-disc" : ""
+          }`}
+        >
+          <Avatar
+            name={creatorName}
+            seed={creatorSeed}
+            className="size-9 text-base opacity-80"
+          />
+          <span className="absolute inset-0 grid place-items-center">
+            <Music className="size-4 text-bone" />
+          </span>
         </span>
-      </span>
+      )}
     </div>
   );
 }
