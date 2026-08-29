@@ -148,10 +148,26 @@ export default function ProfilPage() {
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
+  // réglage : accepter les messages directs
+  const [dmOpen, setDmOpen] = useState<boolean | null>(null);
+  const [dmSaving, setDmSaving] = useState(false);
+  const toggleDm = async () => {
+    if (dmOpen === null || dmSaving) return;
+    setDmSaving(true);
+    const res = await api.saveSettings(!dmOpen);
+    setDmSaving(false);
+    if (res.ok) setDmOpen(res.data.dmOpen);
+  };
+
   const loadMine = useCallback(async () => {
-    const [p, s] = await Promise.all([api.myProducts(), api.sales()]);
+    const [p, s, st] = await Promise.all([
+      api.myProducts(),
+      api.sales(),
+      api.getSettings(),
+    ]);
     if (p.ok) setMyProds(p.data.products);
     if (s.ok) setSales(s.data.orders);
+    if (st.ok) setDmOpen(st.data.dmOpen);
   }, []);
 
   useEffect(() => {
@@ -550,6 +566,42 @@ export default function ProfilPage() {
         <p className="mt-10 text-center text-xs text-ash">
           Membre SOLANGE depuis 2026 · {euro(me.sales * 86)} de ventes cumulées
         </p>
+      )}
+
+      {/* réglages — messages directs */}
+      {user && dmOpen !== null && (
+        <div className="mt-8 rounded-2xl border border-bone/10 p-4 md:max-w-md">
+          <p className="overline mb-2 text-[9px] text-ash">Réglages</p>
+          <button
+            type="button"
+            onClick={() => void toggleDm()}
+            disabled={dmSaving}
+            role="switch"
+            aria-checked={dmOpen}
+            className="flex min-h-11 w-full items-center justify-between gap-3 text-left disabled:opacity-50"
+          >
+            <span className="min-w-0">
+              <span className="block text-[13.5px] font-medium text-bone">
+                Autoriser les messages directs
+              </span>
+              <span className="block text-[11.5px] text-ash">
+                Les membres peuvent t&apos;écrire sans passer par une annonce.
+              </span>
+            </span>
+            <span
+              aria-hidden="true"
+              className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${
+                dmOpen ? "bg-bone" : "bg-bone/20"
+              }`}
+            >
+              <span
+                className={`absolute top-0.5 size-5 rounded-full transition-all ${
+                  dmOpen ? "left-[22px] bg-ink" : "left-0.5 bg-bone/70"
+                }`}
+              />
+            </span>
+          </button>
+        </div>
       )}
 
       <div className="mt-6 mb-2 flex flex-col items-center gap-1 text-center">

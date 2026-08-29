@@ -69,9 +69,10 @@ function threadForItem(
     (fromId === myId), quel que soit mon rôle dans le fil. */
 function toConversation(c: ApiConversation, myId: string): Conversation {
   const other = c.role === "seller" ? c.buyerHandle : c.sellerHandle;
+  const dm = c.kind === "dm";
   return {
     id: c.id,
-    name: c.role === "seller" ? `@${other} · acheteur` : other,
+    name: dm ? other : c.role === "seller" ? `@${other} · acheteur` : other,
     handle: other,
     seed: other,
     itemBrand: c.itemBrand,
@@ -87,6 +88,23 @@ function toConversation(c: ApiConversation, myId: string): Conversation {
   };
 }
 
+/** Fil DM synthétique (?to=handle) tant qu'aucun fil serveur n'existe. */
+function dmConv(handle: string): Conversation {
+  return {
+    id: `dm-${handle}`,
+    name: handle,
+    handle,
+    seed: handle,
+    itemBrand: "Message",
+    itemName: "direct",
+    itemSeed: "",
+    itemPriceEUR: 0,
+    time: "maintenant",
+    unread: 0,
+    messages: [],
+  };
+}
+
 /** The opening offer message seeded into the thread (10 % below asking). */
 function offerMessage(item: ThreadItem): Message {
   const offer = Math.round(item.priceEUR * 0.9);
@@ -99,6 +117,7 @@ function offerMessage(item: ThreadItem): Message {
 function MessagesInner() {
   const params = useSearchParams();
   const itemId = params.get("item");
+  const toHandle = params.get("to");
   const { user, serverProducts, isBlocked, toggleBlock } = useStore();
 
   // Pièce visée : catalogue mock d'abord, sinon annonce membre (serveur).
@@ -132,14 +151,20 @@ function MessagesInner() {
     }
     if (item && !merged.some((c) => c.handle === item.seller))
       merged.unshift(syntheticConv(item));
+    if (
+      toHandle &&
+      !merged.some((c) => c.handle === toHandle && c.itemBrand === "Message")
+    )
+      merged.unshift(dmConv(toHandle));
     return merged;
-  }, [serverConvs, item]);
+  }, [serverConvs, item, toHandle]);
 
   // Une pièce du catalogue se résout de façon synchrone : fil + pré-sélection
   // sont dérivés une seule fois via des initialiseurs lazy — pas de cascade.
   // Une annonce membre arrive après hydratation du store : l'effet ci-dessous
   // sème alors l'offre, une seule fois.
   const [selId, setSelId] = useState<string | null>(() => {
+    if (toHandle) return `dm-${toHandle}`;
     const ci = itemId ? catalogItem(itemId) : undefined;
     if (!ci) return null;
     return (threadForItem(ci, conversations) ?? syntheticConv(ci)).id;
@@ -151,6 +176,15 @@ function MessagesInner() {
     const target = threadForItem(ci, conversations) ?? syntheticConv(ci);
     return { [target.id]: [offerMessage(ci)] };
   });
+  // si un fil DM serveur existe déjà avec ce membre, on le préfère au synthétique
+  useEffect(() => {
+    if (!toHandle) return;
+    const real = serverConvs.find(
+      (c) => c.handle === toHandle && c.itemBrand === "Message",
+    );
+    if (real) queueMicrotask(() => setSelId(real.id));
+  }, [toHandle, serverConvs]);
+
   const seededRef = useRef(itemId ? Boolean(catalogItem(itemId)) : true);
   useEffect(() => {
     if (seededRef.current || !item) return;
@@ -237,11 +271,14 @@ function MessagesInner() {
     // fil (mock ou synthétique) rattaché au vendeur de la pièce.
     if (user) {
       const isServerConv = serverConvs.some((c) => c.id === active.id);
+      const isDm = !isServerConv && active.id.startsWith("dm-");
       const isItemThread = item !== undefined && active.handle === item.seller;
-      if (isServerConv || isItemThread)
+      if (isServerConv || isDm || isItemThread)
         void api.sendMessage({
           convId: isServerConv ? active.id : undefined,
-          productId: !isServerConv && isItemThread ? item.id : undefined,
+          toHandle: isDm ? active.handle : undefined,
+          productId:
+            !isServerConv && !isDm && isItemThread ? item.id : undefined,
           text,
         });
     }
@@ -407,23 +444,25 @@ function MessagesInner() {
               </div>
             </header>
 
-            {/* product context */}
-            <div className="mx-4 mt-4 flex items-center gap-3 rounded-2xl border border-bone/10 bg-bone/[0.03] p-2.5">
-              <span className="grid size-11 place-items-center rounded-xl bg-coal text-bone/70">
-                <Bag className="size-5" />
-              </span>
-              <div className="min-w-0 flex-1">
-                <p className="overline text-[9px] text-ash">
-                  {active.itemBrand}
-                </p>
-                <p className="truncate text-[13px] text-bone">
-                  {active.itemName}
-                </p>
+            {/* product context — masqué pour les messages directs */}
+            {active && active.itemBrand !== "Message" && (
+              <div className="mx-4 mt-4 flex items-center gap-3 rounded-2xl border border-bone/10 bg-bone/[0.03] p-2.5">
+                <span className="grid size-11 place-items-center rounded-xl bg-coal text-bone/70">
+                  <Bag className="size-5" />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="overline text-[9px] text-ash">
+                    {active.itemBrand}
+                  </p>
+                  <p className="truncate text-[13px] text-bone">
+                    {active.itemName}
+                  </p>
+                </div>
+                <span className="font-display text-sm font-bold text-bone">
+                  {euro(active.itemPriceEUR)}
+                </span>
               </div>
-              <span className="font-display text-sm font-bold text-bone">
-                {euro(active.itemPriceEUR)}
-              </span>
-            </div>
+            )}
 
             {/* messages */}
             <div className="flex flex-1 flex-col gap-2 overflow-y-auto px-4 py-5">

@@ -42,6 +42,7 @@ type PostTile = {
 
 type Profile = {
   demo: boolean;
+  dmOpen: boolean;
   handle: string;
   name: string;
   seed: string;
@@ -82,6 +83,7 @@ function demoProfile(handle: string): Profile | null {
   if (!c) return null;
   return {
     demo: true,
+    dmOpen: false,
     handle,
     name: c.name,
     seed: c.seed,
@@ -112,6 +114,7 @@ function demoProfile(handle: string): Profile | null {
 function serverProfile(data: PublicProfile): Profile {
   return {
     demo: false,
+    dmOpen: data.dmOpen ?? true,
     handle: data.user.handle,
     name: data.user.name || data.user.handle,
     seed: data.user.handle,
@@ -178,7 +181,9 @@ function ProductTile({
           <span className="font-display text-[15px] font-bold text-bone">
             {euro(tile.priceEUR)}
           </span>
-          {tile.size && <span className="text-[11px] text-ash">T. {tile.size}</span>}
+          {tile.size && (
+            <span className="text-[11px] text-ash">T. {tile.size}</span>
+          )}
         </div>
       </div>
 
@@ -403,6 +408,17 @@ export default function MembrePage() {
               >
                 {isSelf ? "C'est toi" : following ? "Suivi" : "Suivre"}
               </button>
+
+              {/* DM — seulement si le membre accepte les messages directs */}
+              {!isSelf && state.profile.dmOpen && (
+                <Link
+                  href={`/messages?to=${encodeURIComponent(handle)}`}
+                  data-cursor="link"
+                  className="inline-flex min-h-11 items-center rounded-full border border-bone/25 px-5 text-sm font-semibold text-bone transition-colors hover:border-bone/60"
+                >
+                  Écrire
+                </Link>
+              )}
 
               {/* ⋯ — signaler / bloquer */}
               <div className="relative">

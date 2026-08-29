@@ -2,6 +2,7 @@
    annonces (dispo + vendues), posts. Jamais l'email. */
 import type { Config } from "@netlify/functions";
 import { store, json, bad } from "./_shared/core.mts";
+import { userSettings } from "./settings.mts";
 
 export default async (req: Request) => {
   const handle = decodeURIComponent(
@@ -44,8 +45,10 @@ export default async (req: Request) => {
     if (p && p.authorId === userId) myPosts.push(p);
   }
 
+  const settings = await userSettings(userId);
   return json({
     user: { handle: u.handle, name: u.name },
+    dmOpen: settings.dmOpen,
     products: mine,
     posts: myPosts,
   });

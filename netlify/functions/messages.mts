@@ -19,9 +19,11 @@ import {
   rateLimit,
 } from "./_shared/core.mts";
 import { SEED_CATALOG } from "./_shared/seed-catalog.mts";
+import { userSettings } from "./settings.mts";
 
 type Conv = {
   id: string;
+  kind?: "item" | "dm";
   buyerId: string;
   buyerHandle: string;
   sellerId: string | null; // null = vendeur seed (fictif)
@@ -72,6 +74,7 @@ export default async (req: Request) => {
   const b = await readJson<{
     productId?: string;
     convId?: string;
+    toHandle?: string;
     text?: string;
   }>(req);
   const text = (b?.text ?? "").trim().slice(0, 1000);
@@ -86,6 +89,48 @@ export default async (req: Request) => {
     conv = (await msgs.get(`c:${convId}`, { type: "json" })) as Conv | null;
     if (!conv || (conv.buyerId !== user.id && conv.sellerId !== user.id))
       return bad("Conversation inconnue", 404);
+  } else if (b?.toHandle) {
+    // ---- message direct (sans annonce) ----
+    const handle = b.toHandle.trim().toLowerCase();
+    const users = store("users");
+    const targetId = (await users.get(`handle:${handle}`, {
+      type: "text",
+    })) as string | null;
+    if (!targetId) return bad("Membre introuvable", 404);
+    if (targetId === user.id) return bad("C'est toi", 403);
+    const target = (await users.get(`u:${targetId}`, { type: "json" })) as {
+      handle: string;
+    } | null;
+    if (!target) return bad("Membre introuvable", 404);
+    const settings = await userSettings(targetId);
+    if (!settings.dmOpen)
+      return bad("Ce membre n'accepte pas les messages directs", 403);
+    // le destinataire a bloqué l'expéditeur → même refus discret
+    const tSocial = (await store("social").get(`s:${targetId}`, {
+      type: "json",
+    })) as { blocked?: string[] } | null;
+    if (tSocial?.blocked?.includes(user.handle))
+      return bad("Ce membre n'accepte pas les messages directs", 403);
+
+    convId = `dm:${[user.id, targetId].sort().join(":")}`;
+    conv = ((await msgs.get(`c:${convId}`, {
+      type: "json",
+    })) as Conv | null) ?? {
+      id: convId,
+      kind: "dm",
+      buyerId: user.id,
+      buyerHandle: user.handle,
+      sellerId: targetId,
+      sellerHandle: target.handle,
+      productId: "",
+      itemBrand: "Message",
+      itemName: "direct",
+      itemPriceEUR: 0,
+      messages: [],
+      createdAt: Date.now(),
+    };
+    await pushIndex(user.id, convId);
+    await pushIndex(targetId, convId);
   } else {
     const pid = (b?.productId ?? "").trim();
     if (!pid) return bad("Article manquant");

@@ -57,6 +57,7 @@ export type ApiMessage = {
 
 export type ApiConversation = {
   id: string;
+  kind?: "item" | "dm";
   buyerId: string;
   buyerHandle: string;
   sellerId: string | null;
@@ -99,6 +100,7 @@ export type ApiNotif = {
 
 export type PublicProfile = {
   user: { handle: string; name: string };
+  dmOpen?: boolean;
   products: ApiProduct[];
   posts: ApiPost[];
 };
@@ -206,6 +208,12 @@ export const api = {
     }),
   deleteAccount: () =>
     request<{ ok: boolean }>("/api/account/delete", { method: "POST" }),
+  getSettings: () => request<{ dmOpen: boolean }>("/api/settings"),
+  saveSettings: (dmOpen: boolean) =>
+    request<{ ok: boolean; dmOpen: boolean }>("/api/settings", {
+      method: "POST",
+      body: JSON.stringify({ dmOpen }),
+    }),
   posts: () => request<{ posts: ApiPost[] }>("/api/posts"),
   createPost: (p: { caption: string; brandTags: string[]; images: string[] }) =>
     request<{ ok: boolean; post: ApiPost }>("/api/posts", {
@@ -214,7 +222,12 @@ export const api = {
     }),
   conversations: () =>
     request<{ conversations: ApiConversation[] }>("/api/messages"),
-  sendMessage: (p: { productId?: string; convId?: string; text: string }) =>
+  sendMessage: (p: {
+    productId?: string;
+    convId?: string;
+    toHandle?: string;
+    text: string;
+  }) =>
     request<{ ok: boolean; conversation: ApiConversation }>("/api/messages", {
       method: "POST",
       body: JSON.stringify(p),
