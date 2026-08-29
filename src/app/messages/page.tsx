@@ -11,7 +11,7 @@ import {
   type Message,
   type Conversation,
 } from "@/lib/mock";
-import { api } from "@/lib/api";
+import { api, type ApiConversation } from "@/lib/api";
 import { useStore } from "@/lib/store";
 import { EASE, euro } from "@/lib/utils";
 import {
@@ -63,36 +63,26 @@ function threadForItem(
   );
 }
 
-/** Conversation serveur (GET /api/messages) → shape UI, données validées. */
-function toConversation(raw: unknown): Conversation | null {
-  const c = raw as {
-    id?: unknown;
-    sellerHandle?: unknown;
-    itemBrand?: unknown;
-    itemName?: unknown;
-    itemPriceEUR?: unknown;
-    messages?: unknown;
-  } | null;
-  if (!c || typeof c.id !== "string" || typeof c.sellerHandle !== "string")
-    return null;
-  const msgs = Array.isArray(c.messages) ? c.messages : [];
+/** Conversation serveur (GET /api/messages) → shape UI. Bilatéral : côté
+    vendeur, l'interlocuteur affiché est l'ACHETEUR ; « me » = mes messages
+    (fromId === myId), quel que soit mon rôle dans le fil. */
+function toConversation(c: ApiConversation, myId: string): Conversation {
+  const other = c.role === "seller" ? c.buyerHandle : c.sellerHandle;
   return {
     id: c.id,
-    name: c.sellerHandle,
-    handle: c.sellerHandle,
-    seed: c.sellerHandle,
-    itemBrand: typeof c.itemBrand === "string" ? c.itemBrand : "",
-    itemName: typeof c.itemName === "string" ? c.itemName : "",
+    name: c.role === "seller" ? `@${other} · acheteur` : other,
+    handle: other,
+    seed: other,
+    itemBrand: c.itemBrand,
+    itemName: c.itemName,
     itemSeed: "",
-    itemPriceEUR: typeof c.itemPriceEUR === "number" ? c.itemPriceEUR : 0,
+    itemPriceEUR: c.itemPriceEUR,
     time: "—",
     unread: 0,
-    messages: msgs.flatMap((m): Message[] => {
-      const mm = m as { from?: unknown; text?: unknown } | null;
-      return mm && typeof mm.text === "string"
-        ? [{ from: mm.from === "me" ? "me" : "them", text: mm.text }]
-        : [];
-    }),
+    messages: c.messages.map((m): Message => ({
+      from: m.fromId === myId ? "me" : "them",
+      text: m.text,
+    })),
   };
 }
 
@@ -123,9 +113,7 @@ function MessagesInner() {
     void api.conversations().then((res) => {
       if (alive && res.ok)
         setServerConvs(
-          res.data.conversations
-            .map(toConversation)
-            .filter((c): c is Conversation => c !== null),
+          res.data.conversations.map((c) => toConversation(c, user.id)),
         );
     });
     return () => {

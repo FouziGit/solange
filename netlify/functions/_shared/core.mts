@@ -17,17 +17,24 @@ export type SessionUser = {
 export const store = (name: string) =>
   getStore({ name, consistency: "strong" });
 
-export const json = (data: unknown, status = 200, headers: Record<string, string> = {}) =>
+export const json = (
+  data: unknown,
+  status = 200,
+  headers: Record<string, string> = {},
+) =>
   new Response(JSON.stringify(data), {
     status,
     headers: { "content-type": "application/json; charset=utf-8", ...headers },
   });
 
-export const bad = (message: string, status = 400) => json({ error: message }, status);
+export const bad = (message: string, status = 400) =>
+  json({ error: message }, status);
 
-export const sha256 = (s: string) => createHash("sha256").update(s).digest("hex");
+export const sha256 = (s: string) =>
+  createHash("sha256").update(s).digest("hex");
 
-export const newId = (prefix: string) => `${prefix}_${randomUUID().replace(/-/g, "").slice(0, 12)}`;
+export const newId = (prefix: string) =>
+  `${prefix}_${randomUUID().replace(/-/g, "").slice(0, 12)}`;
 
 export const otpCode = () => String(randomInt(100000, 1000000)); // RNG crypto, 6 chiffres
 
@@ -88,4 +95,46 @@ export async function readJson<T>(req: Request): Promise<T | null> {
   } catch {
     return null;
   }
+}
+
+export const APP_URL =
+  process.env.APP_URL ?? "https://solange-beta.netlify.app";
+
+/** Email transactionnel via Resend. Silent-fail : une notification qui
+    échoue ne doit JAMAIS faire échouer la commande/le message. */
+export async function sendEmail(
+  to: string,
+  subject: string,
+  bodyHtml: string,
+): Promise<void> {
+  try {
+    const res = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        from: process.env.MAIL_FROM ?? "SOLANGE <solange@nouhbenzidane.fr>",
+        to: [to],
+        subject,
+        html: `<div style="background:#0d0d0e;color:#f4f1ea;font-family:Helvetica,Arial,sans-serif;padding:40px 24px">
+          <p style="letter-spacing:.35em;font-size:12px;margin:0 0 28px;text-align:center">S O L A N G E</p>
+          ${bodyHtml}
+          <p style="font-size:11px;color:#8a857b;margin:28px 0 0;text-align:center">Beta · démonstration — paiements simulés</p>
+        </div>`,
+      }),
+    });
+    if (!res.ok) console.error("notify_email_error", res.status);
+  } catch {
+    console.error("notify_email_unreachable");
+  }
+}
+
+/** Email d'un membre par id (null si introuvable). */
+export async function userEmail(userId: string): Promise<string | null> {
+  const u = (await store("users").get(`u:${userId}`, { type: "json" })) as {
+    email?: string;
+  } | null;
+  return u?.email ?? null;
 }

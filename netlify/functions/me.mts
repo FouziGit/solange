@@ -19,8 +19,18 @@ export default async (req: Request) => {
   }
 
   return json({
-    user: { id: user.id, handle: user.handle, name: user.name, email: user.email },
-    social: (social as object) ?? { liked: [], saved: [], follows: [], joined: [] },
+    user: {
+      id: user.id,
+      handle: user.handle,
+      name: user.name,
+      email: user.email,
+    },
+    social: (social as object) ?? {
+      liked: [],
+      saved: [],
+      follows: [],
+      joined: [],
+    },
     orders,
   });
 };

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { motion } from "motion/react";
 import { PageShell } from "@/components/ui/PageShell";
@@ -11,6 +11,7 @@ import { invite, looks, me } from "@/lib/mock";
 import { forSale, liked } from "@/lib/data";
 import { EASE, compact, euro, gradientFor, initials } from "@/lib/utils";
 import { useStore } from "@/lib/store";
+import { api, type ApiOrder, type ApiProduct } from "@/lib/api";
 import { imgItem } from "@/lib/img";
 import {
   Verified,
@@ -131,12 +132,44 @@ function ReferralCard() {
 export default function ProfilPage() {
   const [tab, setTab] = useState<string>("vente");
   const [referral, setReferral] = useState(false);
-  const { orders, user, authReady, signOut, savedItems, serverProducts } =
+  const { orders, user, authReady, signOut, savedItems, refreshProducts } =
     useStore();
   const saleItems = forSale();
   const likedItems = liked();
   const isGuest = authReady && user === null;
-  const myListings = serverProducts.filter((p) => p.mine).length;
+
+  // Mes annonces (toutes, y compris vendues/retirées) + mes ventes — serveur.
+  const [myProds, setMyProds] = useState<ApiProduct[]>([]);
+  const [sales, setSales] = useState<ApiOrder[]>([]);
+  const [withdrawing, setWithdrawing] = useState<string | null>(null);
+
+  const loadMine = useCallback(async () => {
+    const [p, s] = await Promise.all([api.myProducts(), api.sales()]);
+    if (p.ok) setMyProds(p.data.products);
+    if (s.ok) setSales(s.data.orders);
+  }, []);
+
+  useEffect(() => {
+    // chargement/reset différé d'un tick — pas de setState synchrone en effet
+    queueMicrotask(() => {
+      if (user) void loadMine();
+      else {
+        setMyProds([]);
+        setSales([]);
+      }
+    });
+  }, [user, loadMine]);
+
+  const withdraw = async (id: string) => {
+    setWithdrawing(id);
+    const res = await api.withdrawProduct(id);
+    setWithdrawing(null);
+    if (res.ok) {
+      await Promise.all([loadMine(), refreshProducts()]);
+    }
+  };
+
+  const myListings = myProds.length;
 
   const reconnect = () => {
     try {
@@ -187,7 +220,9 @@ export default function ProfilPage() {
             </h1>
             {!user && me.verified && <Verified className="size-5 text-bone" />}
           </div>
-          <p className="mt-1 text-sm text-ash">@{user ? user.handle : me.handle}</p>
+          <p className="mt-1 text-sm text-ash">
+            @{user ? user.handle : me.handle}
+          </p>
           {user ? (
             <p className="mt-2 text-[13px] text-ash">{user.email}</p>
           ) : (
@@ -315,6 +350,98 @@ export default function ProfilPage() {
                   </span>
                   <span className="inline-flex items-center gap-1 rounded-full bg-bone/10 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-bone/80">
                     <Check className="size-2.5" /> Payé
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* mes annonces — pièces déposées par le membre (serveur) */}
+      {user && myProds.length > 0 && (
+        <div className="mt-8 md:max-w-md">
+          <p className="overline mb-3 text-[9px] text-ash">
+            Mes annonces · {myProds.length}
+          </p>
+          <div className="flex flex-col gap-2">
+            {myProds.map((p) => (
+              <div
+                key={p.id}
+                className="glass flex items-center gap-3 rounded-2xl p-2.5"
+              >
+                <span
+                  className="grid size-14 shrink-0 place-items-center overflow-hidden rounded-xl ring-1 ring-bone/10"
+                  style={{ background: gradientFor(p.id) }}
+                >
+                  {p.images[0] && (
+                    /* eslint-disable-next-line @next/next/no-img-element */
+                    <img
+                      src={p.images[0]}
+                      alt={p.name}
+                      className="size-full object-cover"
+                    />
+                  )}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="overline text-[9px] text-ash">{p.brand}</p>
+                  <p className="font-display truncate text-[14px] font-semibold tracking-tight text-bone">
+                    {p.name}
+                  </p>
+                  <p className="mt-0.5 text-[11px] text-ash">
+                    {euro(p.priceEUR)} · {p.size}
+                  </p>
+                </div>
+                {p.status === "available" ? (
+                  <button
+                    type="button"
+                    onClick={() => void withdraw(p.id)}
+                    disabled={withdrawing === p.id}
+                    className="inline-flex min-h-11 shrink-0 items-center rounded-full border border-bone/20 px-3.5 text-[12px] font-medium text-bone/80 transition-colors hover:border-bone/50 hover:text-bone disabled:opacity-40"
+                  >
+                    {withdrawing === p.id ? "Retrait…" : "Retirer"}
+                  </button>
+                ) : (
+                  <span className="inline-flex shrink-0 items-center rounded-full bg-bone/10 px-2.5 py-1 text-[9px] font-semibold uppercase tracking-wider text-bone/70">
+                    {p.status === "sold" ? "Vendue" : "Retirée"}
+                  </span>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* mes ventes — commandes reçues sur mes annonces (serveur) */}
+      {user && sales.length > 0 && (
+        <div className="mt-8 md:max-w-md">
+          <p className="overline mb-3 text-[9px] text-ash">
+            Mes ventes · {sales.length}
+          </p>
+          <div className="flex flex-col gap-2">
+            {sales.map((s) => (
+              <div
+                key={s.id}
+                className="glass flex items-center gap-3 rounded-2xl p-2.5"
+              >
+                <div className="min-w-0 flex-1">
+                  <p className="overline text-[9px] text-ash">{s.brand}</p>
+                  <p className="font-display truncate text-[14px] font-semibold tracking-tight text-bone">
+                    {s.name}
+                  </p>
+                  <p className="mt-0.5 text-[11px] text-ash">
+                    Achetée par @{s.buyerHandle ?? "membre"} ·{" "}
+                    {new Date(s.createdAt).toLocaleDateString("fr-FR")}
+                  </p>
+                </div>
+                <div className="flex flex-col items-end gap-1">
+                  <span className="font-display text-sm font-bold tracking-tight text-bone">
+                    {s.netSellerEUR != null
+                      ? euro(s.netSellerEUR)
+                      : euro(s.priceEUR)}
+                  </span>
+                  <span className="text-[9px] uppercase tracking-wider text-ash">
+                    net vendeur
                   </span>
                 </div>
               </div>

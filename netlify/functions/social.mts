@@ -1,7 +1,14 @@
 /* POST /api/social — persiste likes / gardés / abonnements / communautés.
    {kind: 'liked'|'saved'|'follows'|'joined', id: string, on: boolean} */
 import type { Config } from "@netlify/functions";
-import { store, json, bad, currentUser, sameOrigin, readJson } from "./_shared/core.mts";
+import {
+  store,
+  json,
+  bad,
+  currentUser,
+  sameOrigin,
+  readJson,
+} from "./_shared/core.mts";
 
 const KINDS = new Set(["liked", "saved", "follows", "joined"]);
 
@@ -17,7 +24,11 @@ export default async (req: Request) => {
   if (!KINDS.has(kind) || !id) return bad("Requête invalide");
 
   const social = store("social");
-  const state = ((await social.get(`s:${user.id}`, { type: "json" })) as Record<string, string[]>) ?? {};
+  const state =
+    ((await social.get(`s:${user.id}`, { type: "json" })) as Record<
+      string,
+      string[]
+    >) ?? {};
   const set = new Set(state[kind] ?? []);
   if (b?.on) set.add(id);
   else set.delete(id);

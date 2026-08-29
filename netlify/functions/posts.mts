@@ -3,7 +3,13 @@
    Corrige l'impasse /creer de l'audit : le post apparaît dans le feed. */
 import type { Config } from "@netlify/functions";
 import {
-  store, json, bad, newId, currentUser, sameOrigin, readJson,
+  store,
+  json,
+  bad,
+  newId,
+  currentUser,
+  sameOrigin,
+  readJson,
 } from "./_shared/core.mts";
 
 const IMG_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
@@ -27,20 +33,32 @@ export default async (req: Request) => {
   const user = await currentUser(req);
   if (!user) return bad("Connecte-toi pour publier", 401);
 
-  const b = await readJson<{ caption?: string; brandTags?: string[]; images?: string[] }>(req);
+  const b = await readJson<{
+    caption?: string;
+    brandTags?: string[];
+    images?: string[];
+  }>(req);
   const caption = (b?.caption ?? "").trim().slice(0, 500);
   if (!caption) return bad("Écris une légende");
-  const brandTags = (b?.brandTags ?? []).slice(0, 5).map((t) => String(t).slice(0, 30));
+  const brandTags = (b?.brandTags ?? [])
+    .slice(0, 5)
+    .map((t) => String(t).slice(0, 30));
 
   const imgs = store("imgs");
   const gallery: string[] = [];
   for (const dataUrl of (b?.images ?? []).slice(0, 4)) {
-    const m = /^data:(image\/(?:jpeg|png|webp));base64,(.+)$/.exec(dataUrl ?? "");
+    const m = /^data:(image\/(?:jpeg|png|webp));base64,(.+)$/.exec(
+      dataUrl ?? "",
+    );
     if (!m || !IMG_TYPES.has(m[1])) return bad("Format de photo non supporté");
     const buf = Buffer.from(m[2], "base64");
-    if (buf.byteLength > MAX_IMG_BYTES) return bad("Photo trop lourde (max ~1,8 Mo)");
+    if (buf.byteLength > MAX_IMG_BYTES)
+      return bad("Photo trop lourde (max ~1,8 Mo)");
     const iid = newId("i");
-    const ab = buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength) as ArrayBuffer;
+    const ab = buf.buffer.slice(
+      buf.byteOffset,
+      buf.byteOffset + buf.byteLength,
+    ) as ArrayBuffer;
     await imgs.set(iid, ab, { metadata: { contentType: m[1] } });
     gallery.push(`/api/img/${iid}`);
   }

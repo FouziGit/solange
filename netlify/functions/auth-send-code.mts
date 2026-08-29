@@ -1,7 +1,15 @@
 /* POST /api/auth/send-code — génère un OTP 6 chiffres (crypto), le hache,
    l'envoie par email via Resend. Cooldown 60 s, expiration 10 min. */
 import type { Config } from "@netlify/functions";
-import { store, json, bad, sha256, otpCode, sameOrigin, readJson } from "./_shared/core.mts";
+import {
+  store,
+  json,
+  bad,
+  sha256,
+  otpCode,
+  sameOrigin,
+  readJson,
+} from "./_shared/core.mts";
 
 const emailRe = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 
@@ -17,9 +25,9 @@ export default async (req: Request) => {
   const key = sha256(email);
   const now = Date.now();
 
-  const prev = (await otps.get(key, { type: "json" })) as
-    | { sentAt: number }
-    | null;
+  const prev = (await otps.get(key, { type: "json" })) as {
+    sentAt: number;
+  } | null;
   if (prev && now - prev.sentAt < 60_000) {
     return bad("Attends une minute avant de redemander un code", 429);
   }

@@ -34,12 +34,39 @@ export type ApiOrder = {
   brand: string;
   name: string;
   sellerHandle: string;
+  sellerId?: string | null;
+  buyerHandle?: string;
   priceEUR: number;
   protectionEUR: number;
   shippingEUR: number;
   totalEUR: number;
+  commissionRate?: number;
+  commissionEUR?: number;
+  netSellerEUR?: number;
   status: string;
   simulated: boolean;
+  createdAt: number;
+};
+
+export type ApiMessage = {
+  id: string;
+  fromId: string;
+  text: string;
+  at: number;
+};
+
+export type ApiConversation = {
+  id: string;
+  buyerId: string;
+  buyerHandle: string;
+  sellerId: string | null;
+  sellerHandle: string;
+  productId: string;
+  itemBrand: string;
+  itemName: string;
+  itemPriceEUR: number;
+  messages: ApiMessage[];
+  role: "buyer" | "seller";
   createdAt: number;
 };
 
@@ -63,7 +90,9 @@ export type SocialState = {
 async function request<T>(
   path: string,
   init?: RequestInit,
-): Promise<{ ok: true; data: T } | { ok: false; error: string; status: number }> {
+): Promise<
+  { ok: true; data: T } | { ok: false; error: string; status: number }
+> {
   try {
     const res = await fetch(path, {
       credentials: "same-origin",
@@ -79,15 +108,21 @@ async function request<T>(
       };
     return { ok: true, data: data as T };
   } catch {
-    return { ok: false, error: "Hors ligne ou serveur indisponible", status: 0 };
+    return {
+      ok: false,
+      error: "Hors ligne ou serveur indisponible",
+      status: 0,
+    };
   }
 }
 
 export const api = {
   me: () =>
-    request<{ user: SessionUser | null; social?: SocialState; orders?: ApiOrder[] }>(
-      "/api/me",
-    ),
+    request<{
+      user: SessionUser | null;
+      social?: SocialState;
+      orders?: ApiOrder[];
+    }>("/api/me"),
   sendCode: (email: string) =>
     request<{ ok: boolean }>("/api/auth/send-code", {
       method: "POST",
@@ -98,8 +133,13 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ email, code }),
     }),
-  logout: () => request<{ ok: boolean }>("/api/auth/logout", { method: "POST" }),
-  social: (kind: "liked" | "saved" | "follows" | "joined", id: string, on: boolean) =>
+  logout: () =>
+    request<{ ok: boolean }>("/api/auth/logout", { method: "POST" }),
+  social: (
+    kind: "liked" | "saved" | "follows" | "joined",
+    id: string,
+    on: boolean,
+  ) =>
     request<{ ok: boolean }>("/api/social", {
       method: "POST",
       body: JSON.stringify({ kind, id, on }),
@@ -107,8 +147,14 @@ export const api = {
   products: () =>
     request<{ products: ApiProduct[]; soldSeeds: string[] }>("/api/products"),
   createProduct: (p: {
-    name: string; brand: string; category: string; condition: string;
-    size: string; priceEUR: number; description?: string; images: string[];
+    name: string;
+    brand: string;
+    category: string;
+    condition: string;
+    size: string;
+    priceEUR: number;
+    description?: string;
+    images: string[];
   }) =>
     request<{ ok: boolean; product: ApiProduct }>("/api/products", {
       method: "POST",
@@ -119,6 +165,12 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ productId }),
     }),
+  sales: () => request<{ orders: ApiOrder[] }>("/api/orders?sales=1"),
+  myProducts: () => request<{ products: ApiProduct[] }>("/api/products?mine=1"),
+  withdrawProduct: (id: string) =>
+    request<{ ok: boolean }>(`/api/products?id=${encodeURIComponent(id)}`, {
+      method: "DELETE",
+    }),
   posts: () => request<{ posts: ApiPost[] }>("/api/posts"),
   createPost: (p: { caption: string; brandTags: string[]; images: string[] }) =>
     request<{ ok: boolean; post: ApiPost }>("/api/posts", {
@@ -126,16 +178,20 @@ export const api = {
       body: JSON.stringify(p),
     }),
   conversations: () =>
-    request<{ conversations: unknown[] }>("/api/messages"),
+    request<{ conversations: ApiConversation[] }>("/api/messages"),
   sendMessage: (p: { productId?: string; convId?: string; text: string }) =>
-    request<{ ok: boolean; conversation: unknown }>("/api/messages", {
+    request<{ ok: boolean; conversation: ApiConversation }>("/api/messages", {
       method: "POST",
       body: JSON.stringify(p),
     }),
 };
 
 /** Redimensionne une photo côté client (mobile-first : upload léger). */
-export function resizeImage(file: File, maxPx = 1280, quality = 0.82): Promise<string> {
+export function resizeImage(
+  file: File,
+  maxPx = 1280,
+  quality = 0.82,
+): Promise<string> {
   return new Promise((resolve, reject) => {
     const url = URL.createObjectURL(file);
     const img = new Image();
