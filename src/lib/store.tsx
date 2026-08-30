@@ -36,6 +36,8 @@ export type Order = {
   shipping: number;
   total: number;
   last4: string;
+  /** Transporteur + point relais choisis (ex. "Mondial Relay · Franprix"). */
+  shippingLabel?: string;
   date: string;
 };
 
@@ -140,6 +142,7 @@ export function SolangeProvider({ children }: { children: ReactNode }) {
             shipping: so.shippingEUR,
             total: so.totalEUR,
             last4: "démo",
+            shippingLabel: so.shippingLabel,
             date: new Date(so.createdAt).toLocaleDateString("fr-FR"),
           })),
         );

@@ -21,6 +21,12 @@ import {
 import { SEED_CATALOG, commissionRate } from "./_shared/seed-catalog.mts";
 
 const SHIPPING_EUR = 4.9;
+/* Barème transporteur — miroir du front (src/lib/shipping.ts). */
+const SHIP: Record<string, { price: number; carrier: string }> = {
+  mondial_relay: { price: 3.9, carrier: "Mondial Relay" },
+  point_relais: { price: 4.5, carrier: "Point Relais" },
+  chronopost: { price: 6.9, carrier: "Chronopost" },
+};
 const cents = (n: number) => Math.round(n * 100) / 100;
 const eur = (n: number) =>
   n.toLocaleString("fr-FR", { minimumFractionDigits: 2 }) + " €";
@@ -47,9 +53,19 @@ export default async (req: Request) => {
   if (!sameOrigin(req)) return bad("Origine refusée", 403);
   if (!user) return bad("Connecte-toi pour acheter", 401);
 
-  const b = await readJson<{ productId?: string }>(req);
+  const b = await readJson<{
+    productId?: string;
+    shippingMethod?: string;
+    relayLabel?: string;
+  }>(req);
   const pid = (b?.productId ?? "").trim();
   if (!pid) return bad("Article manquant");
+  const shipSel = SHIP[(b?.shippingMethod ?? "").trim()] ?? {
+    price: SHIPPING_EUR,
+    carrier: "Livraison suivie",
+  };
+  const relayLabel =
+    typeof b?.relayLabel === "string" ? b.relayLabel.slice(0, 80) : "";
 
   const products = store("products");
   // Source de vérité prix : annonce membre (Blobs) ou catalogue seed serveur.
@@ -83,8 +99,11 @@ export default async (req: Request) => {
 
   const price = cents(item.priceEUR);
   const protection = cents(price * 0.05); // au centime — fix audit
-  const shipping = SHIPPING_EUR;
+  const shipping = shipSel.price;
   const total = cents(price + protection + shipping);
+  const shippingLabel = relayLabel
+    ? `${shipSel.carrier} · ${relayLabel}`
+    : shipSel.carrier;
   const rate = commissionRate(price);
   const fee = cents(price * rate);
   const net = cents(price - fee);
@@ -103,6 +122,8 @@ export default async (req: Request) => {
     protectionEUR: protection,
     shippingEUR: shipping,
     totalEUR: total,
+    shippingMethod: shipSel.carrier,
+    shippingLabel,
     commissionRate: rate,
     commissionEUR: fee,
     netSellerEUR: net,

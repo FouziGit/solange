@@ -40,6 +40,8 @@ export type ApiOrder = {
   protectionEUR: number;
   shippingEUR: number;
   totalEUR: number;
+  shippingMethod?: string;
+  shippingLabel?: string;
   commissionRate?: number;
   commissionEUR?: number;
   netSellerEUR?: number;
@@ -182,10 +184,10 @@ export const api = {
       method: "POST",
       body: JSON.stringify(p),
     }),
-  order: (productId: string) =>
+  order: (productId: string, shippingMethod?: string, relayLabel?: string) =>
     request<{ ok: boolean; order: ApiOrder }>("/api/orders", {
       method: "POST",
-      body: JSON.stringify({ productId }),
+      body: JSON.stringify({ productId, shippingMethod, relayLabel }),
     }),
   sales: () => request<{ orders: ApiOrder[] }>("/api/orders?sales=1"),
   myProducts: () => request<{ products: ApiProduct[] }>("/api/products?mine=1"),

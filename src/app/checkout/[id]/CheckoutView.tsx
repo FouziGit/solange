@@ -12,11 +12,21 @@ import { Stamp } from "@/components/ui/Stamp";
 import { imgItem } from "@/lib/img";
 import { commission, commissionRate, euro, gradientFor } from "@/lib/utils";
 import {
+  SHIP_OPTIONS,
+  shipOption,
+  type ShipMethodId,
+  type RelayPoint,
+} from "@/lib/shipping";
+import { RelayPicker } from "@/components/checkout/RelayPicker";
+import {
   ArrowLeft,
   Lock,
   Card,
   Bag,
   Verified,
+  Pin,
+  ChevronRight,
+  Check,
 } from "@/components/chrome/icons";
 
 type Step = "form" | "processing" | "done";
@@ -38,11 +48,20 @@ export function CheckoutView({ item }: { item: CatalogItem }) {
   const [error, setError] = useState<string | null>(null);
   const [soldOut, setSoldOut] = useState(false); // 409 pendant le paiement
 
+  // livraison — choisie avant paiement (Vinted-like)
+  const [method, setMethod] = useState<ShipMethodId>("mondial_relay");
+  const [relay, setRelay] = useState<RelayPoint | null>(null);
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const ship = shipOption(method);
+  const needsRelay = ship.relay && !relay;
+  const shippingLabel =
+    ship.relay && relay ? `${ship.carrier} · ${relay.name}` : ship.carrier;
+
   const alreadySold = isSold(item.id);
 
   const price = item.priceEUR;
   const protection = Math.round(price * 0.05) + 0.7; // protection acheteur (démo locale)
-  const shipping = 4.9;
+  const shipping = ship.priceEUR;
   const total = Math.round((price + protection + shipping) * 100) / 100;
   const { net } = commission(price);
   const ratePct = (commissionRate(price) * 100).toLocaleString("fr-FR");
@@ -57,6 +76,10 @@ export function CheckoutView({ item }: { item: CatalogItem }) {
   const pay = async (e: React.FormEvent) => {
     e.preventDefault();
     if (step !== "form" || soldOut || alreadySold || !authReady) return;
+    if (needsRelay) {
+      setError("Choisis un point relais pour continuer.");
+      return;
+    }
     setError(null);
     setStep("processing");
 
@@ -72,6 +95,7 @@ export function CheckoutView({ item }: { item: CatalogItem }) {
           shipping,
           total,
           last4: "4242",
+          shippingLabel,
           date: new Date().toLocaleDateString("fr-FR"),
         });
         setStep("done");
@@ -80,7 +104,7 @@ export function CheckoutView({ item }: { item: CatalogItem }) {
     }
 
     /* ---- membre connecté : le serveur recalcule tout ---- */
-    const res = await api.order(item.id);
+    const res = await api.order(item.id, method, relay?.name);
     if (res.ok) {
       const order = res.data.order;
       setServerOrder(order);
@@ -92,6 +116,7 @@ export function CheckoutView({ item }: { item: CatalogItem }) {
         shipping: order.shippingEUR,
         total: order.totalEUR,
         last4: "démo",
+        shippingLabel: order.shippingLabel ?? shippingLabel,
         date: new Date().toLocaleDateString("fr-FR"),
       });
       void refreshProducts();
@@ -166,7 +191,17 @@ export function CheckoutView({ item }: { item: CatalogItem }) {
           <dl className="mt-4 space-y-2 rounded-2xl border border-bone/10 p-4 text-[13px]">
             <Row label="Article">{euro(paidPrice)}</Row>
             <Row label="Protection acheteur">{euro(paidProtection)}</Row>
-            <Row label="Livraison suivie">{euro(paidShipping)}</Row>
+            <Row label={`Livraison · ${ship.carrier}`}>
+              {euro(paidShipping)}
+            </Row>
+            {relay && (
+              <div className="flex items-start gap-1.5 text-[11.5px] text-ash">
+                <Pin className="mt-0.5 size-3.5 shrink-0" />
+                <span>
+                  {relay.name} — {relay.address} · {relay.postal}
+                </span>
+              </div>
+            )}
             <div className="my-1 h-px bg-bone/10" />
             <div className="flex items-center justify-between">
               <dt className="font-semibold text-bone">Total</dt>
@@ -291,8 +326,8 @@ export function CheckoutView({ item }: { item: CatalogItem }) {
       </div>
 
       <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_minmax(0,380px)]">
-        {/* ---- order summary ---- */}
-        <section className="order-2 min-w-0 lg:order-1">
+        {/* ---- order summary + livraison (avant le paiement) ---- */}
+        <section className="order-1 min-w-0 lg:order-1">
           <div className="glass flex items-center gap-3 rounded-2xl p-3">
             <span
               className="grid size-20 shrink-0 place-items-center overflow-hidden rounded-xl ring-1 ring-bone/10"
@@ -320,11 +355,90 @@ export function CheckoutView({ item }: { item: CatalogItem }) {
             </div>
           </div>
 
+          {/* ---- livraison : choix du transporteur ---- */}
+          <div className="mt-4 rounded-2xl border border-bone/10 p-4">
+            <p className="overline mb-3 text-[11px] text-ash">Livraison</p>
+            <div className="flex flex-col gap-2">
+              {SHIP_OPTIONS.map((o) => {
+                const on = method === o.id;
+                return (
+                  <button
+                    key={o.id}
+                    type="button"
+                    onClick={() => setMethod(o.id)}
+                    aria-pressed={on}
+                    className={`flex items-center gap-3 rounded-xl border p-3 text-left transition-colors ${
+                      on
+                        ? "border-bone bg-bone/[0.06]"
+                        : "border-bone/12 bg-bone/[0.02] hover:border-bone/30"
+                    }`}
+                  >
+                    <span
+                      className={`grid size-5 shrink-0 place-items-center rounded-full border ${
+                        on ? "border-bone" : "border-bone/30"
+                      }`}
+                    >
+                      {on && <span className="size-2.5 rounded-full bg-bone" />}
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="font-display block text-[14px] font-semibold tracking-tight text-bone">
+                        {o.carrier}
+                      </span>
+                      <span className="block text-[11.5px] text-ash">
+                        {o.label} · {o.eta}
+                      </span>
+                    </span>
+                    <span className="font-display shrink-0 text-[14px] font-bold tabular-nums text-bone">
+                      {euro(o.priceEUR)}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* point relais — pour Mondial Relay / Point Relais */}
+            {ship.relay && (
+              <button
+                type="button"
+                onClick={() => setPickerOpen(true)}
+                className={`mt-2 flex w-full items-center gap-3 rounded-xl border p-3 text-left transition-colors ${
+                  relay
+                    ? "border-bone/20 bg-bone/[0.03]"
+                    : "border-dashed border-bone/40 bg-transparent hover:border-bone/60"
+                }`}
+              >
+                <span className="grid size-9 shrink-0 place-items-center rounded-full bg-bone/10 text-bone">
+                  <Pin className="size-5" />
+                </span>
+                <span className="min-w-0 flex-1">
+                  {relay ? (
+                    <>
+                      <span className="flex items-center gap-1.5 text-[13px] font-semibold text-bone">
+                        <Check className="size-3.5" /> {relay.name}
+                      </span>
+                      <span className="block truncate text-[11.5px] text-ash">
+                        {relay.address} · {relay.postal}
+                      </span>
+                    </>
+                  ) : (
+                    <span className="text-[13px] font-semibold text-bone">
+                      Choisir un point relais
+                    </span>
+                  )}
+                </span>
+                <span className="shrink-0 text-[12px] font-medium text-ash">
+                  {relay ? "Modifier" : ""}
+                </span>
+                <ChevronRight className="size-4 shrink-0 text-ash" />
+              </button>
+            )}
+          </div>
+
           {/* breakdown */}
           <dl className="mt-4 space-y-2 rounded-2xl border border-bone/10 p-4 text-[13px]">
             <Row label="Article">{euro(price)}</Row>
             <Row label="Protection acheteur">{euro(protection)}</Row>
-            <Row label="Livraison suivie">{euro(shipping)}</Row>
+            <Row label={`Livraison · ${ship.carrier}`}>{euro(shipping)}</Row>
             <div className="my-1 h-px bg-bone/10" />
             <div className="flex items-center justify-between">
               <dt className="font-semibold text-bone">Total</dt>
@@ -347,7 +461,7 @@ export function CheckoutView({ item }: { item: CatalogItem }) {
         </section>
 
         {/* ---- payment card ---- */}
-        <section className="order-1 min-w-0 lg:order-2">
+        <section className="order-2 min-w-0 lg:order-2">
           <form
             onSubmit={(e) => void pay(e)}
             className="rounded-3xl border border-bone/12 bg-coal/70 p-5 backdrop-blur-xl"
@@ -433,7 +547,7 @@ export function CheckoutView({ item }: { item: CatalogItem }) {
             <Button
               type="submit"
               size="lg"
-              disabled={step === "processing" || soldOut || !authReady}
+              disabled={step === "processing" || soldOut || !authReady || needsRelay}
               className="mt-5"
             >
               <AnimatePresence mode="wait" initial={false}>
@@ -471,6 +585,12 @@ export function CheckoutView({ item }: { item: CatalogItem }) {
               </AnimatePresence>
             </Button>
 
+            {needsRelay && (
+              <p className="mt-2 text-center text-[11.5px] text-ash">
+                Choisis un point relais {ship.carrier} pour continuer.
+              </p>
+            )}
+
             {/* Invité : démo locale + proposition de connexion. */}
             {authReady && !user && (
               <div className="mt-4 rounded-xl border border-bone/12 bg-bone/[0.03] p-3.5">
@@ -498,6 +618,14 @@ export function CheckoutView({ item }: { item: CatalogItem }) {
           </form>
         </section>
       </div>
+
+      <RelayPicker
+        open={pickerOpen}
+        onClose={() => setPickerOpen(false)}
+        carrier={ship.carrier}
+        selectedId={relay?.id}
+        onSelect={setRelay}
+      />
     </PageShell>
   );
 }
