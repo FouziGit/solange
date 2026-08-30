@@ -363,7 +363,7 @@ export default function ProfilPage() {
                   />
                 </span>
                 <div className="min-w-0 flex-1">
-                  <p className="overline text-[11px] text-ash">{o.item.brand}</p>
+                  <p className="text-[12px] text-ash">{o.item.brand}</p>
                   <p className="font-display truncate text-[14px] font-semibold tracking-tight text-bone">
                     {o.item.name}
                   </p>
@@ -414,7 +414,7 @@ export default function ProfilPage() {
                   )}
                 </span>
                 <div className="min-w-0 flex-1">
-                  <p className="overline text-[11px] text-ash">{p.brand}</p>
+                  <p className="text-[12px] text-ash">{p.brand}</p>
                   <p className="font-display truncate text-[14px] font-semibold tracking-tight text-bone">
                     {p.name}
                   </p>
@@ -455,7 +455,7 @@ export default function ProfilPage() {
                 className="glass flex items-center gap-3 rounded-2xl p-2.5"
               >
                 <div className="min-w-0 flex-1">
-                  <p className="overline text-[11px] text-ash">{s.brand}</p>
+                  <p className="text-[12px] text-ash">{s.brand}</p>
                   <p className="font-display truncate text-[14px] font-semibold tracking-tight text-bone">
                     {s.name}
                   </p>

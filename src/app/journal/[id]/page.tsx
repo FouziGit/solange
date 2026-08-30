@@ -112,7 +112,6 @@ export default async function JournalArticlePage({
           <span className="overline text-[11px] text-bone/55">
             {article.readingMin} min de lecture
           </span>
-          <span aria-hidden="true" className="h-px w-6 bg-bone/25" />
           <span className="overline text-[11px] text-bone/55">
             {frDate(article.date)}
           </span>
@@ -125,9 +124,7 @@ export default async function JournalArticlePage({
           <LuxeMedia
             seed={article.seed}
             image={
-              article.productIds[0]
-                ? imgItem(article.productIds[0])
-                : undefined
+              article.productIds[0] ? imgItem(article.productIds[0]) : undefined
             }
             brand={article.brand}
             watermark={false}
@@ -135,10 +132,12 @@ export default async function JournalArticlePage({
           />
         </div>
         <figcaption className="mt-2 flex items-center justify-between">
-          <span className="overline text-[11px] text-bone/40">
+          <span className="text-[12px] text-bone/40">
             {article.brand ?? KIND_LABEL[article.kind]} — Archive Solange
           </span>
-          <span className="overline text-[11px] text-bone/30">{folio(index)}</span>
+          <span className="overline text-[11px] text-bone/30">
+            {folio(index)}
+          </span>
         </figcaption>
       </figure>
 
@@ -152,10 +151,7 @@ export default async function JournalArticlePage({
         {body.length > 0 && (
           <div className="mt-8 space-y-6 border-t border-bone/15 pt-8">
             {body.map((p, i) => (
-              <p
-                key={i}
-                className="text-[15px] leading-[1.85] text-bone/80"
-              >
+              <p key={i} className="text-[15px] leading-[1.85] text-bone/80">
                 {p}
               </p>
             ))}
@@ -198,7 +194,7 @@ export default async function JournalArticlePage({
               <p className="truncate text-sm font-medium text-bone">
                 {creator.name}
               </p>
-              <p className="overline mt-0.5 text-[11px] text-bone/50">
+              <p className="mt-0.5 text-[12px] text-bone/50">
                 @{creator.handle}
               </p>
             </div>
@@ -212,11 +208,9 @@ export default async function JournalArticlePage({
 
       {/* closing folio */}
       <div className="mt-14 flex items-center justify-center gap-4 border-t border-bone/15 pt-6">
-        <span aria-hidden="true" className="h-px w-10 bg-bone/20" />
         <span className="overline text-[11px] text-bone/35">
           {folio(index)} — Journal Solange
         </span>
-        <span aria-hidden="true" className="h-px w-10 bg-bone/20" />
       </div>
     </PageShell>
   );

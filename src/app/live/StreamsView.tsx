@@ -299,7 +299,7 @@ function ShoppableRail({ productIds }: { productIds: string[] }) {
             />
           </span>
           <div className="min-w-0 flex-1">
-            <p className="overline truncate text-[11px] text-ash">{it.brand}</p>
+            <p className="truncate text-[12px] text-ash">{it.brand}</p>
             <p className="truncate text-[12.5px] leading-tight text-bone">
               {it.name}
             </p>

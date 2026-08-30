@@ -18,7 +18,6 @@ export default function Error({
         <h1 className="font-editorial mt-4 text-4xl font-semibold tracking-tight text-bone md:text-5xl">
           Quelque chose s’est cassé
         </h1>
-        <span className="mt-5 h-px w-12 bg-bone/25" />
         <p className="mt-5 text-[14px] leading-relaxed text-ash">
           Une erreur inattendue est survenue de notre côté. Tu peux réessayer —
           la plupart du temps, ça repart.

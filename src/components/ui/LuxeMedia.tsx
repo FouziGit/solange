@@ -61,17 +61,14 @@ export function LuxeMedia({
             "radial-gradient(closest-side, rgba(255,255,255,0.10), transparent 72%)",
         }}
       />
-      {/* centered Bodoni brand watermark + hairline rule */}
+      {/* centered Bodoni brand watermark */}
       {watermark && brand && (
         <div className="absolute inset-0 grid place-items-center px-4">
-          <div className="flex flex-col items-center text-center">
-            <span
-              className={`font-editorial italic leading-tight text-bone/30 ${small ? "text-lg" : "text-3xl md:text-5xl"}`}
-            >
-              {brand}
-            </span>
-            <span className="mt-2 h-px w-8 bg-bone/25" />
-          </div>
+          <span
+            className={`font-editorial text-center italic leading-tight text-bone/30 ${small ? "text-lg" : "text-3xl md:text-5xl"}`}
+          >
+            {brand}
+          </span>
         </div>
       )}
       {/* real photo (covers the gradient when it loads) */}

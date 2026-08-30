@@ -178,7 +178,7 @@ function ProductTile({
       </div>
 
       <div className="mt-2.5 px-0.5">
-        <p className="overline text-[11px] text-ash">{tile.brand}</p>
+        <p className="text-[12px] text-ash">{tile.brand}</p>
         <p className="mt-0.5 truncate text-sm text-bone">{tile.name}</p>
         <div className="mt-1 flex items-baseline justify-between gap-2">
           <span className="font-display text-[15px] font-bold text-bone">
@@ -333,7 +333,6 @@ export default function MembrePage() {
           <span className="font-editorial text-[4.5rem] italic leading-none text-bone/85">
             @
           </span>
-          <span className="mt-4 h-px w-12 bg-bone/25" />
           <h1 className="font-editorial mt-6 text-3xl font-semibold tracking-tight text-bone md:text-4xl">
             Profil introuvable
           </h1>

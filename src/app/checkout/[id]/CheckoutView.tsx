@@ -177,7 +177,7 @@ export function CheckoutView({ item }: { item: CatalogItem }) {
               />
             </span>
             <div className="min-w-0 flex-1">
-              <p className="overline text-[11px] text-ash">{item.brand}</p>
+              <p className="text-[12px] text-ash">{item.brand}</p>
               <p className="font-display truncate text-[15px] font-semibold tracking-tight text-bone">
                 {item.name}
               </p>
@@ -269,7 +269,7 @@ export function CheckoutView({ item }: { item: CatalogItem }) {
               />
             </span>
             <div className="min-w-0 flex-1">
-              <p className="overline text-[11px] text-ash">{item.brand}</p>
+              <p className="text-[12px] text-ash">{item.brand}</p>
               <p className="font-display truncate text-[16px] font-semibold tracking-tight text-bone">
                 {item.name}
               </p>
@@ -341,7 +341,7 @@ export function CheckoutView({ item }: { item: CatalogItem }) {
               />
             </span>
             <div className="min-w-0 flex-1">
-              <p className="overline text-[11px] text-ash">{item.brand}</p>
+              <p className="text-[12px] text-ash">{item.brand}</p>
               <p className="font-display truncate text-[16px] font-semibold tracking-tight text-bone">
                 {item.name}
               </p>
@@ -547,7 +547,9 @@ export function CheckoutView({ item }: { item: CatalogItem }) {
             <Button
               type="submit"
               size="lg"
-              disabled={step === "processing" || soldOut || !authReady || needsRelay}
+              disabled={
+                step === "processing" || soldOut || !authReady || needsRelay
+              }
               className="mt-5"
             >
               <AnimatePresence mode="wait" initial={false}>
@@ -656,7 +658,9 @@ function Field({
 }) {
   return (
     <label className={`block ${className ?? ""}`}>
-      <span className="overline mb-1.5 block text-[11px] text-ash">{label}</span>
+      <span className="overline mb-1.5 block text-[11px] text-ash">
+        {label}
+      </span>
       {children}
     </label>
   );

@@ -102,7 +102,7 @@ export function ShopTheLook({
                   </span>
                 </span>
                 <div className="min-w-0 flex-1">
-                  <p className="overline text-[11px] text-ash">{p.brand}</p>
+                  <p className="text-[12px] text-ash">{p.brand}</p>
                   <p className="truncate text-sm font-medium text-bone">
                     {p.name}
                   </p>

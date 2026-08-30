@@ -34,7 +34,6 @@ export function ShopFeed() {
       ))}
 
       <div className="feed-snap flex h-[60dvh] flex-col items-center justify-center gap-3 px-10 text-center">
-        <span className="h-px w-10 bg-bone/30" />
         <span className="overline text-[11px] text-bone/60">
           Fin de la sélection
         </span>

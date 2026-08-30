@@ -446,9 +446,7 @@ function MessagesInner() {
                   <Bag className="size-5" />
                 </span>
                 <div className="min-w-0 flex-1">
-                  <p className="overline text-[11px] text-ash">
-                    {active.itemBrand}
-                  </p>
+                  <p className="text-[12px] text-ash">{active.itemBrand}</p>
                   <p className="truncate text-[13px] text-bone">
                     {active.itemName}
                   </p>

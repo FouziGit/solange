@@ -131,7 +131,7 @@ export function ProductCard({
       </div>
 
       <div className="mt-2.5 px-0.5">
-        <p className="overline text-[11px] text-ash">{item.brand}</p>
+        <p className="text-[12px] text-ash">{item.brand}</p>
         <p className="mt-0.5 truncate text-sm text-bone">{item.name}</p>
         <div className="mt-1 flex items-baseline justify-between gap-2">
           <div className="flex items-baseline gap-1.5">

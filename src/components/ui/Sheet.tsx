@@ -124,8 +124,6 @@ export function Sheet({
               </button>
             </div>
 
-            <div className="mx-5 h-px bg-bone/10" />
-
             {children}
           </motion.div>
         </>

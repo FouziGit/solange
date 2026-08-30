@@ -10,7 +10,6 @@ export default function NotFound() {
         <span className="font-editorial text-[5.5rem] italic leading-none text-bone/85 md:text-[8rem]">
           404
         </span>
-        <span className="mt-4 h-px w-12 bg-bone/25" />
         <h1 className="font-editorial mt-6 text-3xl font-semibold tracking-tight text-bone md:text-4xl">
           Page introuvable
         </h1>

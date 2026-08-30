@@ -89,20 +89,13 @@ export function JournalView({ articles }: { articles: Article[] }) {
                   <span className="overline text-[11px] text-bone/60">
                     {cover.readingMin} min de lecture
                   </span>
-                  <span aria-hidden="true" className="h-px w-6 bg-bone/25" />
                   <span className="overline text-[11px] text-bone/60">
                     {frDate(cover.date)}
                   </span>
                   {cover.brand && (
-                    <>
-                      <span
-                        aria-hidden="true"
-                        className="hidden h-px w-6 bg-bone/25 md:block"
-                      />
-                      <span className="overline hidden text-[11px] text-bone/60 md:inline">
-                        {cover.brand}
-                      </span>
-                    </>
+                    <span className="hidden text-[12px] text-bone/60 md:inline">
+                      {cover.brand}
+                    </span>
                   )}
                 </div>
               </div>
@@ -171,7 +164,7 @@ export function JournalView({ articles }: { articles: Article[] }) {
 
                   <div className="mt-3 flex items-center gap-3">
                     {a.brand && (
-                      <span className="overline border border-bone/20 px-2 py-1 text-[11px] text-bone/70">
+                      <span className="text-[12px] text-bone/70">
                         {a.brand}
                       </span>
                     )}

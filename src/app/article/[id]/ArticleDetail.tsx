@@ -69,7 +69,7 @@ export function ArticleDetail({
           transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1], delay: 0.08 }}
           className="lg:py-2"
         >
-          <p className="overline text-[11px] text-ash">{item.brand}</p>
+          <p className="text-[12px] text-ash">{item.brand}</p>
           <h1 className="font-editorial mt-2 text-5xl font-semibold leading-[0.95] tracking-tight text-bone md:text-7xl">
             {item.name}
           </h1>
