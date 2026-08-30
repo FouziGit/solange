@@ -2,7 +2,6 @@
 "use client";
 
 import { useState } from "react";
-import { motion } from "motion/react";
 import Link from "next/link";
 import { useStore } from "@/lib/store";
 import { euro, compact, gradientFor, initials } from "@/lib/utils";

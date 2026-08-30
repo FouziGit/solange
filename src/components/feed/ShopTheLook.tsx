@@ -1,12 +1,13 @@
 "use client";
 
+import { Sheet } from "../ui/Sheet";
 import { useState } from "react";
 import Link from "next/link";
 import { AnimatePresence, motion } from "motion/react";
 import type { Product } from "@/lib/mock";
 import { track } from "@/lib/track";
 import { euro, gradientFor, initials } from "@/lib/utils";
-import { Bag, Check, ChevronUp, X } from "../chrome/icons";
+import { Bag, Check, ChevronUp } from "../chrome/icons";
 
 export function ShopTheLook({
   products,
@@ -73,147 +74,111 @@ export function ShopTheLook({
       )}
 
       {/* drawer */}
-      <AnimatePresence>
-        {showDrawer && open && (
-          <>
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={close}
-              className="absolute inset-0 z-30 bg-ink/70 backdrop-blur-[2px]"
-            />
-            <motion.div
-              initial={{ y: "100%" }}
-              animate={{ y: 0 }}
-              exit={{ y: "100%" }}
-              transition={{ type: "spring", stiffness: 360, damping: 36 }}
-              className="absolute inset-x-0 bottom-0 z-40 max-h-[78%] overflow-hidden rounded-t-stage border-t border-bone/15 bg-coal/95 backdrop-blur-2xl"
-            >
-              <div className="flex items-center justify-between px-5 pb-2 pt-4">
-                <div>
-                  <p className="eyebrow text-sm text-bone">Shop the look</p>
-                  <p className="font-display text-xl font-bold tracking-mega text-bone">
-                    {products.length} pièce{products.length > 1 ? "s" : ""} à
-                    chiner
-                  </p>
-                </div>
-                <button
-                  onClick={close}
-                  className="grid size-9 place-items-center rounded-full bg-bone/10 text-bone"
-                  aria-label="Fermer"
+      <Sheet
+        open={showDrawer && open}
+        onClose={close}
+        eyebrow="Shop the look"
+        title={`${products.length} pièce${products.length > 1 ? "s" : ""} à chiner`}
+        container="absolute"
+      >
+        <div className="flex flex-col gap-2 overflow-y-auto px-5 py-4">
+          {products.map((p) => {
+            const hot = highlightId === p.id;
+            return (
+              <motion.div
+                key={p.id}
+                layout
+                className={`flex items-center gap-3 rounded-2xl p-2 transition-colors ${
+                  hot ? "bg-bone/10 ring-1 ring-bone/40" : "bg-bone/[0.03]"
+                }`}
+              >
+                <span
+                  className="grid size-16 shrink-0 place-items-center overflow-hidden rounded-xl ring-1 ring-bone/10"
+                  style={{ background: gradientFor(p.id) }}
+                  aria-hidden="true"
                 >
-                  <X className="size-5" />
-                </button>
-              </div>
-
-              <div className="mx-5 h-px bg-bone/10" />
-
-              <div className="flex flex-col gap-2 overflow-y-auto px-5 py-4">
-                {products.map((p) => {
-                  const hot = highlightId === p.id;
-                  return (
-                    <motion.div
-                      key={p.id}
-                      layout
-                      className={`flex items-center gap-3 rounded-2xl p-2 transition-colors ${
-                        hot
-                          ? "bg-bone/10 ring-1 ring-bone/40"
-                          : "bg-bone/[0.03]"
-                      }`}
-                    >
-                      <span
-                        className="grid size-16 shrink-0 place-items-center overflow-hidden rounded-xl ring-1 ring-bone/10"
-                        style={{ background: gradientFor(p.id) }}
-                        aria-hidden="true"
-                      >
-                        <span className="font-display text-lg font-black text-bone/25">
-                          {initials(p.brand)}
-                        </span>
-                      </span>
-                      <div className="min-w-0 flex-1">
-                        <p className="overline text-[9px] text-ash">
-                          {p.brand}
-                        </p>
-                        <p className="truncate text-sm font-medium text-bone">
-                          {p.name}
-                        </p>
-                        <div className="mt-0.5 flex items-center gap-2 text-[11px] text-ash">
-                          <span>Taille {p.size}</span>
-                          <span className="size-0.5 rounded-full bg-ash" />
-                          <span>{p.condition}</span>
-                        </div>
-                      </div>
-                      <div className="flex flex-col items-end gap-1.5">
-                        <div className="text-right leading-none">
-                          <span className="font-display text-base font-bold text-bone">
-                            {euro(p.priceEUR)}
-                          </span>
-                          {p.originalEUR && (
-                            <span className="ml-1 text-[10px] text-ash line-through">
-                              {euro(p.originalEUR)}
-                            </span>
-                          )}
-                        </div>
-                        <Link
-                          href={`/checkout/${p.id}`}
-                          data-cursor="link"
-                          aria-label={`Acheter ${p.name}`}
-                          className="rounded-full bg-bone px-3.5 py-1.5 text-[11px] font-semibold text-ink transition-transform active:scale-95"
-                        >
-                          Acheter
-                        </Link>
-                      </div>
-                    </motion.div>
-                  );
-                })}
-              </div>
-
-              <div className="flex items-center justify-between gap-3 border-t border-bone/10 px-5 pb-24 pt-4 md:pb-5">
-                <span className="text-xs text-ash">
-                  Protection acheteur incluse · livraison 48h
+                  <span className="font-display text-lg font-black text-bone/25">
+                    {initials(p.brand)}
+                  </span>
                 </span>
-                <motion.button
-                  onClick={addAll}
-                  data-cursor="link"
-                  aria-live="polite"
-                  whileTap={{ scale: 0.95 }}
-                  className={`flex items-center gap-1.5 rounded-full px-5 py-2.5 text-sm font-semibold transition-colors ${
-                    added
-                      ? "bg-bone/15 text-bone ring-1 ring-bone/40"
-                      : "bg-bone text-ink"
-                  }`}
-                >
-                  <AnimatePresence mode="wait" initial={false}>
-                    {added ? (
-                      <motion.span
-                        key="added"
-                        initial={{ opacity: 0, y: 4 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -4 }}
-                        transition={{ duration: 0.18 }}
-                        className="flex items-center gap-1.5"
-                      >
-                        <Check className="size-4" /> Ajouté
-                      </motion.span>
-                    ) : (
-                      <motion.span
-                        key="add"
-                        initial={{ opacity: 0, y: 4 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -4 }}
-                        transition={{ duration: 0.18 }}
-                      >
-                        Tout ajouter
-                      </motion.span>
+                <div className="min-w-0 flex-1">
+                  <p className="overline text-[9px] text-ash">{p.brand}</p>
+                  <p className="truncate text-sm font-medium text-bone">
+                    {p.name}
+                  </p>
+                  <div className="mt-0.5 flex items-center gap-2 text-[11px] text-ash">
+                    <span>Taille {p.size}</span>
+                    <span className="size-0.5 rounded-full bg-ash" />
+                    <span>{p.condition}</span>
+                  </div>
+                </div>
+                <div className="flex flex-col items-end gap-1.5">
+                  <div className="text-right leading-none">
+                    <span className="font-display text-base font-bold text-bone">
+                      {euro(p.priceEUR)}
+                    </span>
+                    {p.originalEUR && (
+                      <span className="ml-1 text-[10px] text-ash line-through">
+                        {euro(p.originalEUR)}
+                      </span>
                     )}
-                  </AnimatePresence>
-                </motion.button>
-              </div>
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
+                  </div>
+                  <Link
+                    href={`/checkout/${p.id}`}
+                    data-cursor="link"
+                    aria-label={`Acheter ${p.name}`}
+                    className="rounded-full bg-bone px-3.5 py-1.5 text-[11px] font-semibold text-ink transition-transform active:scale-95"
+                  >
+                    Acheter
+                  </Link>
+                </div>
+              </motion.div>
+            );
+          })}
+        </div>
+
+        <div className="flex items-center justify-between gap-3 border-t border-bone/10 px-5 pb-24 pt-4 md:pb-5">
+          <span className="text-xs text-ash">
+            Protection acheteur incluse · livraison 48h
+          </span>
+          <motion.button
+            onClick={addAll}
+            data-cursor="link"
+            aria-live="polite"
+            whileTap={{ scale: 0.95 }}
+            className={`flex items-center gap-1.5 rounded-full px-5 py-2.5 text-sm font-semibold transition-colors ${
+              added
+                ? "bg-bone/15 text-bone ring-1 ring-bone/40"
+                : "bg-bone text-ink"
+            }`}
+          >
+            <AnimatePresence mode="wait" initial={false}>
+              {added ? (
+                <motion.span
+                  key="added"
+                  initial={{ opacity: 0, y: 4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -4 }}
+                  transition={{ duration: 0.18 }}
+                  className="flex items-center gap-1.5"
+                >
+                  <Check className="size-4" /> Ajouté
+                </motion.span>
+              ) : (
+                <motion.span
+                  key="add"
+                  initial={{ opacity: 0, y: 4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -4 }}
+                  transition={{ duration: 0.18 }}
+                >
+                  Tout ajouter
+                </motion.span>
+              )}
+            </AnimatePresence>
+          </motion.button>
+        </div>
+      </Sheet>
     </>
   );
 }
