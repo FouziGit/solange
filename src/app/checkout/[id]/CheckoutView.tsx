@@ -8,13 +8,13 @@ import type { CatalogItem } from "@/lib/mock";
 import { useStore } from "@/lib/store";
 import { api, type ApiOrder } from "@/lib/api";
 import { PageShell } from "@/components/ui/PageShell";
+import { Stamp } from "@/components/ui/Stamp";
 import { imgItem } from "@/lib/img";
 import { commission, commissionRate, euro, gradientFor } from "@/lib/utils";
 import {
   ArrowLeft,
   Lock,
   Card,
-  Check,
   Bag,
   Verified,
 } from "@/components/chrome/icons";
@@ -121,14 +121,9 @@ export function CheckoutView({ item }: { item: CatalogItem }) {
     return (
       <PageShell>
         <div className="mx-auto max-w-md">
-          <motion.div
-            initial={{ scale: 0.6, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ type: "spring", stiffness: 320, damping: 20 }}
-            className="mx-auto grid size-16 place-items-center rounded-full bg-bone text-ink"
-          >
-            <Check className="size-8" />
-          </motion.div>
+          <div className="flex justify-center">
+            <Stamp>Payée</Stamp>
+          </div>
 
           <h1 className="font-display mt-6 text-center text-3xl font-bold uppercase tracking-tight text-bone">
             Commande enregistrée

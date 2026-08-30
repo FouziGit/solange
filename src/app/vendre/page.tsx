@@ -1,10 +1,11 @@
 "use client";
 
 import { Button } from "@/components/ui/Button";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { PageShell } from "@/components/ui/PageShell";
 import { FieldLabel } from "@/components/ui/FieldLabel";
+import { Stamp } from "@/components/ui/Stamp";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Chip } from "@/components/ui/Chip";
 import { GlassInput } from "@/components/ui/GlassInput";
@@ -18,18 +19,61 @@ const cats = categories.filter((c) => c !== "Tout");
 
 const MAX_PHOTOS = 4;
 
+const VENTE_DRAFT = "solange:brouillon-vente";
+
+/** Brouillon (sessionStorage) — la saisie survit à un refresh accidentel. */
+function readDraft<T>(key: string): T | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = sessionStorage.getItem(key);
+    return raw ? (JSON.parse(raw) as T) : null;
+  } catch {
+    return null;
+  }
+}
+function writeDraft(key: string, value: unknown) {
+  try {
+    sessionStorage.setItem(key, JSON.stringify(value));
+  } catch {
+    /* stockage indisponible — tant pis, pas bloquant */
+  }
+}
+function clearDraft(key: string) {
+  try {
+    sessionStorage.removeItem(key);
+  } catch {}
+}
+
 export default function VendrePage() {
   const { user, authReady, refreshProducts } = useStore();
 
-  const [title, setTitle] = useState("");
-  const [brand, setBrand] = useState("");
-  const [cat, setCat] = useState<string>("");
-  const [cond, setCond] = useState<string>("");
-  const [size, setSize] = useState("");
-  const [price, setPrice] = useState("");
-  const [desc, setDesc] = useState("");
+  type VenteDraft = {
+    title: string;
+    brand: string;
+    cat: string;
+    cond: string;
+    size: string;
+    price: string;
+    desc: string;
+  };
+  const draft = readDraft<VenteDraft>(VENTE_DRAFT);
+  const [title, setTitle] = useState(draft?.title ?? "");
+  const [brand, setBrand] = useState(draft?.brand ?? "");
+  const [cat, setCat] = useState<string>(draft?.cat ?? "");
+  const [cond, setCond] = useState<string>(draft?.cond ?? "");
+  const [size, setSize] = useState(draft?.size ?? "");
+  const [price, setPrice] = useState(draft?.price ?? "");
+  const [desc, setDesc] = useState(draft?.desc ?? "");
   const [boost, setBoost] = useState(false);
   const [listed, setListed] = useState(false);
+
+  useEffect(() => {
+    if (listed) return; // succès → brouillon effacé plus bas
+    writeDraft(VENTE_DRAFT, { title, brand, cat, cond, size, price, desc });
+  }, [title, brand, cat, cond, size, price, desc, listed]);
+  useEffect(() => {
+    if (listed) clearDraft(VENTE_DRAFT);
+  }, [listed]);
 
   const [images, setImages] = useState<string[]>([]);
   const [photoBusy, setPhotoBusy] = useState(false);
@@ -311,11 +355,9 @@ export default function VendrePage() {
             {listed ? (
               /* success state — l'annonce existe réellement côté serveur */
               <div className="flex flex-col items-center py-6 text-center">
-                <span className="grid size-14 place-items-center rounded-full bg-bone text-ink">
-                  <Check className="size-7" />
-                </span>
-                <p className="mt-4 font-editorial text-2xl font-semibold text-bone">
-                  En ligne ✓
+                <Stamp>Déposée</Stamp>
+                <p className="mt-5 font-editorial text-2xl font-semibold text-bone">
+                  En ligne
                 </p>
                 <p className="mt-1 max-w-[26ch] text-[13px] leading-relaxed text-ash">
                   {title || "Ta pièce"} est publiée : ton annonce est désormais

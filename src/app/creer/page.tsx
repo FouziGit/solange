@@ -1,8 +1,9 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { PageShell } from "@/components/ui/PageShell";
 import { FieldLabel } from "@/components/ui/FieldLabel";
+import { Stamp } from "@/components/ui/Stamp";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Chip } from "@/components/ui/Chip";
 import { GlassInput } from "@/components/ui/GlassInput";
@@ -29,17 +30,54 @@ const taggable = catalog.slice(0, 8);
 /** The composer publishes a single post kind (a shoppable look). */
 type PostKind = "look" | "actu" | "achats";
 
+const CREER_DRAFT = "solange:brouillon-post";
+
+/** Brouillon (sessionStorage) — la saisie survit à un refresh accidentel. */
+function readDraft<T>(key: string): T | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = sessionStorage.getItem(key);
+    return raw ? (JSON.parse(raw) as T) : null;
+  } catch {
+    return null;
+  }
+}
+function writeDraft(key: string, value: unknown) {
+  try {
+    sessionStorage.setItem(key, JSON.stringify(value));
+  } catch {
+    /* stockage indisponible — tant pis, pas bloquant */
+  }
+}
+function clearDraft(key: string) {
+  try {
+    sessionStorage.removeItem(key);
+  } catch {}
+}
+
 export default function CreerPage() {
   const { user, authReady, refreshSession } = useStore();
 
   const [kind] = useState<PostKind>("look");
-  const [title, setTitle] = useState("");
-  const [caption, setCaption] = useState("");
+  type PostDraft = { title: string; caption: string; hashtags: string[] };
+  const draft = readDraft<PostDraft>(CREER_DRAFT);
+  const [title, setTitle] = useState(draft?.title ?? "");
+  const [caption, setCaption] = useState(draft?.caption ?? "");
   const [tagged, setTagged] = useState<string[]>(["k1"]);
-  const [hashtags, setHashtags] = useState<string[]>(["#archive"]);
+  const [hashtags, setHashtags] = useState<string[]>(
+    draft?.hashtags ?? ["#archive"],
+  );
   const [brandSel, setBrandSel] = useState<string[]>([]);
   const [linked, setLinked] = useState<string[]>([]);
   const [published, setPublished] = useState(false);
+
+  useEffect(() => {
+    if (published) return;
+    writeDraft(CREER_DRAFT, { title, caption, hashtags });
+  }, [title, caption, hashtags, published]);
+  useEffect(() => {
+    if (published) clearDraft(CREER_DRAFT);
+  }, [published]);
 
   const [photos, setPhotos] = useState<string[]>([]);
   const [photoBusy, setPhotoBusy] = useState(false);
@@ -412,11 +450,9 @@ export default function CreerPage() {
             {published ? (
               /* success state — comme sur Vendre */
               <div className="flex flex-col items-center py-6 text-center">
-                <span className="grid size-14 place-items-center rounded-full bg-bone text-ink">
-                  <Check className="size-7" />
-                </span>
-                <p className="mt-4 font-editorial text-2xl font-semibold text-bone">
-                  Publié ✓
+                <Stamp>Publié</Stamp>
+                <p className="mt-5 font-editorial text-2xl font-semibold text-bone">
+                  En ligne
                 </p>
                 <p className="mt-1 max-w-[24ch] text-[13px] leading-relaxed text-ash">
                   {title.trim() || "Ton post"} est en ligne — visible dans le

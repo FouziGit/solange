@@ -64,5 +64,21 @@ aucun emoji.
   membre (réessayer), profil (Premium, se connecter, supprimer). Le reste des
   CTA migre écran par écran en Phase 5.
 
+### `ui/Skeleton` (+ `SkeletonTile`, `SkeletonRow`)
+- **Utiliser pour** : tout chargement de données — le squelette reproduit la
+  mise en page à venir. Jamais de spinner plein écran, jamais de texte
+  « Chargement… » seul. `aria-busy` sur le conteneur.
+- **Ne pas utiliser pour** : du contenu instantané (mock statique).
+
+### `ui/Stamp` — le tampon (signature, DA §9)
+- **Utiliser pour** : les VRAIS jalons uniquement — Payée, Déposée, Publié,
+  Vendue. Un par écran de succès, jamais ailleurs, jamais pour décorer.
+- **Ne pas utiliser pour** : confirmations mineures (le changement d'état à
+  l'écran suffit), badges permanents (utiliser l'étiquette overline).
+
+### `ui/ReportSheet`
+- **Utiliser pour** : tout signalement (post, membre, pièce, message) — ne
+  jamais recréer un prompt/flow local.
+
 ## À venir (lots suivants, voir DECISIONS)
-Squelettes de chargement, toast. Documentés ici quand ils existeront.
+Toast (si un besoin réel émerge — pour l'instant l'écran montre le résultat).

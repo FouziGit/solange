@@ -373,8 +373,11 @@ export function FeedCard({
 
               <motion.div
                 variants={item}
-                className="flex flex-wrap gap-x-2 gap-y-1"
+                className="flex flex-wrap items-center gap-x-2 gap-y-1"
               >
+                <span className="overline border border-bone/25 px-2 py-1 text-[11px] leading-none text-bone/80">
+                  N°{String(index + 1).padStart(2, "0")}
+                </span>
                 {look.tags.map((t) => (
                   <span key={t} className="text-[12px] font-medium text-ash">
                     {t}
