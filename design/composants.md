@@ -51,6 +51,18 @@ Saisie standard. Tout nouveau champ = `.field` (tokens focus inclus).
 Le seul set d'icônes (stroke 1.6, tailles 16/20/24). Aucune icône locale,
 aucun emoji.
 
+### `ui/Button` — le CTA unique
+- **Variantes** : `primary` (bloc renversé bone↔ink, carré — UNE occurrence
+  par écran max), `outline` (filet carré, secondaire), `media` (pill glass —
+  uniquement posé sur un média), `danger` (oxblood carré), `ghost` (texte).
+- **Tailles** : `sm` (contexte dense), `md` (défaut, ≥ 44px), `lg` (pleine
+  largeur, fins de tunnel).
+- `href` → rend un lien ; sinon un bouton. Libellé = verbe d'action, toujours.
+- **Ne pas utiliser pour** : le rail des cartes (RailAction), les chips de
+  sélection (Chip), la navigation (onglets/nav).
+- Migré sur : checkout (payer + 2 sorties de succès), vendre (2 sorties),
+  membre (réessayer), profil (Premium, se connecter, supprimer). Le reste des
+  CTA migre écran par écran en Phase 5.
+
 ## À venir (lots suivants, voir DECISIONS)
-`ui/Button` (variantes primaire inversé / contour / sur-média / danger),
-squelettes de chargement, toast. Documentés ici quand ils existeront.
+Squelettes de chargement, toast. Documentés ici quand ils existeront.

@@ -1,5 +1,6 @@
 "use client";
 
+import { Button } from "@/components/ui/Button";
 import { useRef, useState } from "react";
 import Link from "next/link";
 import { PageShell } from "@/components/ui/PageShell";
@@ -320,19 +321,17 @@ export default function VendrePage() {
                   {title || "Ta pièce"} est publiée : ton annonce est désormais
                   visible par tout le monde dans le Marché.
                 </p>
-                <Link
-                  href="/decouvrir"
-                  className="mt-6 flex min-h-11 w-full items-center justify-center rounded-none bg-bone px-5 text-sm font-semibold text-ink transition-transform active:scale-95"
-                >
+                <Button href="/decouvrir" size="lg" className="mt-6">
                   Voir dans le Marché
-                </Link>
-                <button
-                  type="button"
+                </Button>
+                <Button
+                  variant="outline"
+                  size="lg"
                   onClick={resetForm}
-                  className="mt-3 flex min-h-11 w-full items-center justify-center rounded-none border border-bone/30 px-5 text-sm font-semibold text-bone transition-colors hover:bg-bone/10"
+                  className="mt-3"
                 >
                   Déposer une autre pièce
-                </button>
+                </Button>
               </div>
             ) : (
               <>

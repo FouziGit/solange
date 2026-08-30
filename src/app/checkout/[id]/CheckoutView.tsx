@@ -1,5 +1,6 @@
 "use client";
 
+import { Button } from "@/components/ui/Button";
 import { useState } from "react";
 import Link from "next/link";
 import { AnimatePresence, motion } from "motion/react";
@@ -188,12 +189,9 @@ export function CheckoutView({ item }: { item: CatalogItem }) {
           </div>
 
           <div className="mt-7 flex flex-col gap-3">
-            <Link
-              href="/profil"
-              className="rounded-full bg-bone py-3.5 text-center text-sm font-semibold text-ink transition-transform active:scale-95"
-            >
+            <Button href="/profil" size="lg">
               Voir mes commandes
-            </Link>
+            </Button>
             <Link
               href="/"
               className="glass rounded-full py-3.5 text-center text-sm font-semibold text-bone transition-colors hover:bg-bone/10"
@@ -255,12 +253,9 @@ export function CheckoutView({ item }: { item: CatalogItem }) {
           </div>
 
           <div className="mt-7 flex flex-col gap-3">
-            <Link
-              href="/"
-              className="rounded-full bg-bone py-3.5 text-center text-sm font-semibold text-ink transition-transform active:scale-95"
-            >
+            <Button href="/" size="lg">
               Retour au feed
-            </Link>
+            </Button>
             <Link
               href={`/article/${item.id}`}
               className="glass rounded-full py-3.5 text-center text-sm font-semibold text-bone transition-colors hover:bg-bone/10"
@@ -440,10 +435,11 @@ export function CheckoutView({ item }: { item: CatalogItem }) {
               </div>
             )}
 
-            <button
+            <Button
               type="submit"
+              size="lg"
               disabled={step === "processing" || soldOut || !authReady}
-              className="mt-5 flex min-h-11 w-full items-center justify-center gap-2 rounded-full bg-bone py-3.5 text-sm font-semibold text-ink transition-transform active:scale-95 disabled:opacity-70"
+              className="mt-5"
             >
               <AnimatePresence mode="wait" initial={false}>
                 {soldOut ? (
@@ -478,7 +474,7 @@ export function CheckoutView({ item }: { item: CatalogItem }) {
                   </motion.span>
                 )}
               </AnimatePresence>
-            </button>
+            </Button>
 
             {/* Invité : démo locale + proposition de connexion. */}
             {authReady && !user && (

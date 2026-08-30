@@ -1,5 +1,6 @@
 "use client";
 
+import { Button } from "@/components/ui/Button";
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { motion } from "motion/react";
@@ -279,12 +280,9 @@ export default function ProfilPage() {
         </div>
 
         <div className="mt-5 flex items-center gap-2 md:mt-0">
-          <Link
-            href="/premium"
-            className="inline-flex items-center gap-1.5 rounded-full bg-bone px-4 py-2 text-sm font-semibold text-ink transition-transform active:scale-95"
-          >
+          <Button href="/premium">
             <Crown className="size-4" /> Premium
-          </Link>
+          </Button>
           <button
             type="button"
             onClick={() => setReferral((r) => !r)}
@@ -335,13 +333,9 @@ export default function ProfilPage() {
           <p className="mt-1.5 text-[13.5px] leading-relaxed text-bone/85">
             Connecte-toi pour garder tes achats et tes favoris.
           </p>
-          <button
-            type="button"
-            onClick={reconnect}
-            className="mt-4 inline-flex min-h-11 w-full items-center justify-center rounded-full bg-bone px-5 text-sm font-semibold text-ink transition-transform active:scale-95 md:w-auto"
-          >
+          <Button onClick={reconnect} className="mt-4 w-full md:w-auto">
             Se connecter / créer un compte
-          </button>
+          </Button>
         </div>
       )}
 
@@ -635,14 +629,13 @@ export default function ProfilPage() {
                   </p>
                 )}
                 <div className="mt-3 flex items-center justify-center gap-2">
-                  <button
-                    type="button"
+                  <Button
+                    variant="danger"
                     onClick={() => void destroyAccount()}
                     disabled={deleting}
-                    className="inline-flex min-h-11 items-center rounded-none bg-danger px-4 text-[13px] font-semibold text-noir transition-transform active:scale-95 disabled:opacity-60"
                   >
                     {deleting ? "Suppression…" : "Supprimer mon compte"}
-                  </button>
+                  </Button>
                   <button
                     type="button"
                     onClick={() => {

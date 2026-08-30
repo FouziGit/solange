@@ -1,5 +1,6 @@
 "use client";
 
+import { Button } from "@/components/ui/Button";
 /* ============================================================
    SOLANGE — profil public /membre/[handle]
    Membre réel : api.profile(handle) (annonces + posts serveur).
@@ -308,13 +309,9 @@ export default function MembrePage() {
           <p className="mt-3 max-w-sm text-[14px] leading-relaxed text-ash">
             {state.message}
           </p>
-          <button
-            type="button"
-            onClick={() => void load()}
-            className="mt-8 inline-flex min-h-11 items-center rounded-none bg-bone px-6 text-sm font-semibold text-ink transition-transform active:scale-95"
-          >
+          <Button onClick={() => void load()} className="mt-8">
             Réessayer
-          </button>
+          </Button>
         </div>
       )}
 
