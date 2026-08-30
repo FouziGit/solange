@@ -23,3 +23,25 @@ Chaque entrée : décision, alternative écartée, raison. Relire en début de p
 - **D-004 — Gate d'auth contournée pour les captures** en injectant
   `solange:onboarded=1` via `--load-storage` (état localStorage), soit
   exactement l'état d'un visiteur ayant déjà passé l'écran d'accueil une fois.
+
+## Phase 2
+
+- **D-005 — Registre : tu.** Majorité écrasante de l'existant + public Gen Z.
+  Alternative écartée : vouvoiement (aurait exigé de réécrire ~90 % des
+  chaînes pour un gain de distance non voulu par la marque).
+- **D-006 — Lexique canonique tranché** : pièce · look · Marché · Cercles ·
+  Notifications · Gardées · membre. Onglet feed renommé « Looks ».
+  Alternatives écartées : « Défilé » (trop littéral), garder « Feed »
+  (générique, anglicisme non-mode), « Favoris » (entre en collision avec
+  Suivre/le cœur du like).
+- **D-007 — Règle des formes : carré = commerce, rond = organique** ;
+  `--radius-stage` (28px) tokenisé pour le cadre feed desktop et les sheets.
+  Alternative écartée : tout-carré intégral (tuait le rail glass et les
+  avatars, seuls éléments « vivants » posés sur le média).
+- **D-008 — Tests DA à l'état zéro : ÉCHEC documenté** (flou + logo échangé,
+  `audit/captures/da-tests/`). La signature « étiquette + tampon » (§9 DA.md)
+  est la réponse ; re-test obligatoire en Phase 6.
+- **D-009 — Pas de couleur d'accent.** La différenciation vient des objets du
+  vestiaire (étiquette, cintre, tampon, N°), pas d'une teinte. Seul ajout
+  chromatique : `--c-danger` oxblood désaturé (remplace les red-* Tailwind du
+  profil). Alternative écartée : accent terracotta/acide (tics catalogués).
