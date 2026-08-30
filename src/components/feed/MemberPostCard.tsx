@@ -14,6 +14,7 @@ import { useStore } from "@/lib/store";
 import { compact, gradientFor, initials } from "@/lib/utils";
 import { CarouselMedia } from "./CarouselMedia";
 import { RailAction } from "./RailAction";
+import { ReportSheet } from "../ui/ReportSheet";
 import { Heart, Bookmark } from "../chrome/icons";
 
 const group: Variants = {
@@ -71,36 +72,9 @@ export function MemberPostCard({
   }, [post.caption, inView]);
 
   // toast de confirmation (signalement) — éphémère, purement local
-  const [toast, setToast] = useState<string | null>(null);
-  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const reporting = useRef(false);
 
-  useEffect(
-    () => () => {
-      if (toastTimer.current) clearTimeout(toastTimer.current);
-    },
-    [],
-  );
-
-  const showToast = (msg: string) => {
-    if (toastTimer.current) clearTimeout(toastTimer.current);
-    setToast(msg);
-    toastTimer.current = setTimeout(() => setToast(null), 2600);
-  };
-
-  const onReport = async () => {
-    if (reporting.current) return;
-    const reason = window.prompt("Pourquoi signales-tu cette publication ?");
-    if (!reason || !reason.trim()) return;
-    reporting.current = true;
-    const res = await api.report("post", post.id, reason.trim());
-    reporting.current = false;
-    showToast(
-      res.ok
-        ? "Signalement envoyé. Merci."
-        : `Échec du signalement : ${res.error}`,
-    );
-  };
+  const [reportOpen, setReportOpen] = useState(false);
+  const onReport = () => setReportOpen(true);
 
   return (
     <section
@@ -344,25 +318,7 @@ export function MemberPostCard({
             </motion.div>
 
             {/* toast éphémère (confirmation signalement) */}
-            <AnimatePresence>
-              {toast && (
-                <motion.div
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: 6 }}
-                  transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
-                  style={{
-                    bottom: "calc(var(--tabbar-clearance) + 5.5rem)",
-                  }}
-                  className="pointer-events-none absolute inset-x-0 z-30 flex justify-center md:!bottom-44"
-                  role="status"
-                >
-                  <span className="rounded-full bg-black/70 px-4 py-2 text-[12px] font-medium text-bone ring-1 ring-bone/15 backdrop-blur">
-                    {toast}
-                  </span>
-                </motion.div>
-              )}
-            </AnimatePresence>
+            <AnimatePresence></AnimatePresence>
 
             {/* barre de progression — même rythme que les looks */}
             <div className="absolute inset-x-0 bottom-0 z-30 h-[2px] bg-bone/10">
@@ -377,6 +333,14 @@ export function MemberPostCard({
           </>
         )}
       </motion.div>
+
+      <ReportSheet
+        open={reportOpen}
+        onClose={() => setReportOpen(false)}
+        targetType="post"
+        targetId={post.id}
+        targetLabel={`Publication de @${post.authorHandle}`}
+      />
     </section>
   );
 }

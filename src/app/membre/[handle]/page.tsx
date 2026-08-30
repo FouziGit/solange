@@ -18,6 +18,7 @@ import { imgItem, imgLook } from "@/lib/img";
 import { EASE, compact, euro, gradientFor, initials } from "@/lib/utils";
 import { useStore } from "@/lib/store";
 import { PageShell } from "@/components/ui/PageShell";
+import { ReportSheet } from "@/components/ui/ReportSheet";
 import { Photo } from "@/components/ui/Photo";
 import { Verified } from "@/components/chrome/icons";
 
@@ -249,7 +250,6 @@ export default function MembrePage() {
     useStore();
   const [state, setState] = useState<State>({ kind: "loading" });
   const [menuOpen, setMenuOpen] = useState(false);
-  const [reportMsg, setReportMsg] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setState({ kind: "loading" });
@@ -280,20 +280,21 @@ export default function MembrePage() {
   const blocked = isBlocked(handle);
   const isSelf = user !== null && user.handle === handle;
 
-  const report = async () => {
+  const [reportOpen, setReportOpen] = useState(false);
+  const report = () => {
     setMenuOpen(false);
-    const reason = window.prompt(`Pourquoi signaler @${handle} ?`);
-    if (!reason || !reason.trim()) return;
-    const res = await api.report("user", handle, reason.trim());
-    setReportMsg(
-      res.ok
-        ? "Signalement envoyé. Merci, notre équipe va examiner ce profil."
-        : `Signalement impossible : ${res.error}`,
-    );
+    setReportOpen(true);
   };
 
   return (
     <PageShell marginWord="Membre">
+      <ReportSheet
+        open={reportOpen}
+        onClose={() => setReportOpen(false)}
+        targetType="user"
+        targetId={handle}
+        targetLabel={`@${handle}`}
+      />
       {state.kind === "loading" && (
         <div className="flex min-h-[55vh] flex-col items-center justify-center gap-4 text-center">
           <span className="size-20 animate-pulse rounded-full bg-bone/10" />
@@ -473,11 +474,6 @@ export default function MembrePage() {
           </div>
 
           {/* retour de signalement */}
-          {reportMsg && (
-            <p className="mt-4 text-center text-[12.5px] text-ash md:text-left">
-              {reportMsg}
-            </p>
-          )}
 
           {blocked ? (
             /* membre bloqué : contenus masqués */

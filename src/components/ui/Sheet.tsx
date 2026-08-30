@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "motion/react";
 import { X } from "../chrome/icons";
 
@@ -35,6 +36,10 @@ export function Sheet({
   children: React.ReactNode;
 }) {
   const panelRef = useRef<HTMLDivElement>(null);
+  // Portal (fixed uniquement) : sort le panneau du stacking context créé par
+  // les transitions de page (template.tsx) — sinon z-[70] reste sous la nav.
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
 
   useEffect(() => {
     if (!open) return;
@@ -46,11 +51,12 @@ export function Sheet({
     return () => document.removeEventListener("keydown", onKey);
   }, [open, onClose]);
 
+  /* fixed = plein viewport, AU-DESSUS de la tab bar (z-50) et du FAB */
   const pos = container === "fixed" ? "fixed" : "absolute";
-  const zScrim = container === "fixed" ? "z-40" : "z-30";
-  const zPanel = container === "fixed" ? "z-50" : "z-40";
+  const zScrim = container === "fixed" ? "z-[60]" : "z-30";
+  const zPanel = container === "fixed" ? "z-[70]" : "z-40";
 
-  return (
+  const sheet = (
     <AnimatePresence>
       {open && (
         <>
@@ -107,4 +113,10 @@ export function Sheet({
       )}
     </AnimatePresence>
   );
+
+  if (container === "fixed") {
+    if (!mounted) return null;
+    return createPortal(sheet, document.body);
+  }
+  return sheet;
 }

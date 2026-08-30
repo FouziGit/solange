@@ -13,6 +13,7 @@ import {
   type Conversation,
 } from "@/lib/mock";
 import { api, type ApiConversation } from "@/lib/api";
+import { ReportSheet } from "@/components/ui/ReportSheet";
 import { useStore } from "@/lib/store";
 import { EASE, euro } from "@/lib/utils";
 import {
@@ -234,18 +235,11 @@ function MessagesInner() {
     feedbackTimer.current = setTimeout(() => setFeedback(null), 3000);
   };
 
+  const [reportOpen, setReportOpen] = useState(false);
   const reportActive = () => {
     if (!active) return;
     setMenuOpen(false);
-    const reason = window.prompt(`Pourquoi signaler @${active.handle} ?`);
-    if (!reason?.trim()) return;
-    void api.report("user", active.handle, reason.trim()).then((res) => {
-      showFeedback(
-        res.ok
-          ? "Signalement envoyé. Merci."
-          : "Échec du signalement, réessaie plus tard.",
-      );
-    });
+    setReportOpen(true);
   };
 
   const blockActive = () => {
@@ -515,6 +509,15 @@ function MessagesInner() {
             {feedback}
           </span>
         </div>
+      )}
+      {active && (
+        <ReportSheet
+          open={reportOpen}
+          onClose={() => setReportOpen(false)}
+          targetType="user"
+          targetId={active.handle}
+          targetLabel={`@${active.handle}`}
+        />
       )}
     </div>
   );
