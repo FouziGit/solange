@@ -50,3 +50,18 @@ Chaque entrée : décision, alternative écartée, raison. Relire en début de p
   destinations différentes (switch du home vs onglet /decouvrir) sous un même
   nom. Le switch nomme donc le TYPE DE CONTENU (looks / pièces — l'objet
   canonique), la nav nomme le LIEU (Marché). Icône du mode pièces : le cintre.
+
+## Phase 6
+
+- **D-011 — Bypass d'outillage `?e2e=1`** sur AuthGate (== bouton « Passer »,
+  mode invité) : Lighthouse/Playwright ne savent pas poser de localStorage
+  simplement. N'ouvre RIEN de plus qu'un tap utilisateur. Alternative
+  écartée : instrumenter Lighthouse via un user-flow scripté (poids outillage
+  disproportionné).
+- **D-012 — Images recompressées à la source** (41 JPEG, 5,2 → 2,4 Mo, q72
+  max 1200px) plutôt que next/image immédiat : gain identique côté octets
+  sans toucher au pipeline de rendu ; next/image reste au plan (rapport §5.1).
+- **D-013 — Budget perf NON tenu, assumé** : gate 88 / feed 80 / marché 76.
+  La cause est structurelle (pages données full-CSR) ; le correctif (RSC +
+  streaming) dépasse le « pas de big-bang » de cette passe — planifié en
+  premier du reste-à-faire au lieu d'être maquillé.

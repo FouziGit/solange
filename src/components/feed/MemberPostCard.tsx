@@ -9,7 +9,7 @@ import {
   type Variants,
 } from "motion/react";
 import Link from "next/link";
-import { api, type ApiPost } from "@/lib/api";
+import type { ApiPost } from "@/lib/api";
 import { useStore } from "@/lib/store";
 import { compact, gradientFor, initials } from "@/lib/utils";
 import { CarouselMedia } from "./CarouselMedia";

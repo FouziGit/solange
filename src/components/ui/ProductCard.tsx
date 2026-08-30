@@ -83,6 +83,7 @@ export function ProductCard({
           seed={item.seed}
           image={item.image ?? imgItem(item.id)}
           brand={item.brand}
+          eager={index < 2}
           className="transition-transform duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-[1.06]"
         />
 
@@ -151,7 +152,9 @@ export function ProductCard({
 
   return (
     <motion.article
-      initial={{ opacity: 0, y: 18 }}
+      /* Premier viewport : naît visible (LCP) — la révélation au scroll ne
+         concerne que la suite de la grille. */
+      initial={index < 4 ? false : { opacity: 0, y: 18 }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, margin: "0px 0px -10% 0px" }}
       transition={{

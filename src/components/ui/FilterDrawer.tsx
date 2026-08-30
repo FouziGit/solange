@@ -1,10 +1,8 @@
 "use client";
 
 import { Sheet } from "./Sheet";
-import { motion } from "motion/react";
 import { Chip } from "@/components/ui/Chip";
 import type { SortKey } from "@/lib/data";
-import { X } from "@/components/chrome/icons";
 
 export type Filters = {
   priceMin: string;

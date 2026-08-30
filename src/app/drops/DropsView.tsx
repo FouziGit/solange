@@ -122,7 +122,7 @@ export function DropsView({ drops }: { drops: Drop[] }) {
         initial={{ opacity: 0, y: 18 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-        className="relative overflow-hidden rounded-[28px] ring-1 ring-bone/10"
+        className="relative overflow-hidden rounded-stage ring-1 ring-bone/10"
       >
         <div className="relative aspect-[4/5] w-full sm:aspect-[16/10]">
           <LuxeMedia

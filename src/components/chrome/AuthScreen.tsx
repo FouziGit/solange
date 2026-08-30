@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { AnimatePresence, motion, useReducedMotion } from "motion/react";
+import { AnimatePresence, motion } from "motion/react";
 import { api } from "@/lib/api";
 import { useStore } from "@/lib/store";
 import { LogoMark } from "./Brandmark";
@@ -18,7 +18,6 @@ const emailRe = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
  * invité, sans compte : rien n'est persisté. `onComplete` déverrouille.
  */
 export function AuthScreen({ onComplete }: { onComplete: () => void }) {
-  const reduce = useReducedMotion();
   const { refreshSession } = useStore();
   const [step, setStep] = useState<Step>("email");
   const [email, setEmail] = useState("");
@@ -123,9 +122,10 @@ export function AuthScreen({ onComplete }: { onComplete: () => void }) {
 
         {/* steps — the whole block cascades in once, after the intro */}
         <motion.div
-          initial={{ opacity: 0, y: 14 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.95, duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+          /* naît visible : c'est l'élément LCP du premier écran (mesuré) */
+          initial={{ y: 14 }}
+          animate={{ y: 0 }}
+          transition={{ delay: 0.5, duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
           className="mt-10 w-full"
         >
           <AnimatePresence mode="wait">
