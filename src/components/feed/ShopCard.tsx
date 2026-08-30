@@ -9,6 +9,7 @@ import { euro, compact, gradientFor, initials } from "@/lib/utils";
 import { imgItem } from "@/lib/img";
 import type { DisplayItem } from "../ui/ProductCard";
 import { Heart, Bookmark, Share, Bag } from "../chrome/icons";
+import { RailAction } from "./RailAction";
 
 /**
  * Full-screen shoppable product card — the Vinted-in-TikTok side of the feed.
@@ -100,25 +101,25 @@ export function ShopCard({
           style={{ bottom: "calc(var(--tabbar-clearance) + 9rem)" }}
           className="absolute right-3 z-20 flex flex-col items-center gap-5 md:!bottom-40"
         >
-          <RailButton
+          <RailAction
             label={compact(item.likes + (liked ? 1 : 0))}
             onClick={() => toggleLike(item.id)}
             pressed={liked}
             ariaLabel={liked ? "Retirer le j'aime" : "J'aime"}
           >
             <Heart filled={liked} className="size-6 text-bone" />
-          </RailButton>
-          <RailButton
+          </RailAction>
+          <RailAction
             label={saved ? "Gardé" : "Garder"}
             onClick={() => toggleSave(item.id)}
             pressed={saved}
             ariaLabel={saved ? "Retirer des favoris" : "Enregistrer"}
           >
             <Bookmark filled={saved} className="size-6 text-bone" />
-          </RailButton>
-          <RailButton label="Partager" ariaLabel="Partager">
+          </RailAction>
+          <RailAction label="Partager" ariaLabel="Partager">
             <Share className="size-[22px] text-bone" />
-          </RailButton>
+          </RailAction>
         </div>
 
         {/* bottom info + buy CTA */}
@@ -195,40 +196,5 @@ export function ShopCard({
         </div>
       </div>
     </section>
-  );
-}
-
-function RailButton({
-  children,
-  label,
-  onClick,
-  pressed,
-  ariaLabel,
-}: {
-  children: React.ReactNode;
-  label: string;
-  onClick?: () => void;
-  pressed?: boolean;
-  ariaLabel?: string;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      data-cursor="link"
-      aria-label={ariaLabel}
-      aria-pressed={pressed}
-      className="group flex flex-col items-center gap-1"
-    >
-      <motion.span
-        whileTap={{ scale: 0.8 }}
-        transition={{ type: "spring", stiffness: 420, damping: 24 }}
-        className="glass grid size-12 place-items-center rounded-full transition-colors group-hover:bg-bone/15"
-      >
-        {children}
-      </motion.span>
-      <span className="text-[11px] font-semibold tabular-nums text-bone/90">
-        {label}
-      </span>
-    </button>
   );
 }

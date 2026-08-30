@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import Link from "next/link";
 import { PageShell } from "@/components/ui/PageShell";
+import { FieldLabel } from "@/components/ui/FieldLabel";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Chip } from "@/components/ui/Chip";
 import { GlassInput } from "@/components/ui/GlassInput";
@@ -15,12 +16,6 @@ import { Camera, Crown, Check, X } from "@/components/chrome/icons";
 const cats = categories.filter((c) => c !== "Tout");
 
 const MAX_PHOTOS = 4;
-
-function Label({ children }: { children: React.ReactNode }) {
-  return (
-    <span className="overline mb-2 block text-[9px] text-ash">{children}</span>
-  );
-}
 
 export default function VendrePage() {
   const { user, authReady, refreshProducts } = useStore();
@@ -149,7 +144,7 @@ export default function VendrePage() {
         <div className="space-y-6">
           {/* photos */}
           <div>
-            <Label>Photos</Label>
+            <FieldLabel>Photos</FieldLabel>
             <input
               ref={fileRef}
               type="file"
@@ -232,7 +227,7 @@ export default function VendrePage() {
 
           <div className="grid gap-5 sm:grid-cols-2">
             <div>
-              <Label>Titre de l&apos;annonce</Label>
+              <FieldLabel>Titre de l&apos;annonce</FieldLabel>
               <GlassInput
                 aria-label="Titre"
                 value={title}
@@ -241,7 +236,7 @@ export default function VendrePage() {
               />
             </div>
             <div>
-              <Label>Marque</Label>
+              <FieldLabel>Marque</FieldLabel>
               <GlassInput
                 aria-label="Marque"
                 value={brand}
@@ -252,7 +247,7 @@ export default function VendrePage() {
           </div>
 
           <div>
-            <Label>Catégorie</Label>
+            <FieldLabel>Catégorie</FieldLabel>
             <div className="flex flex-wrap gap-2">
               {cats.map((c) => (
                 <Chip key={c} active={c === cat} onClick={() => setCat(c)}>
@@ -264,7 +259,7 @@ export default function VendrePage() {
 
           <div className="grid gap-5 sm:grid-cols-2">
             <div>
-              <Label>Taille</Label>
+              <FieldLabel>Taille</FieldLabel>
               <GlassInput
                 aria-label="Taille"
                 value={size}
@@ -273,7 +268,7 @@ export default function VendrePage() {
               />
             </div>
             <div>
-              <Label>Prix (€)</Label>
+              <FieldLabel>Prix (€)</FieldLabel>
               <GlassInput
                 aria-label="Prix"
                 value={price}
@@ -285,7 +280,7 @@ export default function VendrePage() {
           </div>
 
           <div>
-            <Label>État</Label>
+            <FieldLabel>État</FieldLabel>
             <div className="flex flex-wrap gap-2">
               {conditions.map((c) => (
                 <Chip key={c} active={c === cond} onClick={() => setCond(c)}>
@@ -296,7 +291,7 @@ export default function VendrePage() {
           </div>
 
           <div>
-            <Label>Description</Label>
+            <FieldLabel>Description</FieldLabel>
             <GlassInput
               multiline
               aria-label="Description"

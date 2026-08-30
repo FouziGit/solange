@@ -2,6 +2,7 @@
 
 import { useMemo, useRef, useState } from "react";
 import { PageShell } from "@/components/ui/PageShell";
+import { FieldLabel } from "@/components/ui/FieldLabel";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Chip } from "@/components/ui/Chip";
 import { GlassInput } from "@/components/ui/GlassInput";
@@ -21,12 +22,6 @@ import {
 } from "@/components/chrome/icons";
 
 const MAX_PHOTOS = 4;
-
-function Label({ children }: { children: React.ReactNode }) {
-  return (
-    <span className="overline mb-2 block text-[9px] text-ash">{children}</span>
-  );
-}
 
 /** Catalog pieces offered as taggable / linkable items in the composer. */
 const taggable = catalog.slice(0, 8);
@@ -199,7 +194,7 @@ export default function CreerPage() {
           {/* photos — look only */}
           {kind === "look" && (
             <div>
-              <Label>Photos</Label>
+              <FieldLabel>Photos</FieldLabel>
               <input
                 ref={fileRef}
                 type="file"
@@ -284,7 +279,7 @@ export default function CreerPage() {
 
           {/* editorial title */}
           <div>
-            <Label>Titre éditorial</Label>
+            <FieldLabel>Titre éditorial</FieldLabel>
             <GlassInput
               aria-label="Titre éditorial du post"
               value={title}
@@ -301,7 +296,7 @@ export default function CreerPage() {
 
           {/* caption / texte */}
           <div>
-            <Label>{kind === "look" ? "Légende" : "Texte"}</Label>
+            <FieldLabel>{kind === "look" ? "Légende" : "Texte"}</FieldLabel>
             <GlassInput
               multiline
               aria-label={kind === "look" ? "Légende du look" : "Texte du post"}
@@ -322,7 +317,7 @@ export default function CreerPage() {
           {/* brand tags — actu + achats */}
           {kind !== "look" && (
             <div>
-              <Label>Tagguer des marques</Label>
+              <FieldLabel>Tagguer des marques</FieldLabel>
               <div className="flex flex-wrap gap-2">
                 {brands.map((b) => (
                   <Chip
@@ -345,7 +340,7 @@ export default function CreerPage() {
           {/* linked marketplace pieces — achats */}
           {kind === "achats" && (
             <div>
-              <Label>Lier des articles de la marketplace</Label>
+              <FieldLabel>Lier des articles de la marketplace</FieldLabel>
               <div className="flex flex-wrap gap-2">
                 {taggable.map((it) => (
                   <Chip
@@ -368,7 +363,7 @@ export default function CreerPage() {
           {/* tag pieces — look */}
           {kind === "look" && (
             <div>
-              <Label>Tagguer des pièces</Label>
+              <FieldLabel>Tagguer des pièces</FieldLabel>
               <div className="flex flex-wrap gap-2">
                 {taggable.map((it) => (
                   <Chip
@@ -391,7 +386,7 @@ export default function CreerPage() {
           {/* trending tags — look */}
           {kind === "look" && (
             <div>
-              <Label>Tags tendances</Label>
+              <FieldLabel>Tags tendances</FieldLabel>
               <div className="flex flex-wrap gap-2">
                 {trendingTags.map((t) => (
                   <Chip
@@ -412,7 +407,7 @@ export default function CreerPage() {
 
         {/* sticky live preview */}
         <aside className="lg:sticky lg:top-14 lg:h-fit">
-          <Label>Aperçu</Label>
+          <FieldLabel>Aperçu</FieldLabel>
           <div className="overflow-hidden rounded-3xl border border-bone/12 bg-coal/60 p-3">
             {published ? (
               /* success state — comme sur Vendre */

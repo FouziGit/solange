@@ -13,6 +13,7 @@ import { api, type ApiPost } from "@/lib/api";
 import { useStore } from "@/lib/store";
 import { compact, gradientFor, initials } from "@/lib/utils";
 import { CarouselMedia } from "./CarouselMedia";
+import { RailAction } from "./RailAction";
 import { Heart, Bookmark } from "../chrome/icons";
 
 const group: Variants = {
@@ -29,45 +30,6 @@ const item: Variants = {
 };
 
 /** Bouton du rail d'actions — même format que le rail des looks (glass, 48px). */
-function RailAction({
-  children,
-  label,
-  onClick,
-  accent,
-  pressed,
-  ariaLabel,
-}: {
-  children: React.ReactNode;
-  label: string;
-  onClick?: () => void;
-  accent?: boolean;
-  pressed?: boolean;
-  ariaLabel?: string;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      data-cursor="link"
-      aria-label={ariaLabel}
-      aria-pressed={pressed}
-      className="group flex flex-col items-center gap-1"
-    >
-      <motion.span
-        whileHover={{ y: -2, scale: 1.06 }}
-        whileTap={{ scale: 0.8 }}
-        transition={{ type: "spring", stiffness: 420, damping: 24 }}
-        className={`grid size-12 place-items-center rounded-full transition-colors ${
-          accent ? "glass-bone" : "glass"
-        } group-hover:bg-bone/15`}
-      >
-        {children}
-      </motion.span>
-      <span className="text-[11px] font-semibold text-bone/90 tabular-nums">
-        {label}
-      </span>
-    </button>
-  );
-}
 
 /**
  * Carte plein écran d'une publication membre (backend /api/posts) dans le
