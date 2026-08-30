@@ -1,5 +1,13 @@
 @import "tailwindcss";
 
+/* La mémoire de travail du chantier design (audit/, design/, *.md) cite des
+   classes abrégées : on l'exclut du scan de sources Tailwind pour que le CSS
+   généré ne contienne jamais de candidats invalides. */
+@source not "../../audit";
+@source not "../../design";
+@source not "../../*.md";
+@source not "../../netlify";
+
 /* ============================================================
    SOLANGE — design system
    Strict noir & blanc — ivory on ink, no chroma.
@@ -220,6 +228,15 @@ body {
   -webkit-backdrop-filter: blur(10px);
   border: 1px solid var(--glass-border);
 }
+/* Barre flottante posée sur du CONTENU (tab bar) : plus opaque que .glass
+   (réservé aux surfaces sur média) pour que rien ne la traverse. */
+.glass-bar {
+  background: color-mix(in srgb, var(--background) 88%, transparent);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--glass-border);
+}
+
 .glass-bone {
   background: var(--glass-bone-bg);
   backdrop-filter: blur(10px);

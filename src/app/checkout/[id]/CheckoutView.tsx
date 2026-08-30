@@ -297,7 +297,7 @@ export function CheckoutView({ item }: { item: CatalogItem }) {
 
       <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_minmax(0,380px)]">
         {/* ---- order summary ---- */}
-        <section className="order-2 lg:order-1">
+        <section className="order-2 min-w-0 lg:order-1">
           <div className="glass flex items-center gap-3 rounded-2xl p-3">
             <span
               className="grid size-20 shrink-0 place-items-center overflow-hidden rounded-xl ring-1 ring-bone/10"
@@ -352,7 +352,7 @@ export function CheckoutView({ item }: { item: CatalogItem }) {
         </section>
 
         {/* ---- payment card ---- */}
-        <section className="order-1 lg:order-2">
+        <section className="order-1 min-w-0 lg:order-2">
           <form
             onSubmit={(e) => void pay(e)}
             className="rounded-3xl border border-bone/12 bg-coal/70 p-5 backdrop-blur-xl"

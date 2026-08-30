@@ -56,7 +56,7 @@ export function MobileTabBar() {
   return (
     <>
       <nav className="pb-safe fixed inset-x-0 bottom-0 z-50 flex items-end justify-around px-6 pt-3 md:hidden">
-        <div className="glass pointer-events-none absolute inset-x-3 bottom-3 top-1 rounded-none" />
+        <div className="glass-bar pointer-events-none absolute inset-x-3 bottom-3 top-1 rounded-none" />
 
         {left.map(({ href, label, Icon, match, live }) => (
           <TabLink
