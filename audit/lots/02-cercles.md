@@ -105,3 +105,18 @@ dans la function) ; le push (Lot 3) s'y branchera. Liens profonds vers
 Membres actifs 7 j et taux de réponse : calculables depuis les fils
 (authorId/réponses horodatées) — requête admin au Lot 4. Zéro mock
 restant : `grep -rn "CommunityThread" src/` → 0.
+
+## Vérification E2E en PROD (2026-08-31, consignée puis purgée)
+
+| Étape                                    | Résultat                                                                                                                |
+| ---------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| Publier un fil SANS avoir rejoint        | **403** « Rejoins le Cercle pour ouvrir un fil » ✓                                                                      |
+| Rejoindre (social `joined`) puis publier | fil créé `th_63d5c256904b` ✓                                                                                            |
+| Répondre sans adhésion (2ᵉ compte)       | **403** ✓                                                                                                               |
+| Réponse avec mention `@lot2-membre`      | posée ; l'auteur reçoit UNE notif `circle` (pas de doublon réponse+mention) avec lien profond `/communaute/cm1/fil/…` ✓ |
+| J'aime                                   | toggle serveur, compte 1 ✓                                                                                              |
+| Suppression du fil par un TIERS          | **404** sans fuite ✓                                                                                                    |
+| Épingler sans rôle admin                 | **403** « Réservé aux animateurs » ✓ (D-018)                                                                            |
+| Badge non-lus                            | `?unread=1` → `{count:1, circleIds:["cm1"]}` ✓                                                                          |
+| Rendu prod 375                           | captures `lot2-cercle-fil-reel-prod-375.png` / `lot2-fil-detail-prod-375.png` — mentions liées, like, barrière invité   |
+| Purge                                    | fil supprimé par l'auteur, comptes supprimés (RGPD), store `circles` vide, cm1 rend 0 fil                               |
