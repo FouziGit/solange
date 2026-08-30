@@ -154,7 +154,16 @@ export function FeedCard({
             {/* media + tap layer */}
             <div
               data-cursor="media"
+              role="button"
+              tabIndex={0}
+              aria-label={paused ? "Reprendre la vidéo" : "Mettre en pause"}
               onClick={onMediaClick}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  setPaused((p) => !p);
+                }
+              }}
               className="absolute inset-0"
             >
               {hasGallery ? (

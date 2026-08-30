@@ -79,7 +79,7 @@ export function FilterDrawer({
       <div className="flex flex-col gap-6 overflow-y-auto px-5 py-5">
         {/* sort */}
         <fieldset>
-          <legend className="overline mb-2.5 block text-[9px] text-ash">
+          <legend className="overline mb-2.5 block text-[11px] text-ash">
             Trier par
           </legend>
           <div className="grid grid-cols-4 gap-1.5">
@@ -107,7 +107,7 @@ export function FilterDrawer({
 
         {/* price */}
         <fieldset>
-          <legend className="overline mb-2.5 block text-[9px] text-ash">
+          <legend className="overline mb-2.5 block text-[11px] text-ash">
             Prix (€)
           </legend>
           <div className="flex items-center gap-3">
@@ -137,7 +137,7 @@ export function FilterDrawer({
 
         {/* sizes */}
         <fieldset>
-          <legend className="overline mb-2.5 block text-[9px] text-ash">
+          <legend className="overline mb-2.5 block text-[11px] text-ash">
             Tailles
           </legend>
           <div className="flex flex-wrap gap-2">
@@ -155,7 +155,7 @@ export function FilterDrawer({
 
         {/* conditions */}
         <fieldset>
-          <legend className="overline mb-2.5 block text-[9px] text-ash">
+          <legend className="overline mb-2.5 block text-[11px] text-ash">
             État
           </legend>
           <div className="flex flex-wrap gap-2">
@@ -173,7 +173,7 @@ export function FilterDrawer({
 
         {/* brands */}
         <fieldset>
-          <legend className="overline mb-2.5 block text-[9px] text-ash">
+          <legend className="overline mb-2.5 block text-[11px] text-ash">
             Marques
           </legend>
           <div className="flex flex-wrap gap-2">

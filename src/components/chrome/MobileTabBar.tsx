@@ -155,7 +155,7 @@ function TabLink({
         )}
       </span>
       <span
-        className={`text-[9px] font-medium tracking-wide transition-colors ${on ? "text-bone" : "text-ash/60"}`}
+        className={`text-[11px] font-medium tracking-wide transition-colors ${on ? "text-bone" : "text-ash/60"}`}
       >
         {label}
       </span>

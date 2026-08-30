@@ -43,6 +43,22 @@ function StreamVideo({
     if (ref.current) ref.current.muted = muted;
   }, [muted]);
 
+  // Ne joue que visible : trois autoplay simultanés hors écran = batterie et
+  // décodeur gaspillés. ≥50 % visible → play, sinon pause (perf, DA §7).
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const io = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) void el.play().catch(() => {});
+        else el.pause();
+      },
+      { threshold: 0.5 },
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
+
   if (failed) return <LuxeMedia seed={seed} watermark className={className} />;
 
   return (
@@ -53,8 +69,7 @@ function StreamVideo({
       muted
       loop
       playsInline
-      autoPlay
-      preload={eager ? "auto" : "metadata"}
+      preload={eager ? "metadata" : "none"}
       onError={() => setFailed(true)}
       className={cn("size-full object-cover", className)}
     />
@@ -80,7 +95,13 @@ function Eye({ className }: { className?: string }) {
   );
 }
 
-function SoundIcon({ muted, className }: { muted: boolean; className?: string }) {
+function SoundIcon({
+  muted,
+  className,
+}: {
+  muted: boolean;
+  className?: string;
+}) {
   return (
     <svg
       viewBox="0 0 24 24"
@@ -115,7 +136,7 @@ function LiveBadge({ className }: { className?: string }) {
         <span className="absolute inline-flex size-full animate-ping rounded-full bg-bone opacity-70" />
         <span className="relative inline-flex size-2 rounded-full bg-bone" />
       </span>
-      <span className="overline text-[9px] text-bone">En direct</span>
+      <span className="overline text-[11px] text-bone">En direct</span>
     </span>
   );
 }
@@ -140,7 +161,11 @@ function LiveTile({
       transition={{ duration: 0.55, ease: EASE.luxe, delay: index * 0.05 }}
       className="group relative block aspect-[3/4] w-full overflow-hidden rounded-2xl border border-bone/10 text-left"
     >
-      <StreamVideo src={stream.video} poster={stream.poster} seed={stream.seed} />
+      <StreamVideo
+        src={stream.video}
+        poster={stream.poster}
+        seed={stream.seed}
+      />
 
       {/* top overlays */}
       <LiveBadge className="absolute left-3 top-3" />
@@ -240,7 +265,7 @@ function ChatRow({ line }: { line: ChatLine }) {
       <Avatar
         name={line.handle}
         seed={line.seed}
-        className="mt-0.5 size-6 shrink-0 text-[9px]"
+        className="mt-0.5 size-6 shrink-0 text-[11px]"
       />
       <p className="min-w-0 text-[13px] leading-snug text-bone/90">
         <span className="mr-1.5 font-semibold text-bone/60">
@@ -274,7 +299,7 @@ function ShoppableRail({ productIds }: { productIds: string[] }) {
             />
           </span>
           <div className="min-w-0 flex-1">
-            <p className="overline truncate text-[9px] text-ash">{it.brand}</p>
+            <p className="overline truncate text-[11px] text-ash">{it.brand}</p>
             <p className="truncate text-[12.5px] leading-tight text-bone">
               {it.name}
             </p>
@@ -509,7 +534,7 @@ export function StreamsView({ streams }: { streams: Stream[] }) {
             <h2 className="font-editorial text-2xl font-semibold tracking-tight text-bone">
               À venir
             </h2>
-            <span className="overline text-[10px] text-bone/35">
+            <span className="overline text-[11px] text-bone/35">
               Nº {String(upcoming.length).padStart(2, "0")}
             </span>
           </div>

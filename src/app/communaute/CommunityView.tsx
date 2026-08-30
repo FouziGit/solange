@@ -155,7 +155,7 @@ function CommunityCard({
 
         {/* thread preview */}
         <div className="flex flex-col gap-2.5 pt-1">
-          <p className="overline text-[9px] text-bone/50">À la une</p>
+          <p className="overline text-[11px] text-bone/50">À la une</p>
           {c.threads.map((t) => (
             <div
               key={t.title}

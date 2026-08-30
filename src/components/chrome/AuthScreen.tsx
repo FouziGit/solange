@@ -72,24 +72,6 @@ export function AuthScreen({ onComplete }: { onComplete: () => void }) {
 
   return (
     <div className="theme-dark fixed inset-0 z-[100] overflow-hidden bg-noir text-bone">
-      {/* drifting light blobs — quiet motion so the screen feels alive */}
-      {!reduce && (
-        <>
-          <motion.span
-            aria-hidden
-            className="pointer-events-none absolute -left-[20%] -top-[10%] size-[70vh] rounded-full bg-bone/[0.07] blur-[110px]"
-            animate={{ x: [0, 60, -20, 0], y: [0, 40, 10, 0] }}
-            transition={{ duration: 18, repeat: Infinity, ease: "easeInOut" }}
-          />
-          <motion.span
-            aria-hidden
-            className="pointer-events-none absolute -bottom-[15%] -right-[15%] size-[60vh] rounded-full bg-bone/[0.05] blur-[120px]"
-            animate={{ x: [0, -50, 20, 0], y: [0, -30, -10, 0] }}
-            transition={{ duration: 22, repeat: Infinity, ease: "easeInOut" }}
-          />
-        </>
-      )}
-
       {/* vignette */}
       <div
         aria-hidden
@@ -113,32 +95,8 @@ export function AuthScreen({ onComplete }: { onComplete: () => void }) {
             animate={{ opacity: [0, 0.55, 0.22], scale: [0.5, 1.5, 1.15] }}
             transition={{ duration: 1.9, ease: "easeOut" }}
           />
-          {/* expanding sonar ring on entrance */}
-          {!reduce && (
-            <motion.span
-              aria-hidden
-              className="absolute inset-0 rounded-full border border-bone/40"
-              initial={{ opacity: 0.6, scale: 0.7 }}
-              animate={{ opacity: 0, scale: 2.2 }}
-              transition={{ duration: 1.6, ease: "easeOut", delay: 0.3 }}
-            />
-          )}
           {/* the mark — gentle breathing loop once it has arrived */}
-          <motion.div
-            animate={reduce ? undefined : { y: [0, -7, 0] }}
-            transition={
-              reduce
-                ? undefined
-                : {
-                    duration: 4.5,
-                    repeat: Infinity,
-                    ease: "easeInOut",
-                    delay: 1.2,
-                  }
-            }
-          >
-            <LogoMark variant="white" className="size-20" />
-          </motion.div>
+          <LogoMark variant="white" className="size-20" />
         </motion.div>
 
         {/* wordmark — thin, wide-tracked Montserrat (refined / luxe), revealed
@@ -268,7 +226,10 @@ export function AuthScreen({ onComplete }: { onComplete: () => void }) {
                 />
 
                 {error && (
-                  <p className="mt-1 text-center text-[11px] text-ash" role="alert">
+                  <p
+                    className="mt-1 text-center text-[11px] text-ash"
+                    role="alert"
+                  >
                     {error}
                   </p>
                 )}

@@ -50,7 +50,7 @@ export function CommentSheet({
                   <span className="truncate text-[13px] font-semibold text-bone">
                     @{c.handle}
                   </span>
-                  <span className="shrink-0 text-[10px] text-ash">
+                  <span className="shrink-0 text-[11px] text-ash">
                     {c.time}
                   </span>
                 </div>

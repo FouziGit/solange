@@ -71,7 +71,7 @@ export function PageHeader({
       {(right || sectionNo) && (
         <div className="flex shrink-0 flex-col items-end gap-1">
           {sectionNo && (
-            <span className="overline text-[10px] text-bone/40">
+            <span className="overline text-[11px] text-bone/40">
               {sectionNo}
             </span>
           )}

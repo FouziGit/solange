@@ -152,7 +152,7 @@ export function CheckoutView({ item }: { item: CatalogItem }) {
               />
             </span>
             <div className="min-w-0 flex-1">
-              <p className="overline text-[9px] text-ash">{item.brand}</p>
+              <p className="overline text-[11px] text-ash">{item.brand}</p>
               <p className="font-display truncate text-[15px] font-semibold tracking-tight text-bone">
                 {item.name}
               </p>
@@ -234,7 +234,7 @@ export function CheckoutView({ item }: { item: CatalogItem }) {
               />
             </span>
             <div className="min-w-0 flex-1">
-              <p className="overline text-[9px] text-ash">{item.brand}</p>
+              <p className="overline text-[11px] text-ash">{item.brand}</p>
               <p className="font-display truncate text-[16px] font-semibold tracking-tight text-bone">
                 {item.name}
               </p>
@@ -242,7 +242,7 @@ export function CheckoutView({ item }: { item: CatalogItem }) {
                 Taille {item.size} · {euro(price)}
               </p>
             </div>
-            <span className="shrink-0 rounded-full border border-bone/20 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-ash">
+            <span className="shrink-0 rounded-full border border-bone/20 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wider text-ash">
               Vendue
             </span>
           </div>
@@ -281,7 +281,7 @@ export function CheckoutView({ item }: { item: CatalogItem }) {
 
       {/* Bandeau test — honnête : rien de réel n'est débité. */}
       <div className="mt-4 flex items-center gap-2.5 rounded-xl border border-bone/20 bg-bone/[0.04] px-3.5 py-2.5">
-        <span className="rounded-md bg-bone px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-ink">
+        <span className="rounded-md bg-bone px-1.5 py-0.5 text-[11px] font-bold uppercase tracking-wider text-ink">
           Test
         </span>
         <p className="text-[11.5px] leading-tight text-ash">
@@ -306,7 +306,7 @@ export function CheckoutView({ item }: { item: CatalogItem }) {
               />
             </span>
             <div className="min-w-0 flex-1">
-              <p className="overline text-[9px] text-ash">{item.brand}</p>
+              <p className="overline text-[11px] text-ash">{item.brand}</p>
               <p className="font-display truncate text-[16px] font-semibold tracking-tight text-bone">
                 {item.name}
               </p>
@@ -336,7 +336,7 @@ export function CheckoutView({ item }: { item: CatalogItem }) {
 
           {/* Stripe Connect split */}
           <div className="mt-3 rounded-2xl border border-bone/10 bg-bone/[0.02] p-4">
-            <p className="overline mb-2 text-[9px] text-ash">
+            <p className="overline mb-2 text-[11px] text-ash">
               Répartition · Stripe Connect
             </p>
             <Row label={`Le vendeur reçoit`}>{euro(net)}</Row>
@@ -356,7 +356,7 @@ export function CheckoutView({ item }: { item: CatalogItem }) {
               <span className="flex items-center gap-2 text-[13px] font-semibold text-bone">
                 <Card className="size-4" /> Carte bancaire
               </span>
-              <span className="text-[10px] font-semibold uppercase tracking-wider text-ash">
+              <span className="text-[11px] font-semibold uppercase tracking-wider text-ash">
                 via Stripe
               </span>
             </div>
@@ -528,7 +528,7 @@ function Field({
 }) {
   return (
     <label className={`block ${className ?? ""}`}>
-      <span className="overline mb-1.5 block text-[9px] text-ash">{label}</span>
+      <span className="overline mb-1.5 block text-[11px] text-ash">{label}</span>
       {children}
     </label>
   );

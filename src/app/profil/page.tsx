@@ -35,7 +35,7 @@ function Stat({ value, label }: { value: string; label: string }) {
       <div className="font-display text-lg font-bold text-bone tabular-nums">
         {value}
       </div>
-      <div className="text-[10px] uppercase tracking-[0.18em] text-ash">
+      <div className="text-[11px] uppercase tracking-[0.18em] text-ash">
         {label}
       </div>
     </div>
@@ -66,7 +66,7 @@ function ReferralCard() {
       aria-label="Parrainage"
     >
       <div className="mt-6 rounded-3xl border border-bone/12 bg-coal/60 p-5 md:max-w-md">
-        <p className="overline text-[9px] text-ash">Parrainage</p>
+        <p className="overline text-[11px] text-ash">Parrainage</p>
         <p className="mt-1 font-editorial text-2xl font-semibold text-bone">
           Invite, gagne.
         </p>
@@ -329,7 +329,7 @@ export default function ProfilPage() {
       {/* invité : encart mode démo + reconnexion */}
       {isGuest && (
         <div className="mt-6 rounded-2xl border border-bone/12 bg-coal/60 p-5 md:max-w-md">
-          <p className="overline text-[9px] text-ash">Mode démo</p>
+          <p className="overline text-[11px] text-ash">Mode démo</p>
           <p className="mt-1.5 text-[13.5px] leading-relaxed text-bone/85">
             Connecte-toi pour garder tes achats et tes favoris.
           </p>
@@ -342,7 +342,7 @@ export default function ProfilPage() {
       {/* mes commandes — populated by the checkout flow */}
       {orders.length > 0 && (
         <div className="mt-8 md:max-w-md">
-          <p className="overline mb-3 text-[9px] text-ash">
+          <p className="overline mb-3 text-[11px] text-ash">
             Mes commandes · {orders.length}
           </p>
           <div className="flex flex-col gap-2">
@@ -363,7 +363,7 @@ export default function ProfilPage() {
                   />
                 </span>
                 <div className="min-w-0 flex-1">
-                  <p className="overline text-[9px] text-ash">{o.item.brand}</p>
+                  <p className="overline text-[11px] text-ash">{o.item.brand}</p>
                   <p className="font-display truncate text-[14px] font-semibold tracking-tight text-bone">
                     {o.item.name}
                   </p>
@@ -378,7 +378,7 @@ export default function ProfilPage() {
                   <span className="font-display text-sm font-bold tracking-tight text-bone">
                     {euro(o.total)}
                   </span>
-                  <span className="inline-flex items-center gap-1 rounded-full bg-bone/10 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-bone/80">
+                  <span className="inline-flex items-center gap-1 rounded-full bg-bone/10 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wider text-bone/80">
                     <Check className="size-2.5" /> Payé
                   </span>
                 </div>
@@ -391,7 +391,7 @@ export default function ProfilPage() {
       {/* mes annonces — pièces déposées par le membre (serveur) */}
       {user && myProds.length > 0 && (
         <div className="mt-8 md:max-w-md">
-          <p className="overline mb-3 text-[9px] text-ash">
+          <p className="overline mb-3 text-[11px] text-ash">
             Mes annonces · {myProds.length}
           </p>
           <div className="flex flex-col gap-2">
@@ -414,7 +414,7 @@ export default function ProfilPage() {
                   )}
                 </span>
                 <div className="min-w-0 flex-1">
-                  <p className="overline text-[9px] text-ash">{p.brand}</p>
+                  <p className="overline text-[11px] text-ash">{p.brand}</p>
                   <p className="font-display truncate text-[14px] font-semibold tracking-tight text-bone">
                     {p.name}
                   </p>
@@ -432,7 +432,7 @@ export default function ProfilPage() {
                     {withdrawing === p.id ? "Retrait…" : "Retirer"}
                   </button>
                 ) : (
-                  <span className="inline-flex shrink-0 items-center rounded-full bg-bone/10 px-2.5 py-1 text-[9px] font-semibold uppercase tracking-wider text-bone/70">
+                  <span className="inline-flex shrink-0 items-center rounded-full bg-bone/10 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wider text-bone/70">
                     {p.status === "sold" ? "Vendue" : "Retirée"}
                   </span>
                 )}
@@ -445,7 +445,7 @@ export default function ProfilPage() {
       {/* mes ventes — commandes reçues sur mes annonces (serveur) */}
       {user && sales.length > 0 && (
         <div className="mt-8 md:max-w-md">
-          <p className="overline mb-3 text-[9px] text-ash">
+          <p className="overline mb-3 text-[11px] text-ash">
             Mes ventes · {sales.length}
           </p>
           <div className="flex flex-col gap-2">
@@ -455,7 +455,7 @@ export default function ProfilPage() {
                 className="glass flex items-center gap-3 rounded-2xl p-2.5"
               >
                 <div className="min-w-0 flex-1">
-                  <p className="overline text-[9px] text-ash">{s.brand}</p>
+                  <p className="overline text-[11px] text-ash">{s.brand}</p>
                   <p className="font-display truncate text-[14px] font-semibold tracking-tight text-bone">
                     {s.name}
                   </p>
@@ -470,7 +470,7 @@ export default function ProfilPage() {
                       ? euro(s.netSellerEUR)
                       : euro(s.priceEUR)}
                   </span>
-                  <span className="text-[9px] uppercase tracking-wider text-ash">
+                  <span className="text-[11px] uppercase tracking-wider text-ash">
                     net vendeur
                   </span>
                 </div>
@@ -565,7 +565,7 @@ export default function ProfilPage() {
       {/* réglages — messages directs */}
       {user && dmOpen !== null && (
         <div className="mt-8 rounded-2xl border border-bone/10 p-4 md:max-w-md">
-          <p className="overline mb-2 text-[9px] text-ash">Réglages</p>
+          <p className="overline mb-2 text-[11px] text-ash">Réglages</p>
           <button
             type="button"
             onClick={() => void toggleDm()}

@@ -102,7 +102,7 @@ export function ShopTheLook({
                   </span>
                 </span>
                 <div className="min-w-0 flex-1">
-                  <p className="overline text-[9px] text-ash">{p.brand}</p>
+                  <p className="overline text-[11px] text-ash">{p.brand}</p>
                   <p className="truncate text-sm font-medium text-bone">
                     {p.name}
                   </p>
@@ -118,7 +118,7 @@ export function ShopTheLook({
                       {euro(p.priceEUR)}
                     </span>
                     {p.originalEUR && (
-                      <span className="ml-1 text-[10px] text-ash line-through">
+                      <span className="ml-1 text-[11px] text-ash line-through">
                         {euro(p.originalEUR)}
                       </span>
                     )}

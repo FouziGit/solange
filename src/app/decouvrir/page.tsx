@@ -161,7 +161,7 @@ function DecouvrirInner() {
           <Sliders className="size-4" />
           {activeCount > 0 && (
             <span
-              className="absolute -right-0.5 -top-0.5 grid size-4 place-items-center rounded-full bg-bone text-[9px] font-bold text-ink"
+              className="absolute -right-0.5 -top-0.5 grid size-4 place-items-center rounded-full bg-bone text-[11px] font-bold text-ink"
               aria-hidden="true"
             >
               {activeCount}
@@ -176,7 +176,7 @@ function DecouvrirInner() {
           className="mt-3 border border-bone/15 p-4"
           onMouseDown={(e) => e.preventDefault()}
         >
-          <p className="overline mb-2 text-[9px] text-ash">Tendances</p>
+          <p className="overline mb-2 text-[11px] text-ash">Tendances</p>
           <div className="flex flex-wrap gap-2">
             {trendingTags.map((t) => (
               <Chip key={t} onClick={() => setQ(t.replace("#", ""))}>
@@ -184,7 +184,7 @@ function DecouvrirInner() {
               </Chip>
             ))}
           </div>
-          <p className="overline mb-2 mt-4 text-[9px] text-ash">Marques</p>
+          <p className="overline mb-2 mt-4 text-[11px] text-ash">Marques</p>
           <div className="flex flex-wrap gap-2">
             {brands.slice(0, 8).map((b) => (
               <Chip key={b} onClick={() => setQ(b)}>
@@ -257,7 +257,7 @@ function DecouvrirInner() {
 
         {/* trending */}
         <div className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-1.5">
-          <span className="overline text-[9px] text-ash">Tendances</span>
+          <span className="overline text-[11px] text-ash">Tendances</span>
           {trendingTags.map((t) => (
             <button
               key={t}
@@ -395,7 +395,7 @@ function DecouvrirInner() {
                     )}
                   </span>
                   <span className="min-w-0">
-                    <span className="overline block text-[9px] text-ash">
+                    <span className="overline block text-[11px] text-ash">
                       {hit.type === "post" ? "Post" : "Journal"}
                     </span>
                     <span className="block truncate text-sm font-semibold text-bone">

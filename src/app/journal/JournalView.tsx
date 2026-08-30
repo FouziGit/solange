@@ -69,10 +69,10 @@ export function JournalView({ articles }: { articles: Article[] }) {
 
               {/* kicker row — top hairline, rubrique + folio */}
               <div className="absolute inset-x-0 top-0 flex items-center justify-between border-b border-bone/15 px-5 py-3 md:px-8">
-                <span className="overline text-[10px] text-bone/80">
+                <span className="overline text-[11px] text-bone/80">
                   {KIND_LABEL[cover.kind]}
                 </span>
-                <span className="overline text-[10px] text-bone/50">
+                <span className="overline text-[11px] text-bone/50">
                   {folio(0)} — À la une
                 </span>
               </div>
@@ -86,11 +86,11 @@ export function JournalView({ articles }: { articles: Article[] }) {
                   {cover.standfirst}
                 </p>
                 <div className="mt-1 flex items-center gap-3 border-t border-bone/20 pt-3">
-                  <span className="overline text-[10px] text-bone/60">
+                  <span className="overline text-[11px] text-bone/60">
                     {cover.readingMin} min de lecture
                   </span>
                   <span aria-hidden="true" className="h-px w-6 bg-bone/25" />
-                  <span className="overline text-[10px] text-bone/60">
+                  <span className="overline text-[11px] text-bone/60">
                     {frDate(cover.date)}
                   </span>
                   {cover.brand && (
@@ -99,7 +99,7 @@ export function JournalView({ articles }: { articles: Article[] }) {
                         aria-hidden="true"
                         className="hidden h-px w-6 bg-bone/25 md:block"
                       />
-                      <span className="overline hidden text-[10px] text-bone/60 md:inline">
+                      <span className="overline hidden text-[11px] text-bone/60 md:inline">
                         {cover.brand}
                       </span>
                     </>
@@ -116,7 +116,7 @@ export function JournalView({ articles }: { articles: Article[] }) {
         <section className="mt-12 md:mt-16">
           <div className="flex items-baseline justify-between border-t border-bone/20 pt-3">
             <h2 className="eyebrow text-sm text-bone/55">Au sommaire</h2>
-            <span className="overline text-[10px] text-bone/40">
+            <span className="overline text-[11px] text-bone/40">
               {rest.length} article{rest.length > 1 ? "s" : ""}
             </span>
           </div>
@@ -142,10 +142,10 @@ export function JournalView({ articles }: { articles: Article[] }) {
                 >
                   {/* thin top rule + rubrique + folio */}
                   <div className="flex items-baseline justify-between border-t border-bone/25 pt-3">
-                    <span className="overline text-[10px] text-bone/60">
+                    <span className="overline text-[11px] text-bone/60">
                       {KIND_LABEL[a.kind]}
                     </span>
-                    <span className="overline text-[10px] text-bone/35">
+                    <span className="overline text-[11px] text-bone/35">
                       {folio(i + 1)}
                     </span>
                   </div>
@@ -171,11 +171,11 @@ export function JournalView({ articles }: { articles: Article[] }) {
 
                   <div className="mt-3 flex items-center gap-3">
                     {a.brand && (
-                      <span className="overline border border-bone/20 px-2 py-1 text-[9px] text-bone/70">
+                      <span className="overline border border-bone/20 px-2 py-1 text-[11px] text-bone/70">
                         {a.brand}
                       </span>
                     )}
-                    <span className="overline text-[9px] text-bone/45">
+                    <span className="overline text-[11px] text-bone/45">
                       {a.readingMin} min · {frDate(a.date)}
                     </span>
                   </div>
@@ -189,7 +189,7 @@ export function JournalView({ articles }: { articles: Article[] }) {
       {/* closing folio */}
       <div className="mt-14 flex items-center justify-center gap-4 border-t border-bone/15 pt-6">
         <span aria-hidden="true" className="h-px w-10 bg-bone/20" />
-        <span className="overline text-[10px] text-bone/35">
+        <span className="overline text-[11px] text-bone/35">
           Journal — Solange Éditions
         </span>
         <span aria-hidden="true" className="h-px w-10 bg-bone/20" />

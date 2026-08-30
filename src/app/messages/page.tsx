@@ -333,7 +333,7 @@ function MessagesInner() {
                       {c.name}
                     </span>
                     {c.verified && <Verified className="size-3.5 text-bone" />}
-                    <span className="ml-auto text-[10px] text-ash">
+                    <span className="ml-auto text-[11px] text-ash">
                       {c.time}
                     </span>
                   </div>
@@ -343,7 +343,7 @@ function MessagesInner() {
                   </p>
                 </div>
                 {c.unread > 0 && (
-                  <span className="grid size-5 place-items-center rounded-full bg-bone text-[10px] font-bold text-ink">
+                  <span className="grid size-5 place-items-center rounded-full bg-bone text-[11px] font-bold text-ink">
                     {c.unread}
                   </span>
                 )}
@@ -446,7 +446,7 @@ function MessagesInner() {
                   <Bag className="size-5" />
                 </span>
                 <div className="min-w-0 flex-1">
-                  <p className="overline text-[9px] text-ash">
+                  <p className="overline text-[11px] text-ash">
                     {active.itemBrand}
                   </p>
                   <p className="truncate text-[13px] text-bone">

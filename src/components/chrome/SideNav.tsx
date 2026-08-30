@@ -90,7 +90,7 @@ export function SideNav() {
                 )}
               </span>
               <span
-                className={`relative text-[10px] font-medium tracking-wide transition-colors ${
+                className={`relative text-[11px] font-medium tracking-wide transition-colors ${
                   on ? "text-bone" : "text-ash/70 group-hover:text-bone"
                 }`}
               >

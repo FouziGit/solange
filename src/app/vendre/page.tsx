@@ -399,7 +399,7 @@ export default function VendrePage() {
                     )}
                   </span>
                   <div className="min-w-0">
-                    <p className="overline text-[9px] text-ash">
+                    <p className="overline text-[11px] text-ash">
                       {brand || "Marque"}
                     </p>
                     <p className="truncate text-sm text-bone">

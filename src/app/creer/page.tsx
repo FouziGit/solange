@@ -492,7 +492,7 @@ export default function CreerPage() {
                       }}
                     />
                     {/* badge */}
-                    <span className="absolute left-3 top-3 inline-flex items-center gap-1 rounded-none glass px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.18em] text-bone/85">
+                    <span className="absolute left-3 top-3 inline-flex items-center gap-1 rounded-none glass px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-bone/85">
                       <Sparkle className="size-3" /> Édito
                     </span>
 
@@ -543,7 +543,7 @@ export default function CreerPage() {
                   /* sharp editorial card — actu / achats */
                   <div className="border border-bone/15 bg-ink/40">
                     <div className="flex items-center justify-between border-b border-bone/15 px-4 py-2.5">
-                      <span className="overline text-[9px] text-ash">
+                      <span className="overline text-[11px] text-ash">
                         {kind === "actu" ? "Actu / collection" : "Mes achats"}
                       </span>
                       <span
@@ -566,7 +566,7 @@ export default function CreerPage() {
                           {brandSel.map((b) => (
                             <span
                               key={b}
-                              className="border border-bone/25 px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.14em] text-bone/80"
+                              className="border border-bone/25 px-2 py-0.5 text-[11px] font-medium uppercase tracking-[0.14em] text-bone/80"
                             >
                               {b}
                             </span>
@@ -576,7 +576,7 @@ export default function CreerPage() {
                     </div>
                     {kind === "achats" && linkedItems.length > 0 && (
                       <div className="border-t border-bone/15 p-3">
-                        <span className="overline mb-2 block text-[9px] text-ash">
+                        <span className="overline mb-2 block text-[11px] text-ash">
                           Pièces liées · {linkedItems.length}
                         </span>
                         <div className="grid grid-cols-2 gap-2.5">

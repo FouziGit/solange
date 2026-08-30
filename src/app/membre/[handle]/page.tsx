@@ -170,7 +170,7 @@ function ProductTile({
         {tile.image && <Photo src={tile.image} alt={tile.name} />}
         {sold && (
           <span className="pointer-events-none absolute inset-0 grid place-items-center bg-black/55">
-            <span className="border border-bone/60 px-3 py-1 text-[10px] font-semibold uppercase tracking-widest text-bone">
+            <span className="border border-bone/60 px-3 py-1 text-[11px] font-semibold uppercase tracking-widest text-bone">
               Vendu
             </span>
           </span>
@@ -178,7 +178,7 @@ function ProductTile({
       </div>
 
       <div className="mt-2.5 px-0.5">
-        <p className="overline text-[9px] text-ash">{tile.brand}</p>
+        <p className="overline text-[11px] text-ash">{tile.brand}</p>
         <p className="mt-0.5 truncate text-sm text-bone">{tile.name}</p>
         <div className="mt-1 flex items-baseline justify-between gap-2">
           <span className="font-display text-[15px] font-bold text-bone">
@@ -509,7 +509,7 @@ export default function MembrePage() {
             <>
               {/* annonces */}
               <section className="mt-10" aria-label="Annonces en vente">
-                <p className="overline mb-3 text-[9px] text-ash">
+                <p className="overline mb-3 text-[11px] text-ash">
                   En vente · {state.profile.products.length}
                 </p>
                 {state.profile.products.length === 0 ? (
@@ -532,7 +532,7 @@ export default function MembrePage() {
 
               {/* posts */}
               <section className="mt-10" aria-label="Posts publiés">
-                <p className="overline mb-3 text-[9px] text-ash">
+                <p className="overline mb-3 text-[11px] text-ash">
                   Posts · {state.profile.posts.length}
                 </p>
                 {state.profile.posts.length === 0 ? (
