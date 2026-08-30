@@ -19,6 +19,7 @@ import { EASE, compact, euro, gradientFor, initials } from "@/lib/utils";
 import { useStore } from "@/lib/store";
 import { PageShell } from "@/components/ui/PageShell";
 import { ReportSheet } from "@/components/ui/ReportSheet";
+import { Skeleton, SkeletonTile } from "@/components/ui/Skeleton";
 import { Photo } from "@/components/ui/Photo";
 import { Verified } from "@/components/chrome/icons";
 
@@ -296,9 +297,20 @@ export default function MembrePage() {
         targetLabel={`@${handle}`}
       />
       {state.kind === "loading" && (
-        <div className="flex min-h-[55vh] flex-col items-center justify-center gap-4 text-center">
-          <span className="size-20 animate-pulse rounded-full bg-bone/10" />
-          <p className="text-sm text-ash">Chargement du profil…</p>
+        <div aria-busy="true" aria-label="Chargement du profil">
+          <div className="flex flex-col items-center gap-4 pt-6 text-center">
+            <Skeleton className="size-28 rounded-full" />
+            <Skeleton className="h-7 w-44" />
+            <Skeleton className="h-3.5 w-56" />
+            <div className="mt-2 flex gap-2">
+              <Skeleton className="h-11 w-28 rounded-full" />
+              <Skeleton className="h-11 w-11 rounded-full" />
+            </div>
+          </div>
+          <div className="mt-10 grid grid-cols-2 gap-3 md:grid-cols-3">
+            <SkeletonTile />
+            <SkeletonTile />
+          </div>
         </div>
       )}
 

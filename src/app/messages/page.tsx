@@ -304,7 +304,8 @@ function MessagesInner() {
         <div className="flex-1 overflow-y-auto px-3 pb-28 md:pb-4">
           {visibleConvs.length === 0 && (
             <p className="px-3 py-6 text-[13px] text-ash">
-              Aucune conversation pour le moment.
+              Aucune conversation. Écris à un vendeur depuis une pièce du Marché
+              — la discussion vivra ici.
             </p>
           )}
           {visibleConvs.map((c) => {
