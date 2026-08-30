@@ -15,6 +15,7 @@ import { KenBurnsMedia } from "./KenBurnsMedia";
 import { CarouselMedia } from "./CarouselMedia";
 import { CreatorHeader } from "./CreatorHeader";
 import { Avatar } from "../chrome/Avatar";
+import { TogglePill } from "../ui/TogglePill";
 import { ActionRail } from "./ActionRail";
 import { CommentSheet } from "./CommentSheet";
 import { ShopTheLook } from "./ShopTheLook";
@@ -317,17 +318,13 @@ export function FeedCard({
                     @{look.creator.handle}
                   </span>
                 </Link>
-                <button
-                  onClick={() => toggleFollow(look.creator.handle)}
-                  aria-pressed={following}
-                  className={`inline-flex h-8 shrink-0 items-center rounded-full px-3.5 text-[12px] font-semibold transition-colors ${
-                    following
-                      ? "border border-bone/30 text-bone/80"
-                      : "bg-bone text-ink"
-                  }`}
-                >
-                  {following ? "Suivi" : "Suivre"}
-                </button>
+                <TogglePill
+                  on={following}
+                  onToggle={() => toggleFollow(look.creator.handle)}
+                  labelOn="Suivi"
+                  labelOff="Suivre"
+                  size="sm"
+                />
                 <button
                   onClick={() => setMuted((m) => !m)}
                   className="ml-auto grid size-9 shrink-0 place-items-center rounded-full glass text-bone active:scale-90"

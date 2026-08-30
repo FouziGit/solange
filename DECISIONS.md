@@ -65,3 +65,22 @@ Chaque entrée : décision, alternative écartée, raison. Relire en début de p
   La cause est structurelle (pages données full-CSR) ; le correctif (RSC +
   streaming) dépasse le « pas de big-bang » de cette passe — planifié en
   premier du reste-à-faire au lieu d'être maquillé.
+
+## Brief 2 — Lot 0
+
+- **D-014 — Primitive `TogglePill`** : le balayage lot 0 a montré que les
+  CTA restants étaient à 70 % le même objet — un toggle social (Suivre,
+  Rejoindre, Me prévenir, Réserver) réécrit 9 fois avec 9 géométries.
+  `Button` ne modélise pas d'état pressé ; plutôt que de le surcharger d'un
+  6ᵉ variant, une primitive dédiée avec `aria-pressed`/`role="switch"`.
+  off = bloc renversé (l'invite), on = filet posé — la version inversée de
+  Live (on = bloc plein) est normalisée à ce sens unique. Alternative
+  écartée : prop `pressed` sur Button (mélange deux grammaires — l'action à
+  sens unique et l'état réversible — et casse la règle « un seul bloc
+  renversé = l'action primaire » en rendant le renversement ambigu).
+- **D-015 — Échecs réseau : bandeau inline, pas de Toast global.** Le
+  pattern erreur (cause + remède + Réessayer) se pose DANS l'écran concerné
+  (bandeau au Marché/Messages, chip sur le feed) ; le besoin d'un Toast
+  global n'a toujours pas émergé (composants.md §À venir). L'envoi de
+  message échoué fait exception : rollback de l'optimiste + texte restitué
+  dans le champ + feedback local existant de l'écran.

@@ -1,9 +1,9 @@
 "use client";
 
 import { Sheet } from "../ui/Sheet";
+import { Button } from "../ui/Button";
 import { useState } from "react";
-import Link from "next/link";
-import { AnimatePresence, motion } from "motion/react";
+import { motion } from "motion/react";
 import type { Product } from "@/lib/mock";
 import { track } from "@/lib/track";
 import { euro, gradientFor, initials } from "@/lib/utils";
@@ -123,14 +123,13 @@ export function ShopTheLook({
                       </span>
                     )}
                   </div>
-                  <Link
+                  <Button
                     href={`/checkout/${p.id}`}
-                    data-cursor="link"
+                    size="sm"
                     aria-label={`Acheter ${p.name}`}
-                    className="rounded-full bg-bone px-3.5 py-1.5 text-[11px] font-semibold text-ink transition-transform active:scale-95"
                   >
                     Acheter
-                  </Link>
+                  </Button>
                 </div>
               </motion.div>
             );
@@ -141,42 +140,23 @@ export function ShopTheLook({
           <span className="text-xs text-ash">
             Protection acheteur incluse · livraison 48h
           </span>
-          <motion.button
+          <Button
             onClick={addAll}
-            data-cursor="link"
             aria-live="polite"
-            whileTap={{ scale: 0.95 }}
-            className={`flex items-center gap-1.5 rounded-full px-5 py-2.5 text-sm font-semibold transition-colors ${
+            className={
               added
-                ? "bg-bone/15 text-bone ring-1 ring-bone/40"
-                : "bg-bone text-ink"
-            }`}
+                ? "bg-bone/15 text-bone ring-1 ring-bone/40 hover:bg-bone/15"
+                : ""
+            }
           >
-            <AnimatePresence mode="wait" initial={false}>
-              {added ? (
-                <motion.span
-                  key="added"
-                  initial={{ opacity: 0, y: 4 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -4 }}
-                  transition={{ duration: 0.18 }}
-                  className="flex items-center gap-1.5"
-                >
-                  <Check className="size-4" /> Ajouté
-                </motion.span>
-              ) : (
-                <motion.span
-                  key="add"
-                  initial={{ opacity: 0, y: 4 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -4 }}
-                  transition={{ duration: 0.18 }}
-                >
-                  Tout ajouter
-                </motion.span>
-              )}
-            </AnimatePresence>
-          </motion.button>
+            {added ? (
+              <>
+                <Check className="size-4" /> Ajouté
+              </>
+            ) : (
+              "Tout ajouter"
+            )}
+          </Button>
         </div>
       </Sheet>
     </>

@@ -12,7 +12,7 @@ export function VideoFeed() {
   const containerRef = useRef<HTMLDivElement>(null);
   const [active, setActive] = useState(0);
   const reduce = useReducedMotion();
-  const { isBlocked, memberPosts, refreshPosts } = useStore();
+  const { isBlocked, memberPosts, refreshPosts, postsError } = useStore();
   const visibleLooks = looks;
 
   // Publications membres — lues depuis le store, PRÉCHARGÉES pendant le
@@ -100,6 +100,26 @@ export function VideoFeed() {
           />
         ))}
       </div>
+
+      {/* échec /api/posts : les publications membres manquent du fil — on
+          l'annonce en chip discrète, le fil reste complet avec les looks */}
+      {postsError && (
+        <div
+          role="status"
+          aria-live="polite"
+          className="pointer-events-none fixed inset-x-0 z-30 flex justify-center"
+          style={{ top: "calc(env(safe-area-inset-top) + 7rem)" }}
+        >
+          <button
+            type="button"
+            onClick={() => void refreshPosts()}
+            data-cursor="link"
+            className="pointer-events-auto glass rounded-full px-4 py-2 text-[12px] font-medium text-bone active:scale-95"
+          >
+            Les publications n&apos;ont pas chargé · Réessayer
+          </button>
+        </div>
+      )}
 
       {/* scroll hint, fades after first scroll */}
       <AnimatePresence>

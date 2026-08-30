@@ -72,6 +72,9 @@ type Store = {
      scroll-snap à l'ouverture (jank PWA). */
   memberPosts: ApiPost[];
   refreshPosts(): Promise<void>;
+  /* — échecs réseau à annoncer (lot 0 : plus d'échec muet) — */
+  productsError: boolean;
+  postsError: boolean;
   isSold(id: string): boolean;
   isBlocked(handle: string): boolean;
   toggleBlock(handle: string): void;
@@ -128,6 +131,8 @@ export function SolangeProvider({ children }: { children: ReactNode }) {
   const [likesMap, setLikesMap] = useState<Record<string, number>>({});
   const [blocked, setBlocked] = useState<Set<string>>(() => new Set());
   const [memberPosts, setMemberPosts] = useState<ApiPost[]>([]);
+  const [productsError, setProductsError] = useState(false);
+  const [postsError, setPostsError] = useState(false);
 
   const refreshSession = useCallback(async () => {
     try {
@@ -174,6 +179,8 @@ export function SolangeProvider({ children }: { children: ReactNode }) {
       setSoldSeeds(res.data.soldSeeds);
       setLikesMap(res.data.likesMap ?? {});
     }
+    // l'échec s'annonce à l'écran (bandeau Marché) — plus d'échec muet
+    setProductsError(!res.ok);
   }, []);
 
   const refreshPosts = useCallback(async () => {
@@ -187,6 +194,7 @@ export function SolangeProvider({ children }: { children: ReactNode }) {
           : next,
       );
     }
+    setPostsError(!res.ok);
   }, []);
 
   useEffect(() => {
@@ -332,6 +340,8 @@ export function SolangeProvider({ children }: { children: ReactNode }) {
       refreshProducts,
       memberPosts,
       refreshPosts,
+      productsError,
+      postsError,
       isSold,
       isBlocked,
       toggleBlock,
@@ -358,6 +368,8 @@ export function SolangeProvider({ children }: { children: ReactNode }) {
       refreshProducts,
       memberPosts,
       refreshPosts,
+      productsError,
+      postsError,
       isSold,
       isBlocked,
       toggleBlock,

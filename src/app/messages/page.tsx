@@ -128,19 +128,28 @@ function MessagesInner() {
 
   // Conversations serveur du membre connecté, fusionnées AVANT les mock.
   const [serverConvs, setServerConvs] = useState<Conversation[]>([]);
+  // échec de chargement des fils serveur : annoncé dans la liste (lot 0),
+  // retry incrémente la clé pour relancer l'effet
+  const [convError, setConvError] = useState<string | null>(null);
+  const [convRetry, setConvRetry] = useState(0);
   useEffect(() => {
     if (!user) return;
     let alive = true;
     void api.conversations().then((res) => {
-      if (alive && res.ok)
+      if (!alive) return;
+      if (res.ok) {
         setServerConvs(
           res.data.conversations.map((c) => toConversation(c, user.id)),
         );
+        setConvError(null);
+      } else {
+        setConvError(res.error);
+      }
     });
     return () => {
       alive = false;
     };
-  }, [user]);
+  }, [user, convRetry]);
 
   const allConvs = useMemo(() => {
     const merged: Conversation[] = [];
@@ -260,21 +269,38 @@ function MessagesInner() {
       [active.id]: [...(e[active.id] ?? []), { from: "me", text }],
     }));
     setDraft("");
-    // Persistance serveur (fire-and-forget) — l'optimistic local reste seul
-    // maître de l'affichage. convId pour un fil serveur, productId pour un
-    // fil (mock ou synthétique) rattaché au vendeur de la pièce.
+    // Persistance serveur, optimiste MAIS honnête (lot 0) : si l'écriture
+    // échoue, le message optimiste est retiré, le texte revient dans le champ
+    // et l'erreur s'affiche — rien ne se perd en silence. convId pour un fil
+    // serveur, productId pour un fil (mock/synthétique) lié au vendeur.
     if (user) {
       const isServerConv = serverConvs.some((c) => c.id === active.id);
       const isDm = !isServerConv && active.id.startsWith("dm-");
       const isItemThread = item !== undefined && active.handle === item.seller;
-      if (isServerConv || isDm || isItemThread)
-        void api.sendMessage({
-          convId: isServerConv ? active.id : undefined,
-          toHandle: isDm ? active.handle : undefined,
-          productId:
-            !isServerConv && !isDm && isItemThread ? item.id : undefined,
-          text,
-        });
+      if (isServerConv || isDm || isItemThread) {
+        const convId = active.id;
+        void api
+          .sendMessage({
+            convId: isServerConv ? convId : undefined,
+            toHandle: isDm ? active.handle : undefined,
+            productId:
+              !isServerConv && !isDm && isItemThread ? item.id : undefined,
+            text,
+          })
+          .then((res) => {
+            if (res.ok) return;
+            setExtra((e) => {
+              const list = e[convId] ?? [];
+              const i = list.findLastIndex(
+                (m) => m.from === "me" && m.text === text,
+              );
+              if (i === -1) return e;
+              return { ...e, [convId]: list.toSpliced(i, 1) };
+            });
+            setDraft((cur) => cur || text);
+            showFeedback(`Message non envoyé — ${res.error}`);
+          });
+      }
     }
   };
 
@@ -302,6 +328,25 @@ function MessagesInner() {
         </header>
 
         <div className="flex-1 overflow-y-auto px-3 pb-28 md:pb-4">
+          {convError && (
+            <div
+              role="status"
+              aria-live="polite"
+              className="mx-3 mb-2 flex flex-wrap items-center justify-between gap-2 border border-bone/15 px-3.5 py-3"
+            >
+              <p className="text-[13px] text-ash">
+                Tes fils n&apos;ont pas chargé — {convError}
+              </p>
+              <button
+                type="button"
+                onClick={() => setConvRetry((n) => n + 1)}
+                data-cursor="link"
+                className="text-[13px] font-semibold text-bone underline-offset-4 hover:underline"
+              >
+                Réessayer
+              </button>
+            </div>
+          )}
           {visibleConvs.length === 0 && (
             <p className="px-3 py-6 text-[13px] text-ash">
               Aucune conversation. Écris à un vendeur depuis une pièce du Marché

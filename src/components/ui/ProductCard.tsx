@@ -20,6 +20,9 @@ import { Heart, Bag } from "../chrome/icons";
 export type DisplayItem = CatalogItem & {
   image?: string;
   member?: boolean;
+  /** Vendu d'après la donnée SOURCE (ex. profil public d'un membre) —
+      complété par isSold() du store, qui ne voit que le flux global. */
+  soldBase?: boolean;
 };
 
 /** Mappe une annonce membre (ApiProduct) vers l'affichage catalogue existant. */
@@ -37,6 +40,7 @@ export function toDisplayItem(p: ApiProduct): DisplayItem {
     likes: p.likes,
     image: p.images[0],
     member: true,
+    soldBase: p.status === "sold",
   };
 }
 
@@ -60,7 +64,7 @@ export function ProductCard({
 }) {
   const { isSaved, toggleSave, isSold } = useStore();
   const saved = isSaved(item.id);
-  const sold = isSold(item.id);
+  const sold = item.soldBase || isSold(item.id);
   const discount = item.originalEUR
     ? Math.round((1 - item.priceEUR / item.originalEUR) * 100)
     : 0;

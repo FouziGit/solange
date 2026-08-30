@@ -44,6 +44,7 @@ export function KenBurnsMedia({
     const el = videoRef.current;
     if (!el) return;
     if (active && !paused && !reduce) {
+      // autoplay refusé par le navigateur : voulu — le poster reste affiché
       el.play().catch(() => {});
     } else {
       el.pause();

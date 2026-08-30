@@ -9,6 +9,7 @@ import { imgItem } from "@/lib/img";
 import { track } from "@/lib/track";
 import { useStore } from "@/lib/store";
 import { Avatar } from "@/components/chrome/Avatar";
+import { Button } from "@/components/ui/Button";
 import { LuxeMedia } from "@/components/ui/LuxeMedia";
 import { ProductCard } from "@/components/ui/ProductCard";
 import { Chip } from "@/components/ui/Chip";
@@ -161,16 +162,12 @@ export function ArticleDetail({
           {/* actions */}
           <div className="mt-5 flex flex-col gap-3 sm:flex-row">
             {sold ? (
-              <button
-                type="button"
-                disabled
-                className="flex min-h-[52px] flex-1 cursor-not-allowed items-center justify-center gap-2 rounded-none bg-bone/15 px-6 py-3.5 text-sm font-semibold text-bone/50"
-              >
+              <Button disabled className="min-h-12 flex-1">
                 <Bag className="size-5" />
                 Vendu
-              </button>
+              </Button>
             ) : (
-              <Link
+              <Button
                 href={`/checkout/${item.id}`}
                 onClick={() =>
                   track("checkout_start", {
@@ -179,21 +176,20 @@ export function ArticleDetail({
                     priceEUR: item.priceEUR,
                   })
                 }
-                data-cursor="link"
-                className="flex flex-1 items-center justify-center gap-2 rounded-none bg-bone px-6 py-3.5 text-sm font-semibold text-ink transition-transform active:scale-95"
+                className="min-h-12 flex-1"
               >
                 <Bag className="size-5" />
                 Acheter — {euro(item.priceEUR)}
-              </Link>
+              </Button>
             )}
-            <Link
+            <Button
+              variant="outline"
               href={`/messages?item=${item.id}`}
-              data-cursor="link"
-              className="glass flex items-center justify-center gap-2 rounded-none px-6 py-3.5 text-sm font-semibold text-bone transition-colors hover:bg-bone/15"
+              className="min-h-12"
             >
               <Send className="size-4" />
               Faire une offre
-            </Link>
+            </Button>
             <button
               type="button"
               onClick={() => toggleSave(item.id)}

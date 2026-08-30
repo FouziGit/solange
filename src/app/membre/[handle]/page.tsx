@@ -15,26 +15,24 @@ import { motion } from "motion/react";
 import { api, type PublicProfile } from "@/lib/api";
 import { catalog, looks, me } from "@/lib/mock";
 import { imgItem, imgLook } from "@/lib/img";
-import { EASE, compact, euro, gradientFor, initials } from "@/lib/utils";
+import { EASE, compact, gradientFor, initials } from "@/lib/utils";
 import { useStore } from "@/lib/store";
 import { PageShell } from "@/components/ui/PageShell";
 import { ReportSheet } from "@/components/ui/ReportSheet";
+import {
+  ProductCard,
+  toDisplayItem,
+  type DisplayItem,
+} from "@/components/ui/ProductCard";
+import { TogglePill } from "@/components/ui/TogglePill";
 import { Skeleton, SkeletonTile } from "@/components/ui/Skeleton";
 import { Photo } from "@/components/ui/Photo";
 import { Verified } from "@/components/chrome/icons";
 
 /* ---------- affichage normalisé (serveur ou démo) ---------- */
 
-type Tile = {
-  id: string;
-  brand: string;
-  name: string;
-  priceEUR: number;
-  size: string;
-  image?: string;
-  /** Vendu d'après la donnée source ; complété par isSold() au rendu. */
-  soldBase: boolean;
-};
+/* La tuile pièce est la primitive ProductCard (lot 0 : le doublon
+   ProductTile local est résorbé, cf. design/composants.md). */
 
 type PostTile = {
   id: string;
@@ -51,7 +49,7 @@ type Profile = {
   seed: string;
   verified: boolean;
   followers: number | null;
-  products: Tile[];
+  products: DisplayItem[];
   posts: PostTile[];
 };
 
@@ -94,15 +92,7 @@ function demoProfile(handle: string): Profile | null {
     followers: c.followers,
     products: catalog
       .filter((it) => it.seller === handle)
-      .map((it) => ({
-        id: it.id,
-        brand: it.brand,
-        name: it.name,
-        priceEUR: it.priceEUR,
-        size: it.size,
-        image: imgItem(it.id),
-        soldBase: false,
-      })),
+      .map((it) => ({ ...it, image: imgItem(it.id) })),
     posts: looks
       .filter((l) => l.creator.handle === handle)
       .map((l) => ({
@@ -123,15 +113,7 @@ function serverProfile(data: PublicProfile): Profile {
     seed: data.user.handle,
     verified: false,
     followers: null,
-    products: data.products.map((p) => ({
-      id: p.id,
-      brand: p.brand,
-      name: p.name,
-      priceEUR: p.priceEUR,
-      size: p.size,
-      image: p.images[0],
-      soldBase: p.status === "sold",
-    })),
+    products: data.products.map(toDisplayItem),
     posts: data.posts.map((p) => ({
       id: p.id,
       image: p.gallery[0],
@@ -139,76 +121,6 @@ function serverProfile(data: PublicProfile): Profile {
       seed: `post-${p.id}`,
     })),
   };
-}
-
-/* ---------- tuiles ---------- */
-
-function ProductTile({
-  tile,
-  sold,
-  index,
-}: {
-  tile: Tile;
-  sold: boolean;
-  index: number;
-}) {
-  return (
-    <motion.article
-      initial={{ opacity: 0, y: 16 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, margin: "0px 0px -10% 0px" }}
-      transition={{
-        duration: 0.5,
-        ease: EASE.luxe,
-        delay: Math.min(index * 0.04, 0.3),
-      }}
-    >
-      <div
-        className="relative aspect-[3/4] overflow-hidden rounded-2xl ring-1 ring-bone/10"
-        style={{ background: gradientFor(tile.id) }}
-      >
-        {tile.image && <Photo src={tile.image} alt={tile.name} />}
-        {sold && (
-          <span className="pointer-events-none absolute inset-0 grid place-items-center bg-black/55">
-            <span className="border border-bone/60 px-3 py-1 text-[11px] font-semibold uppercase tracking-widest text-bone">
-              Vendu
-            </span>
-          </span>
-        )}
-      </div>
-
-      <div className="mt-2.5 px-0.5">
-        <p className="text-[12px] text-ash">{tile.brand}</p>
-        <p className="mt-0.5 truncate text-sm text-bone">{tile.name}</p>
-        <div className="mt-1 flex items-baseline justify-between gap-2">
-          <span className="font-display text-[15px] font-bold text-bone">
-            {euro(tile.priceEUR)}
-          </span>
-          {tile.size && (
-            <span className="text-[11px] text-ash">T. {tile.size}</span>
-          )}
-        </div>
-      </div>
-
-      {sold ? (
-        <span
-          aria-disabled="true"
-          className="mt-2 flex min-h-11 cursor-not-allowed items-center justify-center border border-bone/15 text-[12px] font-semibold text-bone/40"
-        >
-          Vendu
-        </span>
-      ) : (
-        <Link
-          href={`/messages?item=${tile.id}`}
-          data-cursor="link"
-          aria-label={`Contacter le vendeur — ${tile.brand} ${tile.name}`}
-          className="mt-2 flex min-h-11 items-center justify-center border border-bone/30 text-[12px] font-semibold text-bone transition-colors hover:bg-bone/10 active:scale-[0.98]"
-        >
-          Contacter
-        </Link>
-      )}
-    </motion.article>
-  );
 }
 
 function PostThumb({ post, index }: { post: PostTile; index: number }) {
@@ -247,7 +159,7 @@ export default function MembrePage() {
     // paramètre mal encodé — on garde la valeur brute
   }
 
-  const { user, isFollowing, toggleFollow, isBlocked, toggleBlock, isSold } =
+  const { user, isFollowing, toggleFollow, isBlocked, toggleBlock } =
     useStore();
   const [state, setState] = useState<State>({ kind: "loading" });
   const [menuOpen, setMenuOpen] = useState(false);
@@ -341,13 +253,9 @@ export default function MembrePage() {
             <span className="text-bone">@{handle || "?"}</span>. Le compte a
             peut-être été supprimé, ou le lien est périmé.
           </p>
-          <Link
-            href="/decouvrir"
-            data-cursor="link"
-            className="mt-8 rounded-none bg-bone px-6 py-3 text-sm font-semibold text-ink transition-transform active:scale-95"
-          >
-            Découvrir la boutique
-          </Link>
+          <Button href="/decouvrir" className="mt-8">
+            Chiner le Marché
+          </Button>
         </div>
       )}
 
@@ -403,20 +311,14 @@ export default function MembrePage() {
             </div>
 
             <div className="mt-5 flex items-center gap-2 md:mt-0">
-              <button
-                type="button"
-                onClick={() => toggleFollow(handle)}
+              <TogglePill
+                on={following}
+                onToggle={() => toggleFollow(handle)}
+                labelOn={isSelf ? "C'est toi" : "Suivi"}
+                labelOff={isSelf ? "C'est toi" : "Suivre"}
                 disabled={isSelf}
-                aria-pressed={following}
-                data-cursor="link"
-                className={`inline-flex min-h-11 items-center rounded-full px-6 text-sm font-semibold transition-transform active:scale-95 disabled:cursor-not-allowed disabled:opacity-40 ${
-                  following
-                    ? "border border-bone/25 text-bone"
-                    : "bg-bone text-ink"
-                }`}
-              >
-                {isSelf ? "C'est toi" : following ? "Suivi" : "Suivre"}
-              </button>
+                className="px-6"
+              />
 
               {/* DM — seulement si le membre accepte les messages directs */}
               {!isSelf && state.profile.dmOpen && (
@@ -518,12 +420,7 @@ export default function MembrePage() {
                 ) : (
                   <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-4">
                     {state.profile.products.map((t, i) => (
-                      <ProductTile
-                        key={t.id}
-                        tile={t}
-                        sold={t.soldBase || isSold(t.id)}
-                        index={i}
-                      />
+                      <ProductCard key={t.id} item={t} index={i} />
                     ))}
                   </div>
                 )}

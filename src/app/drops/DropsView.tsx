@@ -10,7 +10,9 @@ import { track } from "@/lib/track";
 import { Avatar } from "@/components/chrome/Avatar";
 import { LuxeMedia } from "@/components/ui/LuxeMedia";
 import { ProductCard } from "@/components/ui/ProductCard";
-import { Verified } from "@/components/chrome/icons";
+import { TogglePill } from "@/components/ui/TogglePill";
+import { Button } from "@/components/ui/Button";
+import { Check, Verified } from "@/components/chrome/icons";
 
 /** Format a remaining-seconds count as a zero-padded HH:MM:SS string. */
 function formatCountdown(total: number): string {
@@ -190,14 +192,9 @@ export function DropsView({ drops }: { drops: Drop[] }) {
                   {compact(featured.creator.followers)} abonnés
                 </span>
               </div>
-              <button
-                type="button"
-                onClick={seeDrop}
-                data-cursor="link"
-                className="ml-auto rounded-full bg-bone px-5 py-2 text-xs font-semibold text-ink transition-transform active:scale-95"
-              >
+              <Button size="sm" onClick={seeDrop} className="ml-auto">
                 Voir le drop
-              </button>
+              </Button>
             </div>
           </div>
         </div>
@@ -209,19 +206,15 @@ export function DropsView({ drops }: { drops: Drop[] }) {
           <h2 className="font-editorial text-2xl font-semibold tracking-tight text-bone md:text-3xl">
             Pièces du drop
           </h2>
-          <button
-            type="button"
-            onClick={reserve}
-            data-cursor="link"
+          <TogglePill
+            on={reserved}
+            onToggle={reserve}
+            labelOn="Place réservée"
+            labelOff="Réserver ma place"
+            iconOn={<Check className="size-3.5" />}
+            size="sm"
             aria-live="polite"
-            className={`rounded-full px-5 py-2 text-xs font-semibold transition-transform active:scale-95 ${
-              reserved
-                ? "border border-bone/25 text-bone/70"
-                : "bg-bone text-ink"
-            }`}
-          >
-            {reserved ? "Place réservée ✓" : "Réserver ma place"}
-          </button>
+          />
         </div>
         <ProductRow ids={featured.productIds} />
       </div>

@@ -1,10 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { motion } from "motion/react";
 import type { Creator } from "@/lib/mock";
 import { compact } from "@/lib/utils";
 import { Avatar } from "../chrome/Avatar";
+import { TogglePill } from "../ui/TogglePill";
 import { Verified } from "../chrome/icons";
 
 export function CreatorHeader({
@@ -59,18 +59,14 @@ export function CreatorHeader({
         </div>
       </Link>
 
-      <motion.button
-        onClick={onToggleFollow}
-        aria-pressed={following}
-        whileHover={{ y: -1, scale: 1.04 }}
-        whileTap={{ scale: 0.94 }}
-        transition={{ type: "spring", stiffness: 420, damping: 24 }}
-        className={`ml-1 rounded-full px-4 py-1.5 text-xs font-semibold transition-colors ${
-          following ? "border border-bone/25 text-bone" : "bg-bone text-ink"
-        }`}
-      >
-        {following ? "Suivi" : "Suivre"}
-      </motion.button>
+      <TogglePill
+        on={following}
+        onToggle={onToggleFollow}
+        labelOn="Suivi"
+        labelOff="Suivre"
+        size="sm"
+        className="ml-1"
+      />
     </div>
   );
 }

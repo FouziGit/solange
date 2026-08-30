@@ -41,7 +41,9 @@ function writeDraft(key: string, value: unknown) {
 function clearDraft(key: string) {
   try {
     sessionStorage.removeItem(key);
-  } catch {}
+  } catch {
+    /* stockage indisponible — rien à nettoyer */
+  }
 }
 
 export default function VendrePage() {
@@ -171,7 +173,9 @@ export default function VendrePage() {
   function goSignIn() {
     try {
       localStorage.removeItem("solange:onboarded");
-    } catch {}
+    } catch {
+      /* stockage indisponible — la reconnexion suffit */
+    }
     location.reload();
   }
 

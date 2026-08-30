@@ -2,11 +2,11 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import { useStore } from "@/lib/store";
 import { euro, compact, gradientFor, initials } from "@/lib/utils";
 import { imgItem } from "@/lib/img";
 import type { DisplayItem } from "../ui/ProductCard";
+import { Button } from "../ui/Button";
 import { Heart, Bookmark, Share, Bag } from "../chrome/icons";
 import { RailAction } from "./RailAction";
 
@@ -158,39 +158,24 @@ export function ShopCard({
 
           <div className="flex items-center gap-2 pt-1">
             {sold ? (
-              <button
-                type="button"
-                disabled
-                aria-disabled="true"
-                className="flex cursor-not-allowed items-center gap-2 whitespace-nowrap bg-bone/25 px-6 py-2.5 text-sm font-semibold text-bone/50"
-              >
+              <Button disabled>
                 <Bag className="size-4" /> Vendu
-              </button>
+              </Button>
             ) : item.member ? (
               /* Annonce membre : pas de page détail/checkout en beta. */
-              <Link
-                href={`/messages?item=${item.id}`}
-                data-cursor="link"
-                className="flex items-center gap-2 whitespace-nowrap bg-bone px-6 py-2.5 text-sm font-semibold text-ink transition-transform active:scale-95"
-              >
-                Contacter
-              </Link>
+              <Button href={`/messages?item=${item.id}`}>Contacter</Button>
             ) : (
-              <Link
-                href={`/checkout/${item.id}`}
-                data-cursor="link"
-                className="flex items-center gap-2 whitespace-nowrap bg-bone px-6 py-2.5 text-sm font-semibold text-ink transition-transform active:scale-95"
-              >
+              <Button href={`/checkout/${item.id}`}>
                 <Bag className="size-4" /> Acheter
-              </Link>
+              </Button>
             )}
-            <button
-              type="button"
-              disabled={sold}
-              className="whitespace-nowrap border border-bone/30 px-4 py-2.5 text-sm font-medium text-bone transition-colors hover:bg-bone/10 active:scale-95 disabled:cursor-not-allowed disabled:border-bone/15 disabled:text-bone/40"
-            >
-              Faire une offre
-            </button>
+            {/* lot 0 : le bouton était MORT (aucun lien) — branché vers la
+                conversation vendeur, même destination que la fiche pièce */}
+            {!sold && (
+              <Button variant="outline" href={`/messages?item=${item.id}`}>
+                Faire une offre
+              </Button>
+            )}
           </div>
         </div>
       </div>

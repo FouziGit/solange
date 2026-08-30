@@ -6,6 +6,7 @@ import { type Community } from "@/lib/mock";
 import { useStore } from "@/lib/store";
 import { PageShell } from "@/components/ui/PageShell";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { TogglePill } from "@/components/ui/TogglePill";
 import { Avatar } from "@/components/chrome/Avatar";
 import { Verified, Users, Comment, Check } from "@/components/chrome/icons";
 import { compact } from "@/lib/utils";
@@ -45,24 +46,14 @@ export function CommunityDetail({ community: c }: { community: Community }) {
         </div>
       </div>
 
-      <button
-        type="button"
-        onClick={() => toggleJoin(c.id)}
-        aria-pressed={joined}
-        className={`mt-5 flex min-h-11 w-full items-center justify-center gap-1.5 rounded-full text-sm font-semibold transition-transform active:scale-[0.98] md:w-auto md:px-8 ${
-          joined
-            ? "bg-bone/10 text-bone ring-1 ring-bone/30"
-            : "bg-bone text-ink"
-        }`}
-      >
-        {joined ? (
-          <>
-            <Check className="size-4" /> Rejoint
-          </>
-        ) : (
-          "Rejoindre le cercle"
-        )}
-      </button>
+      <TogglePill
+        on={joined}
+        onToggle={() => toggleJoin(c.id)}
+        labelOn="Rejoint"
+        labelOff="Rejoindre le cercle"
+        iconOn={<Check className="size-4" />}
+        className="mt-5 w-full md:w-auto md:px-8"
+      />
 
       <p className="mt-6 max-w-md text-[13.5px] leading-relaxed text-bone/80">
         {c.about}

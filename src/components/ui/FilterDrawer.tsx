@@ -1,6 +1,7 @@
 "use client";
 
 import { Sheet } from "./Sheet";
+import { Button } from "./Button";
 import { Chip } from "@/components/ui/Chip";
 import type { SortKey } from "@/lib/data";
 
@@ -190,18 +191,12 @@ export function FilterDrawer({
 
       {/* footer actions */}
       <div className="flex items-center justify-between gap-3 border-t border-bone/10 px-5 pb-safe pt-4">
-        <button
-          onClick={reset}
-          className="text-xs text-ash transition-colors hover:text-bone"
-        >
+        <Button variant="ghost" size="sm" onClick={reset}>
           Réinitialiser
-        </button>
-        <button
-          onClick={() => onOpenChange(false)}
-          className="rounded-full bg-bone px-5 py-2.5 text-sm font-semibold text-ink transition-transform active:scale-95"
-        >
+        </Button>
+        <Button onClick={() => onOpenChange(false)}>
           Voir {resultCount} pièce{resultCount > 1 ? "s" : ""}
-        </button>
+        </Button>
       </div>
     </Sheet>
   );

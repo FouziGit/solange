@@ -1,6 +1,7 @@
 "use client";
 
 import { motion } from "motion/react";
+import { Button } from "./Button";
 import type { Plan } from "@/lib/mock";
 import { EASE } from "@/lib/utils";
 import { Check, Crown } from "@/components/chrome/icons";
@@ -60,18 +61,14 @@ export function PlanCards({ plans }: { plans: Plan[] }) {
               ))}
             </ul>
 
-            <button
+            <Button
+              variant={featured ? "primary" : "outline"}
+              size="lg"
               disabled={plan.id === "free"}
-              className={`mt-7 w-full rounded-full py-3 text-sm font-semibold transition-transform active:scale-95 ${
-                featured
-                  ? "bg-bone text-ink"
-                  : plan.id === "free"
-                    ? "cursor-default border border-bone/15 text-ash"
-                    : "border border-bone/30 text-bone hover:bg-bone/10"
-              }`}
+              className="mt-7"
             >
               {plan.cta}
-            </button>
+            </Button>
           </motion.div>
         );
       })}

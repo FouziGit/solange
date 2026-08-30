@@ -69,7 +69,9 @@ export function CheckoutView({ item }: { item: CatalogItem }) {
   const signIn = () => {
     try {
       localStorage.removeItem("solange:onboarded");
-    } catch {}
+    } catch {
+      /* stockage indisponible — la reconnexion suffit */
+    }
     location.reload();
   };
 

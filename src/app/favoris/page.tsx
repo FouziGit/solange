@@ -6,6 +6,7 @@ import { PageShell } from "@/components/ui/PageShell";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { ProductCard } from "@/components/ui/ProductCard";
 import { Button } from "@/components/ui/Button";
+import { TogglePill } from "@/components/ui/TogglePill";
 import { Avatar } from "@/components/chrome/Avatar";
 import { Verified } from "@/components/chrome/icons";
 import { followedHandles, looks } from "@/lib/mock";
@@ -25,21 +26,14 @@ function followedCreators(): Creator[] {
 
 function FollowToggle({ handle }: { handle: string }) {
   const { isFollowing, toggleFollow } = useStore();
-  const following = isFollowing(handle);
   return (
-    <button
-      type="button"
-      onClick={() => toggleFollow(handle)}
-      aria-pressed={following}
-      data-cursor="link"
-      className={`shrink-0 rounded-full border px-4 py-1.5 text-[13px] font-medium transition-colors ${
-        following
-          ? "border-bone/20 text-bone/70 hover:border-bone/40 hover:text-bone"
-          : "border-bone bg-bone text-ink"
-      }`}
-    >
-      {following ? "Suivi" : "Suivre"}
-    </button>
+    <TogglePill
+      on={isFollowing(handle)}
+      onToggle={() => toggleFollow(handle)}
+      labelOn="Suivi"
+      labelOff="Suivre"
+      size="sm"
+    />
   );
 }
 

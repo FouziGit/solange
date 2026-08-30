@@ -1,10 +1,12 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import Link from "next/link";
+
 import { AnimatePresence, motion } from "motion/react";
 import { PageShell } from "@/components/ui/PageShell";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { Button } from "@/components/ui/Button";
+import { TogglePill } from "@/components/ui/TogglePill";
 import { LuxeMedia } from "@/components/ui/LuxeMedia";
 import { Avatar } from "@/components/chrome/Avatar";
 import { Verified, ArrowLeft, Send, Bell } from "@/components/chrome/icons";
@@ -205,23 +207,17 @@ function LiveTile({
 function RemindToggle() {
   const [on, setOn] = useState(false);
   return (
-    <button
-      type="button"
-      role="switch"
-      aria-checked={on}
+    <TogglePill
+      on={on}
+      onToggle={() => setOn((v) => !v)}
+      labelOn="Prévu"
+      labelOff="Me prévenir"
+      iconOn={<Bell className="size-3.5" />}
+      iconOff={<Bell className="size-3.5" />}
+      size="sm"
+      switchRole
       aria-label="Me prévenir au début du live"
-      onClick={() => setOn((v) => !v)}
-      data-cursor="link"
-      className={cn(
-        "flex shrink-0 items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-[13px] font-medium transition-colors",
-        on
-          ? "border-bone bg-bone text-ink"
-          : "border-bone/20 text-bone/70 hover:border-bone/40 hover:text-bone",
-      )}
-    >
-      <Bell className="size-3.5" />
-      {on ? "Prévu" : "Me prévenir"}
-    </button>
+    />
   );
 }
 
@@ -307,13 +303,9 @@ function ShoppableRail({ productIds }: { productIds: string[] }) {
               {euro(it.priceEUR)}
             </p>
           </div>
-          <Link
-            href={`/article/${it.id}`}
-            data-cursor="link"
-            className="shrink-0 rounded-full bg-bone px-3 py-1.5 text-[12px] font-semibold text-ink transition-transform active:scale-95"
-          >
+          <Button href={`/article/${it.id}`} size="sm">
             Acheter
-          </Link>
+          </Button>
         </div>
       ))}
     </div>

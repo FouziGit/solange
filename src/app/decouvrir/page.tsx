@@ -11,6 +11,7 @@ import {
   toDisplayItem,
 } from "@/components/ui/ProductCard";
 import { Chip } from "@/components/ui/Chip";
+import { TogglePill } from "@/components/ui/TogglePill";
 import { FilterDrawer, type Filters } from "@/components/ui/FilterDrawer";
 import { Avatar } from "@/components/chrome/Avatar";
 import { categories, conditions, trendingTags } from "@/lib/mock";
@@ -52,7 +53,13 @@ function DecouvrirInner() {
   const [focused, setFocused] = useState(false);
   const [drawer, setDrawer] = useState(false);
   const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS);
-  const { isFollowing, toggleFollow, serverProducts } = useStore();
+  const {
+    isFollowing,
+    toggleFollow,
+    serverProducts,
+    productsError,
+    refreshProducts,
+  } = useStore();
 
   const sizes = useMemo(() => catalogSizes(), []);
   const brands = useMemo(() => catalogBrands(), []);
@@ -169,6 +176,29 @@ function DecouvrirInner() {
           )}
         </button>
       </div>
+
+      {/* échec /api/products : les annonces membres manquent — on le dit
+          (lot 0 : plus d'échec réseau muet), le catalogue reste complet */}
+      {productsError && (
+        <div
+          role="status"
+          aria-live="polite"
+          className="mt-4 flex flex-wrap items-center justify-between gap-3 border border-bone/15 px-4 py-3"
+        >
+          <p className="text-[13px] text-ash">
+            Les annonces membres n&apos;ont pas chargé. Le catalogue reste
+            complet.
+          </p>
+          <button
+            type="button"
+            onClick={() => void refreshProducts()}
+            data-cursor="link"
+            className="text-[13px] font-semibold text-bone underline-offset-4 hover:underline"
+          >
+            Réessayer
+          </button>
+        </div>
+      )}
 
       {/* suggestions — visible while the field is focused & empty */}
       {focused && !hasQuery && (
@@ -339,20 +369,12 @@ function DecouvrirInner() {
                       </span>
                     </span>
                   </Link>
-                  <button
-                    type="button"
-                    data-cursor="link"
-                    onClick={() => toggleFollow(c.handle)}
-                    aria-pressed={followed}
-                    className={cn(
-                      "min-h-11 shrink-0 border px-4 text-[12px] font-semibold transition-colors",
-                      followed
-                        ? "border-bone/25 text-bone/70 hover:border-bone/40"
-                        : "border-bone bg-bone text-ink hover:bg-bone/90",
-                    )}
-                  >
-                    {followed ? "Suivi" : "Suivre"}
-                  </button>
+                  <TogglePill
+                    on={followed}
+                    onToggle={() => toggleFollow(c.handle)}
+                    labelOn="Suivi"
+                    labelOff="Suivre"
+                  />
                 </li>
               );
             })}

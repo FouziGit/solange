@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { Button } from "@/components/ui/Button";
 import { PageShell } from "@/components/ui/PageShell";
 import { LogoMark } from "@/components/chrome/Brandmark";
 
@@ -17,13 +17,9 @@ export default function NotFound() {
           Cette pièce a quitté la vitrine. Le lien est peut-être périmé, ou la
           page a été déplacée.
         </p>
-        <Link
-          href="/"
-          data-cursor="link"
-          className="mt-8 rounded-none bg-bone px-6 py-3 text-sm font-semibold text-ink transition-transform active:scale-95"
-        >
+        <Button href="/" className="mt-8">
           Retour à l’accueil
-        </Link>
+        </Button>
       </div>
     </PageShell>
   );

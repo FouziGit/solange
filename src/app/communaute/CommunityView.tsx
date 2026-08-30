@@ -7,6 +7,7 @@ import { communities, type Community } from "@/lib/mock";
 import { useStore } from "@/lib/store";
 import { PageShell } from "@/components/ui/PageShell";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { TogglePill } from "@/components/ui/TogglePill";
 import { Avatar } from "@/components/chrome/Avatar";
 import { Search, Users, Check } from "@/components/chrome/icons";
 import { compact } from "@/lib/utils";
@@ -109,27 +110,17 @@ function CommunityRow({
           </p>
         </div>
 
-        <button
-          type="button"
-          onClick={(e) => {
+        <TogglePill
+          on={joined}
+          onToggle={(e) => {
             e.preventDefault();
             toggleJoin(c.id);
           }}
-          aria-pressed={joined}
-          className={`flex min-h-9 shrink-0 items-center gap-1.5 rounded-full px-3.5 text-[12px] font-semibold transition-colors active:scale-95 ${
-            joined
-              ? "bg-bone/10 text-bone ring-1 ring-bone/30"
-              : "bg-bone text-ink"
-          }`}
-        >
-          {joined ? (
-            <>
-              <Check className="size-3.5" /> Rejoint
-            </>
-          ) : (
-            "Rejoindre"
-          )}
-        </button>
+          labelOn="Rejoint"
+          labelOff="Rejoindre"
+          iconOn={<Check className="size-3.5" />}
+          size="sm"
+        />
       </Link>
     </motion.div>
   );

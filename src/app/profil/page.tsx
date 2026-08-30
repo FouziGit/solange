@@ -6,6 +6,7 @@ import Link from "next/link";
 import { motion } from "motion/react";
 import { PageShell } from "@/components/ui/PageShell";
 import { ProductCard } from "@/components/ui/ProductCard";
+import { SkeletonRow } from "@/components/ui/Skeleton";
 import { Avatar } from "@/components/chrome/Avatar";
 import { AnimatePresence } from "motion/react";
 import { invite, looks, me } from "@/lib/mock";
@@ -79,12 +80,10 @@ function ReferralCard() {
           <span className="flex-1 select-all font-display text-[15px] font-bold tracking-[0.12em] text-bone">
             {invite.code}
           </span>
-          <button
-            type="button"
+          <Button
+            size="sm"
             onClick={copy}
             aria-label="Copier le code de parrainage"
-            data-cursor="link"
-            className="inline-flex items-center gap-1.5 rounded-full bg-bone px-3.5 py-2 text-[13px] font-semibold text-ink transition-transform active:scale-95"
           >
             {copied ? (
               <>
@@ -93,7 +92,7 @@ function ReferralCard() {
             ) : (
               "Copier le code"
             )}
-          </button>
+          </Button>
         </div>
 
         {/* reward ladder with pips */}
@@ -142,6 +141,7 @@ export default function ProfilPage() {
   // Mes annonces (toutes, y compris vendues/retirées) + mes ventes — serveur.
   const [myProds, setMyProds] = useState<ApiProduct[]>([]);
   const [sales, setSales] = useState<ApiOrder[]>([]);
+  const [mineLoading, setMineLoading] = useState(false);
   const [withdrawing, setWithdrawing] = useState<string | null>(null);
 
   // suppression de compte — confirmation en 2 temps
@@ -161,6 +161,7 @@ export default function ProfilPage() {
   };
 
   const loadMine = useCallback(async () => {
+    setMineLoading(true);
     const [p, s, st] = await Promise.all([
       api.myProducts(),
       api.sales(),
@@ -169,6 +170,7 @@ export default function ProfilPage() {
     if (p.ok) setMyProds(p.data.products);
     if (s.ok) setSales(s.data.orders);
     if (st.ok) setDmOpen(st.data.dmOpen);
+    setMineLoading(false);
   }, []);
 
   useEffect(() => {
@@ -196,7 +198,9 @@ export default function ProfilPage() {
   const reconnect = () => {
     try {
       localStorage.removeItem("solange:onboarded");
-    } catch {}
+    } catch {
+      /* stockage indisponible — la reconnexion suffit */
+    }
     location.reload();
   };
 
@@ -204,7 +208,9 @@ export default function ProfilPage() {
     await signOut();
     try {
       localStorage.removeItem("solange:onboarded");
-    } catch {}
+    } catch {
+      /* stockage indisponible — la reconnexion suffit */
+    }
     location.assign("/");
   };
 
@@ -219,7 +225,9 @@ export default function ProfilPage() {
     }
     try {
       localStorage.removeItem("solange:onboarded");
-    } catch {}
+    } catch {
+      /* stockage indisponible — la reconnexion suffit */
+    }
     location.assign("/");
   };
 
@@ -385,6 +393,16 @@ export default function ProfilPage() {
               </div>
             ))}
           </div>
+        </div>
+      )}
+
+      {/* sections serveur en cours de chargement : squelette fidèle plutôt
+          qu'une apparition d'un coup (matrice des états, profil/chargement) */}
+      {user && mineLoading && (
+        <div aria-busy="true" className="mt-8 flex flex-col gap-2 md:max-w-md">
+          <SkeletonRow />
+          <SkeletonRow />
+          <SkeletonRow />
         </div>
       )}
 

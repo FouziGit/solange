@@ -1,5 +1,6 @@
 "use client";
 
+import { Button } from "@/components/ui/Button";
 import { PageShell } from "@/components/ui/PageShell";
 import { LogoMark } from "@/components/chrome/Brandmark";
 
@@ -27,14 +28,9 @@ export default function Error({
             réf. {error.digest}
           </p>
         )}
-        <button
-          type="button"
-          onClick={() => reset()}
-          data-cursor="link"
-          className="mt-8 rounded-none bg-bone px-6 py-3 text-sm font-semibold text-ink transition-transform active:scale-95"
-        >
+        <Button onClick={() => reset()} className="mt-8">
           Réessayer
-        </button>
+        </Button>
       </div>
     </PageShell>
   );
