@@ -96,6 +96,24 @@ Chaque entrée : décision, alternative écartée, raison. Relire en début de p
   aux données à sécuriser en double. La page respecte l'esprit de D-013 :
   UN fetch, squelette DA, zéro cascade. D-013 vise les pages de contenu
   public (gate/feed/marché) — les écrans membres restent client.
+
+## Brief 2 — Lot 2
+
+- **D-018 — Épinglage réservé au rôle `admin`.** Le brief donne l'épinglage
+  « au créateur du Cercle », mais les animateurs des Cercles seed sont des
+  personas fictifs sans compte. Les vrais animateurs sont Nouh et Youssef :
+  l'endpoint `pin` est prêt et vérifie `role === "admin"` sur le compte
+  (403 pour tous tant que le script du Lot 4 n'a pas attribué le rôle).
+  Alternative écartée : un champ « hostEmail » par Cercle (2ᵉ source de
+  vérité des rôles).
+- **D-019 — Fraîcheur par revalidation discrète, pas de temps réel.** Le
+  stack n'a aucune infra websocket/SSE ; les fils revalident en silence
+  toutes les 30 s quand l'écran est ouvert, sans saut de mise en page
+  (comparaison par id). Alternative écartée : ajouter Pusher/Ably (nouvelle
+  dépendance + compte tiers, interdit sans justification forte).
+- Le compteur « en ligne » mock des Cercles est SUPPRIMÉ (engagement
+  fabriqué) ; « discussions » devient le compte réel de fils.
+
 - **D-015 — Échecs réseau : bandeau inline, pas de Toast global.** Le
   pattern erreur (cause + remède + Réessayer) se pose DANS l'écran concerné
   (bandeau au Marché/Messages, chip sur le feed) ; le besoin d'un Toast

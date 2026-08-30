@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useStore } from "@/lib/store";
 import { Sheet } from "../ui/Sheet";
 import { motion } from "motion/react";
 import {
@@ -49,6 +50,7 @@ const items: TabItem[] = [
 export function MobileTabBar() {
   const pathname = usePathname();
   const [composeOpen, setComposeOpen] = useState(false);
+  const { circlesUnread } = useStore();
 
   const left = items.slice(0, 2);
   const right = items.slice(2);
@@ -66,6 +68,7 @@ export function MobileTabBar() {
             Icon={Icon}
             on={match(pathname)}
             live={live}
+            badge={href === "/communaute" && circlesUnread > 0}
           />
         ))}
 
@@ -91,6 +94,7 @@ export function MobileTabBar() {
             Icon={Icon}
             on={match(pathname)}
             live={live}
+            badge={href === "/communaute" && circlesUnread > 0}
           />
         ))}
       </nav>
@@ -131,12 +135,15 @@ function TabLink({
   Icon,
   on,
   live,
+  badge,
 }: {
   href: string;
   label: string;
   Icon: (p: React.SVGProps<SVGSVGElement>) => React.JSX.Element;
   on: boolean;
   live?: boolean;
+  /** Non-lus (Cercles) : point plein, calme — le ping reste au live. */
+  badge?: boolean;
 }) {
   return (
     <Link
@@ -152,6 +159,12 @@ function TabLink({
             <span className="absolute inline-flex size-full animate-ping rounded-full bg-bone opacity-70" />
             <span className="relative inline-flex size-1.5 rounded-full bg-bone" />
           </span>
+        )}
+        {badge && !live && (
+          <span
+            className="absolute -right-1 -top-0.5 size-1.5 rounded-full bg-bone"
+            aria-label="Du nouveau dans tes cercles"
+          />
         )}
       </span>
       <span

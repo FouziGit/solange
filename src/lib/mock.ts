@@ -1317,16 +1317,6 @@ export const streams: Stream[] = [
 
 /* ---------- Communautés (cercles créateurs) ---------- */
 
-export type CommunityThread = {
-  author: string;
-  handle: string;
-  seed: string;
-  title: string;
-  excerpt: string;
-  replies: number;
-  time: string;
-};
-
 export type Community = {
   id: string;
   name: string;
@@ -1334,13 +1324,10 @@ export type Community = {
   about: string;
   host: Creator;
   members: number;
-  posts: number;
-  online: number;
   topics: string[];
   seed: string;
   /** Avatars de membres mis en avant (aperçu de la pile). */
   memberSeeds: string[];
-  threads: CommunityThread[];
 };
 
 export const communities: Community[] = [
@@ -1352,8 +1339,6 @@ export const communities: Community[] = [
       "Du bling des 2000s au quiet luxury de la nouvelle scène : on décortique comment le rap dicte les tendances, des grails portés en clip aux collabs qui font flamber la cote en seconde main.",
     host: creators.samir,
     members: 18400,
-    posts: 1240,
-    online: 312,
     topics: ["#rap", "#grails", "#collabs", "#culture"],
     seed: "solange-cm-rap-mode",
     memberSeeds: [
@@ -1362,28 +1347,6 @@ export const communities: Community[] = [
       "maya-d-55",
       "yuki-p-12",
       "lou-mercier-21",
-    ],
-    threads: [
-      {
-        author: "Samir Benali",
-        handle: "samir.fits",
-        seed: "samir-b-09",
-        title: "Pourquoi le Carhartt est redevenu un symbole rap",
-        excerpt:
-          "Entre Detroit et la drill parisienne, le workwear a changé de sens. On en parle avant le prochain drop.",
-        replies: 84,
-        time: "Il y a 2 h",
-      },
-      {
-        author: "Théo Laurent",
-        handle: "theo.grail",
-        seed: "theo-grail-3",
-        title: "Les grails Gaultier vus dans les clips 90s",
-        excerpt:
-          "La chemise mesh cyber, c'est direct sorti d'un clip. Fil de repérage des pièces d'archive portées à l'écran.",
-        replies: 51,
-        time: "Hier",
-      },
     ],
   },
   {
@@ -1394,33 +1357,9 @@ export const communities: Community[] = [
       "Un cercle pour les chineur·euses d'archive : Margiela déconstruit, Helmut Lang 99, Issey plissé. On documente la provenance, on partage les trouvailles, on transmet.",
     host: creators.maya,
     members: 9800,
-    posts: 870,
-    online: 143,
     topics: ["#archive", "#margiela", "#provenance", "#slowfashion"],
     seed: "solange-cm-archive-culture",
     memberSeeds: ["maya-d-55", "lou-mercier-21", "neige-77", "theo-grail-3"],
-    threads: [
-      {
-        author: "Maya Diallo",
-        handle: "maya.curates",
-        seed: "maya-d-55",
-        title: "Reconnaître un vrai Margiela d'archive",
-        excerpt:
-          "Étiquette blanche cousue aux 4 coins, numéros entourés : le guide anti-contrefaçon de la communauté.",
-        replies: 132,
-        time: "Il y a 5 h",
-      },
-      {
-        author: "Neige",
-        handle: "neige.vintage",
-        seed: "neige-77",
-        title: "Issey Miyake : entretenir le plissé technique",
-        excerpt:
-          "Comment laver, plier et transmettre une pièce Pleats Please sans jamais l'abîmer.",
-        replies: 47,
-        time: "Lun",
-      },
-    ],
   },
   {
     id: "cm3",
@@ -1430,8 +1369,6 @@ export const communities: Community[] = [
       "Skate, gorpcore, workwear, sneakers : on remonte le fil des sous-cultures et de leurs codes. Débats, drops et sélections partagées chaque semaine.",
     host: creators.yuki,
     members: 24100,
-    posts: 2010,
-    online: 508,
     topics: ["#streetwear", "#gorpcore", "#sneakers", "#skate"],
     seed: "solange-cm-street-origines",
     memberSeeds: [
@@ -1440,28 +1377,6 @@ export const communities: Community[] = [
       "lou-mercier-21",
       "maya-d-55",
       "neige-77",
-    ],
-    threads: [
-      {
-        author: "Yuki Tanaka",
-        handle: "yuki.paris",
-        seed: "yuki-p-12",
-        title: "Gorpcore : effet de mode ou vestiaire durable ?",
-        excerpt:
-          "La Beta Arc'teryx traverse les saisons. On débat de la technique comme investissement seconde main.",
-        replies: 76,
-        time: "Il y a 3 h",
-      },
-      {
-        author: "Lou Mercier",
-        handle: "lou.archive",
-        seed: "lou-mercier-21",
-        title: "Les Puces, meilleure école du style ?",
-        excerpt:
-          "Retour sur dix ans de chine aux allées Vernaison. Vos meilleures trouvailles à moins de 20 €.",
-        replies: 63,
-        time: "Hier",
-      },
     ],
   },
   {
@@ -1472,23 +1387,9 @@ export const communities: Community[] = [
       "Lemaire, The Row, Margiela : le vestiaire discret qui se reconnaît à la coupe, pas à l'étiquette. Curations, entretien des matières et bons plans dépôt-vente.",
     host: creators.neige,
     members: 7200,
-    posts: 540,
-    online: 89,
     topics: ["#quietluxury", "#lemaire", "#minimal", "#tailoring"],
     seed: "solange-cm-quiet-luxury",
     memberSeeds: ["neige-77", "maya-d-55", "theo-grail-3"],
-    threads: [
-      {
-        author: "Maya Diallo",
-        handle: "maya.curates",
-        seed: "maya-d-55",
-        title: "Le Croissant bag Lemaire, pièce de fond de vestiaire",
-        excerpt:
-          "Pourquoi il reste le sac le plus recherché de la maison en seconde main. Vos avis.",
-        replies: 39,
-        time: "Il y a 1 j",
-      },
-    ],
   },
 ];
 

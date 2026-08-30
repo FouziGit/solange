@@ -12,9 +12,7 @@ import {
   readJson,
   rateLimit,
 } from "./_shared/core.mts";
-
-const IMG_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
-const MAX_IMG_BYTES = 1_800_000;
+import { storeImages } from "./_shared/media.mts";
 
 export default async (req: Request) => {
   const posts = store("posts");
@@ -47,24 +45,10 @@ export default async (req: Request) => {
     .slice(0, 5)
     .map((t) => String(t).slice(0, 30));
 
-  const imgs = store("imgs");
-  const gallery: string[] = [];
-  for (const dataUrl of (b?.images ?? []).slice(0, 4)) {
-    const m = /^data:(image\/(?:jpeg|png|webp));base64,(.+)$/.exec(
-      dataUrl ?? "",
-    );
-    if (!m || !IMG_TYPES.has(m[1])) return bad("Format de photo non supporté");
-    const buf = Buffer.from(m[2], "base64");
-    if (buf.byteLength > MAX_IMG_BYTES)
-      return bad("Photo trop lourde (max ~1,8 Mo)");
-    const iid = newId("i");
-    const ab = buf.buffer.slice(
-      buf.byteOffset,
-      buf.byteOffset + buf.byteLength,
-    ) as ArrayBuffer;
-    await imgs.set(iid, ab, { metadata: { contentType: m[1] } });
-    gallery.push(`/api/img/${iid}`);
-  }
+  // pipeline média mutualisé (lot 2) — même validation pour posts et Cercles
+  const stored = await storeImages(b?.images ?? [], 4);
+  if (!stored.ok) return bad(stored.error);
+  const gallery = stored.paths;
 
   const id = newId("l");
   const post = {

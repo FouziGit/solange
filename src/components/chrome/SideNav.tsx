@@ -6,24 +6,84 @@ import { usePathname } from "next/navigation";
 import { AnimatePresence, motion } from "motion/react";
 import { LogoMark } from "./Brandmark";
 import { Avatar } from "./Avatar";
-import { Home, Compass, Live, Plus, Chat, Heart, Bell, Grid, Users } from "./icons";
+import {
+  Home,
+  Compass,
+  Live,
+  Plus,
+  Chat,
+  Heart,
+  Bell,
+  Grid,
+  Users,
+} from "./icons";
 import { streams } from "@/lib/mock";
+import { useStore } from "@/lib/store";
 
 const anyLive = streams.some((s) => s.live);
 
 const items = [
-  { href: "/", label: "Looks", Icon: Home, match: (p: string) => p === "/", live: false },
-  { href: "/live", label: "Live", Icon: Live, match: (p: string) => p.startsWith("/live"), live: anyLive },
-  { href: "/decouvrir", label: "Marché", Icon: Compass, match: (p: string) => p.startsWith("/decouvrir"), live: false },
-  { href: "/journal", label: "Journal", Icon: Grid, match: (p: string) => p.startsWith("/journal") || p.startsWith("/article"), live: false },
-  { href: "/communaute", label: "Cercles", Icon: Users, match: (p: string) => p.startsWith("/communaute"), live: false },
-  { href: "/favoris", label: "Gardées", Icon: Heart, match: (p: string) => p.startsWith("/favoris"), live: false },
-  { href: "/messages", label: "Messages", Icon: Chat, match: (p: string) => p.startsWith("/messages"), live: false },
-  { href: "/notifications", label: "Notifications", Icon: Bell, match: (p: string) => p.startsWith("/notifications"), live: false },
+  {
+    href: "/",
+    label: "Looks",
+    Icon: Home,
+    match: (p: string) => p === "/",
+    live: false,
+  },
+  {
+    href: "/live",
+    label: "Live",
+    Icon: Live,
+    match: (p: string) => p.startsWith("/live"),
+    live: anyLive,
+  },
+  {
+    href: "/decouvrir",
+    label: "Marché",
+    Icon: Compass,
+    match: (p: string) => p.startsWith("/decouvrir"),
+    live: false,
+  },
+  {
+    href: "/journal",
+    label: "Journal",
+    Icon: Grid,
+    match: (p: string) => p.startsWith("/journal") || p.startsWith("/article"),
+    live: false,
+  },
+  {
+    href: "/communaute",
+    label: "Cercles",
+    Icon: Users,
+    match: (p: string) => p.startsWith("/communaute"),
+    live: false,
+  },
+  {
+    href: "/favoris",
+    label: "Gardées",
+    Icon: Heart,
+    match: (p: string) => p.startsWith("/favoris"),
+    live: false,
+  },
+  {
+    href: "/messages",
+    label: "Messages",
+    Icon: Chat,
+    match: (p: string) => p.startsWith("/messages"),
+    live: false,
+  },
+  {
+    href: "/notifications",
+    label: "Notifications",
+    Icon: Bell,
+    match: (p: string) => p.startsWith("/notifications"),
+    live: false,
+  },
 ];
 
 export function SideNav() {
   const pathname = usePathname();
+  const { circlesUnread } = useStore();
   const [composeOpen, setComposeOpen] = useState(false);
   const composeRef = useRef<HTMLDivElement>(null);
 
@@ -31,7 +91,8 @@ export function SideNav() {
   useEffect(() => {
     if (!composeOpen) return;
     const onPointer = (e: PointerEvent) => {
-      if (!composeRef.current?.contains(e.target as Node)) setComposeOpen(false);
+      if (!composeRef.current?.contains(e.target as Node))
+        setComposeOpen(false);
     };
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") setComposeOpen(false);
@@ -57,6 +118,7 @@ export function SideNav() {
       <nav className="flex flex-1 flex-col items-center justify-center gap-2">
         {items.map(({ href, label, Icon, match, live }) => {
           const on = match(pathname);
+          const badge = href === "/communaute" && circlesUnread > 0;
           return (
             <Link
               key={href}
@@ -87,6 +149,12 @@ export function SideNav() {
                     <span className="absolute inline-flex size-full animate-ping rounded-full bg-bone opacity-70" />
                     <span className="relative inline-flex size-2 rounded-full bg-bone ring-2 ring-ink" />
                   </span>
+                )}
+                {badge && !live && (
+                  <span
+                    className="absolute -right-1 -top-0.5 size-2 rounded-full bg-bone ring-2 ring-ink"
+                    aria-label="Du nouveau dans tes cercles"
+                  />
                 )}
               </span>
               <span
@@ -155,7 +223,11 @@ export function SideNav() {
 
       <Link href="/profil" className="group relative" aria-label="Mon profil">
         <span className="absolute -inset-[3px] rounded-full bg-gradient-to-tr from-bone to-bone/40 opacity-70 blur-[1px] transition-opacity group-hover:opacity-100" />
-        <Avatar name="Nouh B" seed="solange-me-01" className="relative size-10 text-lg" />
+        <Avatar
+          name="Nouh B"
+          seed="solange-me-01"
+          className="relative size-10 text-lg"
+        />
       </Link>
     </aside>
   );

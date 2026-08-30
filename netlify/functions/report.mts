@@ -14,7 +14,7 @@ import {
   APP_URL,
 } from "./_shared/core.mts";
 
-const TYPES = new Set(["product", "post", "user", "message"]);
+const TYPES = new Set(["product", "post", "user", "message", "thread"]);
 
 export default async (req: Request) => {
   if (req.method !== "POST") return bad("Méthode non autorisée", 405);

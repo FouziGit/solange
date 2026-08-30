@@ -21,7 +21,7 @@ export function ReportSheet({
 }: {
   open: boolean;
   onClose: () => void;
-  targetType: "product" | "post" | "user" | "message";
+  targetType: "product" | "post" | "user" | "message" | "thread";
   targetId: string;
   targetLabel: string;
 }) {

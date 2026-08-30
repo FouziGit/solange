@@ -110,7 +110,7 @@ export type SocialState = {
 
 export type ApiNotif = {
   id: string;
-  type: "sale" | "message" | "follow" | "report" | "order";
+  type: "sale" | "message" | "follow" | "report" | "order" | "circle";
   text: string;
   link: string;
   at: number;
@@ -122,6 +122,32 @@ export type PublicProfile = {
   dmOpen?: boolean;
   products: ApiProduct[];
   posts: ApiPost[];
+};
+
+/** Fil de Cercle tel que servi par /api/circles (likedBy reste privé). */
+export type ApiThread = {
+  id: string;
+  circleId: string;
+  authorId: string;
+  authorHandle: string;
+  authorName: string;
+  title: string;
+  text?: string;
+  image?: string;
+  createdAt: number;
+  lastActivityAt: number;
+  replyCount: number;
+  likes: number;
+  liked: boolean;
+  pinned?: boolean;
+};
+
+export type ApiCircleReply = {
+  id: string;
+  authorId: string;
+  authorHandle: string;
+  text: string;
+  at: number;
 };
 
 async function request<T>(
@@ -257,6 +283,47 @@ export const api = {
     request<{ ok: boolean; post: ApiPost }>("/api/posts", {
       method: "POST",
       body: JSON.stringify(p),
+    }),
+  /* — Cercles (lot 2) — */
+  circleThreads: (circleId: string) =>
+    request<{ threads: ApiThread[]; lastSeenAt: number }>(
+      `/api/circles?circle=${encodeURIComponent(circleId)}`,
+    ),
+  circleThread: (threadId: string) =>
+    request<{ thread: ApiThread; replies: ApiCircleReply[] }>(
+      `/api/circles?thread=${encodeURIComponent(threadId)}`,
+    ),
+  circlesUnread: () =>
+    request<{ count: number; circleIds: string[] }>("/api/circles?unread=1"),
+  circleSeen: (circleId: string) =>
+    request<{ ok: boolean }>("/api/circles", {
+      method: "POST",
+      body: JSON.stringify({ op: "seen", circleId }),
+    }),
+  circleNewThread: (p: {
+    circleId: string;
+    title: string;
+    text?: string;
+    image?: string;
+  }) =>
+    request<{ ok: boolean; thread: ApiThread }>("/api/circles", {
+      method: "POST",
+      body: JSON.stringify({ op: "thread", ...p }),
+    }),
+  circleReply: (threadId: string, text: string) =>
+    request<{ ok: boolean; reply: ApiCircleReply }>("/api/circles", {
+      method: "POST",
+      body: JSON.stringify({ op: "reply", threadId, text }),
+    }),
+  circleLike: (threadId: string) =>
+    request<{ ok: boolean; liked: boolean; likes: number }>("/api/circles", {
+      method: "POST",
+      body: JSON.stringify({ op: "like", threadId }),
+    }),
+  circleDelete: (threadId: string, replyId?: string) =>
+    request<{ ok: boolean }>("/api/circles", {
+      method: "POST",
+      body: JSON.stringify({ op: "delete", threadId, replyId }),
     }),
   conversations: () =>
     request<{ conversations: ApiConversation[] }>("/api/messages"),

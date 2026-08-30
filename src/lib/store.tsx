@@ -77,6 +77,9 @@ type Store = {
   /* — échecs réseau à annoncer (lot 0 : plus d'échec muet) — */
   productsError: boolean;
   postsError: boolean;
+  /* — Cercles : badge non-lus (lot 2) — */
+  circlesUnread: number;
+  refreshCirclesUnread(): Promise<void>;
   isSold(id: string): boolean;
   isBlocked(handle: string): boolean;
   toggleBlock(handle: string): void;
@@ -135,6 +138,7 @@ export function SolangeProvider({ children }: { children: ReactNode }) {
   const [memberPosts, setMemberPosts] = useState<ApiPost[]>([]);
   const [productsError, setProductsError] = useState(false);
   const [postsError, setPostsError] = useState(false);
+  const [circlesUnread, setCirclesUnread] = useState(0);
 
   const refreshSession = useCallback(async () => {
     try {
@@ -200,14 +204,21 @@ export function SolangeProvider({ children }: { children: ReactNode }) {
     setPostsError(!res.ok);
   }, []);
 
+  const refreshCirclesUnread = useCallback(async () => {
+    const res = await api.circlesUnread();
+    // silencieux : un badge absent n'est pas un échec à annoncer
+    if (res.ok) setCirclesUnread(res.data.count);
+  }, []);
+
   useEffect(() => {
     // hydratation réseau différée d'un tick — jamais de setState synchrone
     queueMicrotask(() => {
       void refreshSession();
       void refreshProducts();
       void refreshPosts();
+      void refreshCirclesUnread();
     });
-  }, [refreshSession, refreshProducts, refreshPosts]);
+  }, [refreshSession, refreshProducts, refreshPosts, refreshCirclesUnread]);
 
   const addOrder = useCallback(
     (order: Order) => setOrders((cur) => [order, ...cur]),
@@ -345,6 +356,8 @@ export function SolangeProvider({ children }: { children: ReactNode }) {
       refreshPosts,
       productsError,
       postsError,
+      circlesUnread,
+      refreshCirclesUnread,
       isSold,
       isBlocked,
       toggleBlock,
@@ -373,6 +386,8 @@ export function SolangeProvider({ children }: { children: ReactNode }) {
       refreshPosts,
       productsError,
       postsError,
+      circlesUnread,
+      refreshCirclesUnread,
       isSold,
       isBlocked,
       toggleBlock,

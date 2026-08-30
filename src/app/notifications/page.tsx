@@ -5,7 +5,7 @@ import Link from "next/link";
 import { PageShell } from "@/components/ui/PageShell";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Avatar } from "@/components/chrome/Avatar";
-import { Bell, Bag, Chat, Plus } from "@/components/chrome/icons";
+import { Bell, Bag, Chat, Plus, Users } from "@/components/chrome/icons";
 import { notifications as mockNotifications } from "@/lib/mock";
 import { api, type ApiNotif } from "@/lib/api";
 import { useStore } from "@/lib/store";
@@ -32,9 +32,11 @@ function NotifIcon({ type }: { type: ApiNotif["type"] }) {
       ? Bag
       : type === "message"
         ? Chat
-        : type === "follow"
-          ? Plus
-          : Bell;
+        : type === "circle"
+          ? Users
+          : type === "follow"
+            ? Plus
+            : Bell;
   return (
     <span className="grid size-11 shrink-0 place-items-center rounded-full bg-bone/10 text-bone/85">
       <Icon className="size-5" />
