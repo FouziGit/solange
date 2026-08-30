@@ -26,7 +26,12 @@ import {
   savedIds,
   type CatalogItem,
 } from "@/lib/mock";
-import { api, type ApiProduct, type SessionUser } from "@/lib/api";
+import {
+  api,
+  type ApiPost,
+  type ApiProduct,
+  type SessionUser,
+} from "@/lib/api";
 
 /** A completed (simulated) purchase — recorded for the profile order history. */
 export type Order = {
@@ -62,6 +67,11 @@ type Store = {
   serverProducts: ApiProduct[];
   soldSeeds: string[];
   refreshProducts(): Promise<void>;
+  /* — publications membres (fil) — préchargées pendant le splash pour que
+     le feed monte complet : plus d'insertion tardive qui fait sauter le
+     scroll-snap à l'ouverture (jank PWA). */
+  memberPosts: ApiPost[];
+  refreshPosts(): Promise<void>;
   isSold(id: string): boolean;
   isBlocked(handle: string): boolean;
   toggleBlock(handle: string): void;
@@ -117,6 +127,7 @@ export function SolangeProvider({ children }: { children: ReactNode }) {
   const [soldSeeds, setSoldSeeds] = useState<string[]>([]);
   const [likesMap, setLikesMap] = useState<Record<string, number>>({});
   const [blocked, setBlocked] = useState<Set<string>>(() => new Set());
+  const [memberPosts, setMemberPosts] = useState<ApiPost[]>([]);
 
   const refreshSession = useCallback(async () => {
     try {
@@ -165,13 +176,27 @@ export function SolangeProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  const refreshPosts = useCallback(async () => {
+    const res = await api.posts();
+    if (res.ok) {
+      const next = res.data.posts;
+      // pas de re-render si la liste n'a pas bougé (revalidation silencieuse)
+      setMemberPosts((cur) =>
+        cur.length === next.length && cur.every((p, i) => p.id === next[i].id)
+          ? cur
+          : next,
+      );
+    }
+  }, []);
+
   useEffect(() => {
     // hydratation réseau différée d'un tick — jamais de setState synchrone
     queueMicrotask(() => {
       void refreshSession();
       void refreshProducts();
+      void refreshPosts();
     });
-  }, [refreshSession, refreshProducts]);
+  }, [refreshSession, refreshProducts, refreshPosts]);
 
   const addOrder = useCallback(
     (order: Order) => setOrders((cur) => [order, ...cur]),
@@ -305,6 +330,8 @@ export function SolangeProvider({ children }: { children: ReactNode }) {
       serverProducts,
       soldSeeds,
       refreshProducts,
+      memberPosts,
+      refreshPosts,
       isSold,
       isBlocked,
       toggleBlock,
@@ -329,6 +356,8 @@ export function SolangeProvider({ children }: { children: ReactNode }) {
       serverProducts,
       soldSeeds,
       refreshProducts,
+      memberPosts,
+      refreshPosts,
       isSold,
       isBlocked,
       toggleBlock,

@@ -47,7 +47,14 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
   if (!ready) {
     return (
       <div className="theme-dark fixed inset-0 z-[100] grid place-items-center bg-noir">
-        <span className="pulse-ring rounded-full">
+        <span className="relative grid place-items-center">
+          {/* anneau séparé animé en transform/opacity (composité GPU) : un
+              box-shadow animé repeindrait toute la zone à chaque frame et
+              fait trembler le splash sur mobile (jank à l'ouverture PWA) */}
+          <span
+            aria-hidden
+            className="pulse-ring absolute -inset-3 rounded-full border border-bone/40"
+          />
           <LogoMark variant="white" className="size-16" />
         </span>
       </div>

@@ -341,15 +341,17 @@ body {
   }
 }
 
+/* transform/opacity uniquement : composité GPU, zéro repaint par frame
+   (l'ancien box-shadow animé faisait trembler le splash sur mobile) */
 @keyframes pulse-ring {
   0% {
-    box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.5);
+    transform: scale(0.72);
+    opacity: 0.55;
   }
-  70% {
-    box-shadow: 0 0 0 12px rgba(255, 255, 255, 0);
-  }
+  70%,
   100% {
-    box-shadow: 0 0 0 0 rgba(255, 255, 255, 0);
+    transform: scale(1.22);
+    opacity: 0;
   }
 }
 .pulse-ring {

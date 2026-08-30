@@ -3,7 +3,6 @@
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { looks } from "@/lib/mock";
-import { api, type ApiPost } from "@/lib/api";
 import { useStore } from "@/lib/store";
 import { FeedCard } from "./FeedCard";
 import { MemberPostCard } from "./MemberPostCard";
@@ -13,25 +12,19 @@ export function VideoFeed() {
   const containerRef = useRef<HTMLDivElement>(null);
   const [active, setActive] = useState(0);
   const reduce = useReducedMotion();
-  const { isBlocked } = useStore();
+  const { isBlocked, memberPosts, refreshPosts } = useStore();
   const visibleLooks = looks;
 
-  // publications membres (backend) — prépendues avant les looks éditoriaux.
-  // En cas d'échec réseau le fil reste complet avec les looks : dégradation
-  // silencieuse, pas d'état d'erreur bloquant.
-  const [memberPosts, setMemberPosts] = useState<ApiPost[]>([]);
+  // Publications membres — lues depuis le store, PRÉCHARGÉES pendant le
+  // splash : le fil monte complet, sans insertion tardive qui ferait sauter
+  // le scroll-snap. La revalidation au montage rattrape un post publié entre
+  // temps ; en cas d'échec réseau le fil reste complet avec les looks.
   const visiblePosts = memberPosts.filter((p) => !isBlocked(p.authorHandle));
   const total = visiblePosts.length + visibleLooks.length;
 
   useEffect(() => {
-    let cancelled = false;
-    void api.posts().then((res) => {
-      if (!cancelled && res.ok) setMemberPosts(res.data.posts);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+    void refreshPosts();
+  }, [refreshPosts]);
 
   useEffect(() => {
     const root = containerRef.current;
