@@ -39,7 +39,7 @@ export function Sheet({
   // Portal (fixed uniquement) : sort le panneau du stacking context créé par
   // les transitions de page (template.tsx) — sinon z-[70] reste sous la nav.
   const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
+  useEffect(() => queueMicrotask(() => setMounted(true)), []);
 
   useEffect(() => {
     if (!open) return;
