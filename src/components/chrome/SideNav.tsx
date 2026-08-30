@@ -12,14 +12,14 @@ import { streams } from "@/lib/mock";
 const anyLive = streams.some((s) => s.live);
 
 const items = [
-  { href: "/", label: "Feed", Icon: Home, match: (p: string) => p === "/", live: false },
+  { href: "/", label: "Looks", Icon: Home, match: (p: string) => p === "/", live: false },
   { href: "/live", label: "Live", Icon: Live, match: (p: string) => p.startsWith("/live"), live: anyLive },
   { href: "/decouvrir", label: "Marché", Icon: Compass, match: (p: string) => p.startsWith("/decouvrir"), live: false },
   { href: "/journal", label: "Journal", Icon: Grid, match: (p: string) => p.startsWith("/journal") || p.startsWith("/article"), live: false },
   { href: "/communaute", label: "Cercles", Icon: Users, match: (p: string) => p.startsWith("/communaute"), live: false },
-  { href: "/favoris", label: "Favoris", Icon: Heart, match: (p: string) => p.startsWith("/favoris"), live: false },
+  { href: "/favoris", label: "Gardées", Icon: Heart, match: (p: string) => p.startsWith("/favoris"), live: false },
   { href: "/messages", label: "Messages", Icon: Chat, match: (p: string) => p.startsWith("/messages"), live: false },
-  { href: "/notifications", label: "Alertes", Icon: Bell, match: (p: string) => p.startsWith("/notifications"), live: false },
+  { href: "/notifications", label: "Notifications", Icon: Bell, match: (p: string) => p.startsWith("/notifications"), live: false },
 ];
 
 export function SideNav() {

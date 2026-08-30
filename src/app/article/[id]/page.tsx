@@ -24,7 +24,7 @@ export default async function ArticlePage({
   const similar = similarTo(item);
 
   return (
-    <PageShell marginWord="Boutique">
+    <PageShell marginWord="Marché">
       <Link
         href="/decouvrir"
         data-cursor="link"

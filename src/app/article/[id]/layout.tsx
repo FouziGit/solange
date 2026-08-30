@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Boutique",
+  title: "Marché",
   description:
     "Pièce de seconde main authentifiée sur SOLANGE. Détail produit, taille, état et vendeur vérifié. Achète ou fais une offre.",
 };

@@ -49,11 +49,11 @@ export default function FavorisPage() {
   const creators = useMemo(() => followedCreators(), []);
 
   return (
-    <PageShell marginWord="Favoris">
-      <PageHeader eyebrow="Ma sélection" title="Favoris" />
+    <PageShell marginWord="Gardées">
+      <PageHeader eyebrow="Ma sélection" title="Gardées" />
 
       {/* tabs */}
-      <div role="tablist" aria-label="Favoris" className="flex gap-2">
+      <div role="tablist" aria-label="Gardées" className="flex gap-2">
         {(
           [
             ["pieces", `Pièces · ${saved.length}`],

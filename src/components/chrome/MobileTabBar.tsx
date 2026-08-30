@@ -25,7 +25,7 @@ type TabItem = {
 };
 
 const items: TabItem[] = [
-  { href: "/", label: "Feed", Icon: Home, match: (p) => p === "/" },
+  { href: "/", label: "Looks", Icon: Home, match: (p) => p === "/" },
   {
     href: "/decouvrir",
     label: "Marché",
@@ -34,7 +34,7 @@ const items: TabItem[] = [
   },
   {
     href: "/communaute",
-    label: "Commu",
+    label: "Cercles",
     Icon: Users,
     match: (p) => p.startsWith("/communaute"),
   },

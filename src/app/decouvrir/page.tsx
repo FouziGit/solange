@@ -129,8 +129,8 @@ function DecouvrirInner() {
   return (
     <PageShell>
       <PageHeader
-        eyebrow="Marketplace"
-        title="Découvrir"
+        eyebrow="Seconde main"
+        title="Marché"
         subtitle="Le moteur de recherche de la mode de seconde main. Pièces, profils, contenus — filtre, chine, achète."
         right={
           <span className="hidden text-sm text-ash md:block">

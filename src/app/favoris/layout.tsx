@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Favoris",
+  title: "Gardées",
   description:
     "Ta sélection : les pièces enregistrées et les vendeurs que tu suis sur Solange.",
 };

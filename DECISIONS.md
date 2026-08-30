@@ -45,3 +45,8 @@ Chaque entrée : décision, alternative écartée, raison. Relire en début de p
   vestiaire (étiquette, cintre, tampon, N°), pas d'une teinte. Seul ajout
   chromatique : `--c-danger` oxblood désaturé (remplace les red-* Tailwind du
   profil). Alternative écartée : accent terracotta/acide (tics catalogués).
+- **D-010 — Switch du home : « Looks | Pièces ».** Le lexique D-006 tue
+  « Boutique », mais nommer le 2e mode « Marché » aurait donné deux
+  destinations différentes (switch du home vs onglet /decouvrir) sous un même
+  nom. Le switch nomme donc le TYPE DE CONTENU (looks / pièces — l'objet
+  canonique), la nav nomme le LIEU (Marché). Icône du mode pièces : le cintre.
