@@ -6,14 +6,14 @@ import { motion } from "motion/react";
 import { streams } from "@/lib/mock";
 import { api } from "@/lib/api";
 import { LogoMark } from "../chrome/Brandmark";
-import { Bell, Play, Bag } from "../chrome/icons";
+import { Bell, Play, Hanger } from "../chrome/icons";
 import type { FeedMode } from "./FeedModeShell";
 
 const anyLive = streams.some((s) => s.live);
 
 const MODES: { id: FeedMode; label: string; Icon: typeof Play }[] = [
-  { id: "scroll", label: "Feed", Icon: Play },
-  { id: "shop", label: "Boutique", Icon: Bag },
+  { id: "scroll", label: "Looks", Icon: Play },
+  { id: "shop", label: "Pièces", Icon: Hanger },
 ];
 
 /**
@@ -43,9 +43,7 @@ export function FeedTopBar({
     };
   }, []);
 
-  const bellLabel = hasUnread
-    ? "Notifications — non lues"
-    : "Notifications";
+  const bellLabel = hasUnread ? "Notifications — non lues" : "Notifications";
 
   return (
     <header
@@ -97,7 +95,7 @@ export function FeedTopBar({
       <div className="relative flex w-full items-center justify-center">
         <div
           role="tablist"
-          aria-label="Mode : feed ou boutique"
+          aria-label="Contenu : looks ou pièces"
           className="glass pointer-events-auto flex items-center gap-0.5 rounded-full p-1"
         >
           {MODES.map(({ id, label, Icon }) => {

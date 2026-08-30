@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { catalog } from "@/lib/mock";
 
-const title = "Découvrir";
+const title = "Marché";
 const description =
   "Le moteur de recherche de la mode de seconde main. Marques, styles, archives : filtre, chine, achète.";
 

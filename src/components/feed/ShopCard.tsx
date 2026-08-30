@@ -2,13 +2,13 @@
 "use client";
 
 import { useState } from "react";
-import { motion } from "motion/react";
 import Link from "next/link";
 import { useStore } from "@/lib/store";
 import { euro, compact, gradientFor, initials } from "@/lib/utils";
 import { imgItem } from "@/lib/img";
 import type { DisplayItem } from "../ui/ProductCard";
 import { Heart, Bookmark, Share, Bag } from "../chrome/icons";
+import { RailAction } from "./RailAction";
 
 /**
  * Full-screen shoppable product card — the Vinted-in-TikTok side of the feed.
@@ -41,7 +41,7 @@ export function ShopCard({
       className="feed-snap relative flex h-[100dvh] w-full items-center justify-center md:py-[3vh]"
     >
       <div
-        className="relative z-10 h-full w-full overflow-hidden bg-black md:h-full md:max-h-[880px] md:w-[min(94vw,468px)] md:rounded-[30px] md:ring-1 md:ring-bone/10 md:shadow-[0_40px_120px_-20px_rgba(0,0,0,0.85)]"
+        className="relative z-10 h-full w-full overflow-hidden bg-black md:h-full md:max-h-[880px] md:w-[min(94vw,468px)] md:rounded-stage md:ring-1 md:ring-bone/10 md:shadow-[0_40px_120px_-20px_rgba(0,0,0,0.85)]"
         style={{ background: gradientFor(item.seed) }}
       >
         {/* gradient + monogram fallback (shows if the photo is missing) */}
@@ -100,25 +100,25 @@ export function ShopCard({
           style={{ bottom: "calc(var(--tabbar-clearance) + 9rem)" }}
           className="absolute right-3 z-20 flex flex-col items-center gap-5 md:!bottom-40"
         >
-          <RailButton
+          <RailAction
             label={compact(item.likes + (liked ? 1 : 0))}
             onClick={() => toggleLike(item.id)}
             pressed={liked}
             ariaLabel={liked ? "Retirer le j'aime" : "J'aime"}
           >
             <Heart filled={liked} className="size-6 text-bone" />
-          </RailButton>
-          <RailButton
+          </RailAction>
+          <RailAction
             label={saved ? "Gardé" : "Garder"}
             onClick={() => toggleSave(item.id)}
             pressed={saved}
             ariaLabel={saved ? "Retirer des favoris" : "Enregistrer"}
           >
             <Bookmark filled={saved} className="size-6 text-bone" />
-          </RailButton>
-          <RailButton label="Partager" ariaLabel="Partager">
+          </RailAction>
+          <RailAction label="Partager" ariaLabel="Partager">
             <Share className="size-[22px] text-bone" />
-          </RailButton>
+          </RailAction>
         </div>
 
         {/* bottom info + buy CTA */}
@@ -126,7 +126,7 @@ export function ShopCard({
           style={{ paddingBottom: "calc(var(--tabbar-clearance) + 1rem)" }}
           className="absolute inset-x-0 bottom-0 z-20 space-y-2.5 p-4 pr-20 md:!pb-9"
         >
-          <p className="overline text-[10px] text-bone/70">{item.brand}</p>
+          <p className="overline text-[11px] text-bone/70">{item.brand}</p>
           <p className="font-display max-w-[24ch] text-[16px] font-semibold leading-snug tracking-tight text-bone">
             {item.name}
           </p>
@@ -195,40 +195,5 @@ export function ShopCard({
         </div>
       </div>
     </section>
-  );
-}
-
-function RailButton({
-  children,
-  label,
-  onClick,
-  pressed,
-  ariaLabel,
-}: {
-  children: React.ReactNode;
-  label: string;
-  onClick?: () => void;
-  pressed?: boolean;
-  ariaLabel?: string;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      data-cursor="link"
-      aria-label={ariaLabel}
-      aria-pressed={pressed}
-      className="group flex flex-col items-center gap-1"
-    >
-      <motion.span
-        whileTap={{ scale: 0.8 }}
-        transition={{ type: "spring", stiffness: 420, damping: 24 }}
-        className="glass grid size-12 place-items-center rounded-full transition-colors group-hover:bg-bone/15"
-      >
-        {children}
-      </motion.span>
-      <span className="text-[11px] font-semibold tabular-nums text-bone/90">
-        {label}
-      </span>
-    </button>
   );
 }

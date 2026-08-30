@@ -9,10 +9,12 @@ import {
   type Variants,
 } from "motion/react";
 import Link from "next/link";
-import { api, type ApiPost } from "@/lib/api";
+import type { ApiPost } from "@/lib/api";
 import { useStore } from "@/lib/store";
 import { compact, gradientFor, initials } from "@/lib/utils";
 import { CarouselMedia } from "./CarouselMedia";
+import { RailAction } from "./RailAction";
+import { ReportSheet } from "../ui/ReportSheet";
 import { Heart, Bookmark } from "../chrome/icons";
 
 const group: Variants = {
@@ -29,45 +31,6 @@ const item: Variants = {
 };
 
 /** Bouton du rail d'actions — même format que le rail des looks (glass, 48px). */
-function RailAction({
-  children,
-  label,
-  onClick,
-  accent,
-  pressed,
-  ariaLabel,
-}: {
-  children: React.ReactNode;
-  label: string;
-  onClick?: () => void;
-  accent?: boolean;
-  pressed?: boolean;
-  ariaLabel?: string;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      data-cursor="link"
-      aria-label={ariaLabel}
-      aria-pressed={pressed}
-      className="group flex flex-col items-center gap-1"
-    >
-      <motion.span
-        whileHover={{ y: -2, scale: 1.06 }}
-        whileTap={{ scale: 0.8 }}
-        transition={{ type: "spring", stiffness: 420, damping: 24 }}
-        className={`grid size-12 place-items-center rounded-full transition-colors ${
-          accent ? "glass-bone" : "glass"
-        } group-hover:bg-bone/15`}
-      >
-        {children}
-      </motion.span>
-      <span className="text-[11px] font-semibold text-bone/90 tabular-nums">
-        {label}
-      </span>
-    </button>
-  );
-}
 
 /**
  * Carte plein écran d'une publication membre (backend /api/posts) dans le
@@ -109,36 +72,9 @@ export function MemberPostCard({
   }, [post.caption, inView]);
 
   // toast de confirmation (signalement) — éphémère, purement local
-  const [toast, setToast] = useState<string | null>(null);
-  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const reporting = useRef(false);
 
-  useEffect(
-    () => () => {
-      if (toastTimer.current) clearTimeout(toastTimer.current);
-    },
-    [],
-  );
-
-  const showToast = (msg: string) => {
-    if (toastTimer.current) clearTimeout(toastTimer.current);
-    setToast(msg);
-    toastTimer.current = setTimeout(() => setToast(null), 2600);
-  };
-
-  const onReport = async () => {
-    if (reporting.current) return;
-    const reason = window.prompt("Pourquoi signales-tu cette publication ?");
-    if (!reason || !reason.trim()) return;
-    reporting.current = true;
-    const res = await api.report("post", post.id, reason.trim());
-    reporting.current = false;
-    showToast(
-      res.ok
-        ? "Signalement envoyé. Merci."
-        : `Échec du signalement : ${res.error}`,
-    );
-  };
+  const [reportOpen, setReportOpen] = useState(false);
+  const onReport = () => setReportOpen(true);
 
   return (
     <section
@@ -152,7 +88,7 @@ export function MemberPostCard({
         }}
         transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
         style={{ willChange: inView ? "transform, opacity" : "auto" }}
-        className="stage relative z-10 h-full w-full overflow-hidden bg-black md:h-full md:max-h-[880px] md:w-[min(94vw,468px)] md:rounded-[30px] md:ring-1 md:ring-bone/10 md:shadow-[0_40px_120px_-20px_rgba(0,0,0,0.85)]"
+        className="relative z-10 h-full w-full overflow-hidden bg-black md:h-full md:max-h-[880px] md:w-[min(94vw,468px)] md:rounded-stage md:ring-1 md:ring-bone/10 md:shadow-[0_40px_120px_-20px_rgba(0,0,0,0.85)]"
       >
         {/* Hors fenêtre : panneau noir plat, rien ne peint offscreen. */}
         {!inView ? (
@@ -382,25 +318,7 @@ export function MemberPostCard({
             </motion.div>
 
             {/* toast éphémère (confirmation signalement) */}
-            <AnimatePresence>
-              {toast && (
-                <motion.div
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: 6 }}
-                  transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
-                  style={{
-                    bottom: "calc(var(--tabbar-clearance) + 5.5rem)",
-                  }}
-                  className="pointer-events-none absolute inset-x-0 z-30 flex justify-center md:!bottom-44"
-                  role="status"
-                >
-                  <span className="rounded-full bg-black/70 px-4 py-2 text-[12px] font-medium text-bone ring-1 ring-bone/15 backdrop-blur">
-                    {toast}
-                  </span>
-                </motion.div>
-              )}
-            </AnimatePresence>
+            <AnimatePresence></AnimatePresence>
 
             {/* barre de progression — même rythme que les looks */}
             <div className="absolute inset-x-0 bottom-0 z-30 h-[2px] bg-bone/10">
@@ -415,6 +333,14 @@ export function MemberPostCard({
           </>
         )}
       </motion.div>
+
+      <ReportSheet
+        open={reportOpen}
+        onClose={() => setReportOpen(false)}
+        targetType="post"
+        targetId={post.id}
+        targetLabel={`Publication de @${post.authorHandle}`}
+      />
     </section>
   );
 }

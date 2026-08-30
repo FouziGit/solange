@@ -83,12 +83,13 @@ export function ProductCard({
           seed={item.seed}
           image={item.image ?? imgItem(item.id)}
           brand={item.brand}
+          eager={index < 2}
           className="transition-transform duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-[1.06]"
         />
 
         {/* discount badge */}
         {discount > 0 && !sold && (
-          <span className="absolute left-2.5 top-2.5 rounded-full bg-bone px-2 py-0.5 text-[10px] font-bold text-ink">
+          <span className="absolute left-2.5 top-2.5 rounded-full bg-bone px-2 py-0.5 text-[11px] font-bold text-ink">
             −{discount}%
           </span>
         )}
@@ -106,7 +107,7 @@ export function ProductCard({
         </button>
 
         {/* condition + quick-buy (achat masqué si vendu) */}
-        <span className="absolute bottom-2.5 left-2.5 rounded-full glass px-2 py-0.5 text-[9px] font-medium tracking-wide text-bone/85">
+        <span className="absolute bottom-2.5 left-2.5 rounded-full glass px-2 py-0.5 text-[11px] font-medium tracking-wide text-bone/85">
           {item.condition}
         </span>
         {!sold && !item.member && (
@@ -122,7 +123,7 @@ export function ProductCard({
         {/* état vendu — overlay sombre discret, la carte reste lisible */}
         {sold && (
           <span className="pointer-events-none absolute inset-0 grid place-items-center bg-black/55">
-            <span className="border border-bone/60 px-3 py-1 text-[10px] font-semibold uppercase tracking-widest text-bone">
+            <span className="border border-bone/60 px-3 py-1 text-[11px] font-semibold uppercase tracking-widest text-bone">
               Vendu
             </span>
           </span>
@@ -130,7 +131,7 @@ export function ProductCard({
       </div>
 
       <div className="mt-2.5 px-0.5">
-        <p className="overline text-[9px] text-ash">{item.brand}</p>
+        <p className="overline text-[11px] text-ash">{item.brand}</p>
         <p className="mt-0.5 truncate text-sm text-bone">{item.name}</p>
         <div className="mt-1 flex items-baseline justify-between gap-2">
           <div className="flex items-baseline gap-1.5">
@@ -151,7 +152,9 @@ export function ProductCard({
 
   return (
     <motion.article
-      initial={{ opacity: 0, y: 18 }}
+      /* Premier viewport : naît visible (LCP) — la révélation au scroll ne
+         concerne que la suite de la grille. */
+      initial={index < 4 ? false : { opacity: 0, y: 18 }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, margin: "0px 0px -10% 0px" }}
       transition={{

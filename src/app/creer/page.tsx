@@ -1,7 +1,9 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { PageShell } from "@/components/ui/PageShell";
+import { FieldLabel } from "@/components/ui/FieldLabel";
+import { Stamp } from "@/components/ui/Stamp";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Chip } from "@/components/ui/Chip";
 import { GlassInput } from "@/components/ui/GlassInput";
@@ -22,29 +24,60 @@ import {
 
 const MAX_PHOTOS = 4;
 
-function Label({ children }: { children: React.ReactNode }) {
-  return (
-    <span className="overline mb-2 block text-[9px] text-ash">{children}</span>
-  );
-}
-
 /** Catalog pieces offered as taggable / linkable items in the composer. */
 const taggable = catalog.slice(0, 8);
 
 /** The composer publishes a single post kind (a shoppable look). */
 type PostKind = "look" | "actu" | "achats";
 
+const CREER_DRAFT = "solange:brouillon-post";
+
+/** Brouillon (sessionStorage) — la saisie survit à un refresh accidentel. */
+function readDraft<T>(key: string): T | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = sessionStorage.getItem(key);
+    return raw ? (JSON.parse(raw) as T) : null;
+  } catch {
+    return null;
+  }
+}
+function writeDraft(key: string, value: unknown) {
+  try {
+    sessionStorage.setItem(key, JSON.stringify(value));
+  } catch {
+    /* stockage indisponible — tant pis, pas bloquant */
+  }
+}
+function clearDraft(key: string) {
+  try {
+    sessionStorage.removeItem(key);
+  } catch {}
+}
+
 export default function CreerPage() {
   const { user, authReady, refreshSession } = useStore();
 
   const [kind] = useState<PostKind>("look");
-  const [title, setTitle] = useState("");
-  const [caption, setCaption] = useState("");
+  type PostDraft = { title: string; caption: string; hashtags: string[] };
+  const draft = readDraft<PostDraft>(CREER_DRAFT);
+  const [title, setTitle] = useState(draft?.title ?? "");
+  const [caption, setCaption] = useState(draft?.caption ?? "");
   const [tagged, setTagged] = useState<string[]>(["k1"]);
-  const [hashtags, setHashtags] = useState<string[]>(["#archive"]);
+  const [hashtags, setHashtags] = useState<string[]>(
+    draft?.hashtags ?? ["#archive"],
+  );
   const [brandSel, setBrandSel] = useState<string[]>([]);
   const [linked, setLinked] = useState<string[]>([]);
   const [published, setPublished] = useState(false);
+
+  useEffect(() => {
+    if (published) return;
+    writeDraft(CREER_DRAFT, { title, caption, hashtags });
+  }, [title, caption, hashtags, published]);
+  useEffect(() => {
+    if (published) clearDraft(CREER_DRAFT);
+  }, [published]);
 
   const [photos, setPhotos] = useState<string[]>([]);
   const [photoBusy, setPhotoBusy] = useState(false);
@@ -199,7 +232,7 @@ export default function CreerPage() {
           {/* photos — look only */}
           {kind === "look" && (
             <div>
-              <Label>Photos</Label>
+              <FieldLabel>Photos</FieldLabel>
               <input
                 ref={fileRef}
                 type="file"
@@ -284,7 +317,7 @@ export default function CreerPage() {
 
           {/* editorial title */}
           <div>
-            <Label>Titre éditorial</Label>
+            <FieldLabel>Titre éditorial</FieldLabel>
             <GlassInput
               aria-label="Titre éditorial du post"
               value={title}
@@ -301,7 +334,7 @@ export default function CreerPage() {
 
           {/* caption / texte */}
           <div>
-            <Label>{kind === "look" ? "Légende" : "Texte"}</Label>
+            <FieldLabel>{kind === "look" ? "Légende" : "Texte"}</FieldLabel>
             <GlassInput
               multiline
               aria-label={kind === "look" ? "Légende du look" : "Texte du post"}
@@ -322,7 +355,7 @@ export default function CreerPage() {
           {/* brand tags — actu + achats */}
           {kind !== "look" && (
             <div>
-              <Label>Tagguer des marques</Label>
+              <FieldLabel>Tagguer des marques</FieldLabel>
               <div className="flex flex-wrap gap-2">
                 {brands.map((b) => (
                   <Chip
@@ -345,7 +378,7 @@ export default function CreerPage() {
           {/* linked marketplace pieces — achats */}
           {kind === "achats" && (
             <div>
-              <Label>Lier des articles de la marketplace</Label>
+              <FieldLabel>Lier des articles de la marketplace</FieldLabel>
               <div className="flex flex-wrap gap-2">
                 {taggable.map((it) => (
                   <Chip
@@ -368,7 +401,7 @@ export default function CreerPage() {
           {/* tag pieces — look */}
           {kind === "look" && (
             <div>
-              <Label>Tagguer des pièces</Label>
+              <FieldLabel>Tagguer des pièces</FieldLabel>
               <div className="flex flex-wrap gap-2">
                 {taggable.map((it) => (
                   <Chip
@@ -391,7 +424,7 @@ export default function CreerPage() {
           {/* trending tags — look */}
           {kind === "look" && (
             <div>
-              <Label>Tags tendances</Label>
+              <FieldLabel>Tags tendances</FieldLabel>
               <div className="flex flex-wrap gap-2">
                 {trendingTags.map((t) => (
                   <Chip
@@ -412,16 +445,14 @@ export default function CreerPage() {
 
         {/* sticky live preview */}
         <aside className="lg:sticky lg:top-14 lg:h-fit">
-          <Label>Aperçu</Label>
+          <FieldLabel>Aperçu</FieldLabel>
           <div className="overflow-hidden rounded-3xl border border-bone/12 bg-coal/60 p-3">
             {published ? (
               /* success state — comme sur Vendre */
               <div className="flex flex-col items-center py-6 text-center">
-                <span className="grid size-14 place-items-center rounded-full bg-bone text-ink">
-                  <Check className="size-7" />
-                </span>
-                <p className="mt-4 font-editorial text-2xl font-semibold text-bone">
-                  Publié ✓
+                <Stamp>Publié</Stamp>
+                <p className="mt-5 font-editorial text-2xl font-semibold text-bone">
+                  En ligne
                 </p>
                 <p className="mt-1 max-w-[24ch] text-[13px] leading-relaxed text-ash">
                   {title.trim() || "Ton post"} est en ligne — visible dans le
@@ -461,7 +492,7 @@ export default function CreerPage() {
                       }}
                     />
                     {/* badge */}
-                    <span className="absolute left-3 top-3 inline-flex items-center gap-1 rounded-none glass px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.18em] text-bone/85">
+                    <span className="absolute left-3 top-3 inline-flex items-center gap-1 rounded-none glass px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-bone/85">
                       <Sparkle className="size-3" /> Édito
                     </span>
 
@@ -512,7 +543,7 @@ export default function CreerPage() {
                   /* sharp editorial card — actu / achats */
                   <div className="border border-bone/15 bg-ink/40">
                     <div className="flex items-center justify-between border-b border-bone/15 px-4 py-2.5">
-                      <span className="overline text-[9px] text-ash">
+                      <span className="overline text-[11px] text-ash">
                         {kind === "actu" ? "Actu / collection" : "Mes achats"}
                       </span>
                       <span
@@ -535,7 +566,7 @@ export default function CreerPage() {
                           {brandSel.map((b) => (
                             <span
                               key={b}
-                              className="border border-bone/25 px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.14em] text-bone/80"
+                              className="border border-bone/25 px-2 py-0.5 text-[11px] font-medium uppercase tracking-[0.14em] text-bone/80"
                             >
                               {b}
                             </span>
@@ -545,7 +576,7 @@ export default function CreerPage() {
                     </div>
                     {kind === "achats" && linkedItems.length > 0 && (
                       <div className="border-t border-bone/15 p-3">
-                        <span className="overline mb-2 block text-[9px] text-ash">
+                        <span className="overline mb-2 block text-[11px] text-ash">
                           Pièces liées · {linkedItems.length}
                         </span>
                         <div className="grid grid-cols-2 gap-2.5">

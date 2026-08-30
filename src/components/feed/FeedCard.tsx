@@ -143,7 +143,7 @@ export function FeedCard({
         // hint the compositor only for cards in the active/animating band;
         // far-off cards drop it so we don't promote dozens of layers
         style={{ willChange: inView ? "transform, opacity" : "auto" }}
-        className="stage relative z-10 h-full w-full overflow-hidden bg-black md:h-full md:max-h-[880px] md:w-[min(94vw,468px)] md:rounded-[30px] md:ring-1 md:ring-bone/10 md:shadow-[0_40px_120px_-20px_rgba(0,0,0,0.85)]"
+        className="relative z-10 h-full w-full overflow-hidden bg-black md:h-full md:max-h-[880px] md:w-[min(94vw,468px)] md:rounded-stage md:ring-1 md:ring-bone/10 md:shadow-[0_40px_120px_-20px_rgba(0,0,0,0.85)]"
       >
         {/* Off-window cards drop everything but a flat black panel of the same
             size — no media, animation or blur paints offscreen. */}
@@ -154,7 +154,16 @@ export function FeedCard({
             {/* media + tap layer */}
             <div
               data-cursor="media"
+              role="button"
+              tabIndex={0}
+              aria-label={paused ? "Reprendre la vidéo" : "Mettre en pause"}
               onClick={onMediaClick}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  setPaused((p) => !p);
+                }
+              }}
               className="absolute inset-0"
             >
               {hasGallery ? (
@@ -373,8 +382,11 @@ export function FeedCard({
 
               <motion.div
                 variants={item}
-                className="flex flex-wrap gap-x-2 gap-y-1"
+                className="flex flex-wrap items-center gap-x-2 gap-y-1"
               >
+                <span className="overline border border-bone/25 px-2 py-1 text-[11px] leading-none text-bone/80">
+                  N°{String(index + 1).padStart(2, "0")}
+                </span>
                 {look.tags.map((t) => (
                   <span key={t} className="text-[12px] font-medium text-ash">
                     {t}

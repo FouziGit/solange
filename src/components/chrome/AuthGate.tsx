@@ -24,7 +24,10 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     let onboarded = false;
     try {
-      onboarded = localStorage.getItem(ONBOARD_KEY) === "1";
+      // outillage (Lighthouse/captures) : ?e2e=1 == « Passer » (mode invité)
+      if (new URLSearchParams(location.search).get("e2e") === "1")
+        onboarded = true;
+      onboarded = onboarded || localStorage.getItem(ONBOARD_KEY) === "1";
     } catch {
       /* storage blocked — treat as not onboarded */
     }

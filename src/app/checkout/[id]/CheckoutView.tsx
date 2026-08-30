@@ -1,5 +1,6 @@
 "use client";
 
+import { Button } from "@/components/ui/Button";
 import { useState } from "react";
 import Link from "next/link";
 import { AnimatePresence, motion } from "motion/react";
@@ -7,13 +8,13 @@ import type { CatalogItem } from "@/lib/mock";
 import { useStore } from "@/lib/store";
 import { api, type ApiOrder } from "@/lib/api";
 import { PageShell } from "@/components/ui/PageShell";
+import { Stamp } from "@/components/ui/Stamp";
 import { imgItem } from "@/lib/img";
 import { commission, commissionRate, euro, gradientFor } from "@/lib/utils";
 import {
   ArrowLeft,
   Lock,
   Card,
-  Check,
   Bag,
   Verified,
 } from "@/components/chrome/icons";
@@ -120,14 +121,9 @@ export function CheckoutView({ item }: { item: CatalogItem }) {
     return (
       <PageShell>
         <div className="mx-auto max-w-md">
-          <motion.div
-            initial={{ scale: 0.6, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ type: "spring", stiffness: 320, damping: 20 }}
-            className="mx-auto grid size-16 place-items-center rounded-full bg-bone text-ink"
-          >
-            <Check className="size-8" />
-          </motion.div>
+          <div className="flex justify-center">
+            <Stamp>Payée</Stamp>
+          </div>
 
           <h1 className="font-display mt-6 text-center text-3xl font-bold uppercase tracking-tight text-bone">
             Commande enregistrée
@@ -156,7 +152,7 @@ export function CheckoutView({ item }: { item: CatalogItem }) {
               />
             </span>
             <div className="min-w-0 flex-1">
-              <p className="overline text-[9px] text-ash">{item.brand}</p>
+              <p className="overline text-[11px] text-ash">{item.brand}</p>
               <p className="font-display truncate text-[15px] font-semibold tracking-tight text-bone">
                 {item.name}
               </p>
@@ -188,12 +184,9 @@ export function CheckoutView({ item }: { item: CatalogItem }) {
           </div>
 
           <div className="mt-7 flex flex-col gap-3">
-            <Link
-              href="/profil"
-              className="rounded-full bg-bone py-3.5 text-center text-sm font-semibold text-ink transition-transform active:scale-95"
-            >
+            <Button href="/profil" size="lg">
               Voir mes commandes
-            </Link>
+            </Button>
             <Link
               href="/"
               className="glass rounded-full py-3.5 text-center text-sm font-semibold text-bone transition-colors hover:bg-bone/10"
@@ -241,7 +234,7 @@ export function CheckoutView({ item }: { item: CatalogItem }) {
               />
             </span>
             <div className="min-w-0 flex-1">
-              <p className="overline text-[9px] text-ash">{item.brand}</p>
+              <p className="overline text-[11px] text-ash">{item.brand}</p>
               <p className="font-display truncate text-[16px] font-semibold tracking-tight text-bone">
                 {item.name}
               </p>
@@ -249,18 +242,15 @@ export function CheckoutView({ item }: { item: CatalogItem }) {
                 Taille {item.size} · {euro(price)}
               </p>
             </div>
-            <span className="shrink-0 rounded-full border border-bone/20 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-ash">
+            <span className="shrink-0 rounded-full border border-bone/20 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wider text-ash">
               Vendue
             </span>
           </div>
 
           <div className="mt-7 flex flex-col gap-3">
-            <Link
-              href="/"
-              className="rounded-full bg-bone py-3.5 text-center text-sm font-semibold text-ink transition-transform active:scale-95"
-            >
+            <Button href="/" size="lg">
               Retour au feed
-            </Link>
+            </Button>
             <Link
               href={`/article/${item.id}`}
               className="glass rounded-full py-3.5 text-center text-sm font-semibold text-bone transition-colors hover:bg-bone/10"
@@ -291,7 +281,7 @@ export function CheckoutView({ item }: { item: CatalogItem }) {
 
       {/* Bandeau test — honnête : rien de réel n'est débité. */}
       <div className="mt-4 flex items-center gap-2.5 rounded-xl border border-bone/20 bg-bone/[0.04] px-3.5 py-2.5">
-        <span className="rounded-md bg-bone px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-ink">
+        <span className="rounded-md bg-bone px-1.5 py-0.5 text-[11px] font-bold uppercase tracking-wider text-ink">
           Test
         </span>
         <p className="text-[11.5px] leading-tight text-ash">
@@ -302,7 +292,7 @@ export function CheckoutView({ item }: { item: CatalogItem }) {
 
       <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_minmax(0,380px)]">
         {/* ---- order summary ---- */}
-        <section className="order-2 lg:order-1">
+        <section className="order-2 min-w-0 lg:order-1">
           <div className="glass flex items-center gap-3 rounded-2xl p-3">
             <span
               className="grid size-20 shrink-0 place-items-center overflow-hidden rounded-xl ring-1 ring-bone/10"
@@ -316,7 +306,7 @@ export function CheckoutView({ item }: { item: CatalogItem }) {
               />
             </span>
             <div className="min-w-0 flex-1">
-              <p className="overline text-[9px] text-ash">{item.brand}</p>
+              <p className="overline text-[11px] text-ash">{item.brand}</p>
               <p className="font-display truncate text-[16px] font-semibold tracking-tight text-bone">
                 {item.name}
               </p>
@@ -346,7 +336,7 @@ export function CheckoutView({ item }: { item: CatalogItem }) {
 
           {/* Stripe Connect split */}
           <div className="mt-3 rounded-2xl border border-bone/10 bg-bone/[0.02] p-4">
-            <p className="overline mb-2 text-[9px] text-ash">
+            <p className="overline mb-2 text-[11px] text-ash">
               Répartition · Stripe Connect
             </p>
             <Row label={`Le vendeur reçoit`}>{euro(net)}</Row>
@@ -357,7 +347,7 @@ export function CheckoutView({ item }: { item: CatalogItem }) {
         </section>
 
         {/* ---- payment card ---- */}
-        <section className="order-1 lg:order-2">
+        <section className="order-1 min-w-0 lg:order-2">
           <form
             onSubmit={(e) => void pay(e)}
             className="rounded-3xl border border-bone/12 bg-coal/70 p-5 backdrop-blur-xl"
@@ -366,7 +356,7 @@ export function CheckoutView({ item }: { item: CatalogItem }) {
               <span className="flex items-center gap-2 text-[13px] font-semibold text-bone">
                 <Card className="size-4" /> Carte bancaire
               </span>
-              <span className="text-[10px] font-semibold uppercase tracking-wider text-ash">
+              <span className="text-[11px] font-semibold uppercase tracking-wider text-ash">
                 via Stripe
               </span>
             </div>
@@ -440,10 +430,11 @@ export function CheckoutView({ item }: { item: CatalogItem }) {
               </div>
             )}
 
-            <button
+            <Button
               type="submit"
+              size="lg"
               disabled={step === "processing" || soldOut || !authReady}
-              className="mt-5 flex min-h-11 w-full items-center justify-center gap-2 rounded-full bg-bone py-3.5 text-sm font-semibold text-ink transition-transform active:scale-95 disabled:opacity-70"
+              className="mt-5"
             >
               <AnimatePresence mode="wait" initial={false}>
                 {soldOut ? (
@@ -478,7 +469,7 @@ export function CheckoutView({ item }: { item: CatalogItem }) {
                   </motion.span>
                 )}
               </AnimatePresence>
-            </button>
+            </Button>
 
             {/* Invité : démo locale + proposition de connexion. */}
             {authReady && !user && (
@@ -537,7 +528,7 @@ function Field({
 }) {
   return (
     <label className={`block ${className ?? ""}`}>
-      <span className="overline mb-1.5 block text-[9px] text-ash">{label}</span>
+      <span className="overline mb-1.5 block text-[11px] text-ash">{label}</span>
       {children}
     </label>
   );

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { PageShell } from "@/components/ui/PageShell";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { ProductCard } from "@/components/ui/ProductCard";
+import { Button } from "@/components/ui/Button";
 import { Avatar } from "@/components/chrome/Avatar";
 import { Verified } from "@/components/chrome/icons";
 import { followedHandles, looks } from "@/lib/mock";
@@ -49,11 +50,11 @@ export default function FavorisPage() {
   const creators = useMemo(() => followedCreators(), []);
 
   return (
-    <PageShell marginWord="Favoris">
-      <PageHeader eyebrow="Ma sélection" title="Favoris" />
+    <PageShell marginWord="Gardées">
+      <PageHeader eyebrow="Ma sélection" title="Gardées" />
 
       {/* tabs */}
-      <div role="tablist" aria-label="Favoris" className="flex gap-2">
+      <div role="tablist" aria-label="Gardées" className="flex gap-2">
         {(
           [
             ["pieces", `Pièces · ${saved.length}`],
@@ -89,9 +90,15 @@ export default function FavorisPage() {
             ))}
           </div>
         ) : (
-          <p className="mt-20 text-center text-sm text-ash">
-            Aucune pièce enregistrée pour l&apos;instant.
-          </p>
+          <div className="mt-20 flex flex-col items-center gap-5 text-center">
+            <p className="max-w-[30ch] text-sm leading-relaxed text-ash">
+              Rien de gardé pour l&apos;instant. Repère une pièce et touche
+              «&nbsp;Garder&nbsp;» — elle t&apos;attendra ici.
+            </p>
+            <Button href="/decouvrir" variant="outline">
+              Chiner le Marché
+            </Button>
+          </div>
         ))}
 
       {/* followed sellers */}

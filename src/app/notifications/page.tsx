@@ -9,6 +9,7 @@ import { Bell, Bag, Chat, Plus } from "@/components/chrome/icons";
 import { notifications as mockNotifications } from "@/lib/mock";
 import { api, type ApiNotif } from "@/lib/api";
 import { useStore } from "@/lib/store";
+import { SkeletonRow } from "@/components/ui/Skeleton";
 
 /** Horodatage relatif fr : « il y a 2 h », « il y a 12 min », « hier »… */
 function timeAgo(at: number): string {
@@ -96,9 +97,16 @@ export default function NotificationsPage() {
       ) : user ? (
         /* ————— membre connecté : notifications réelles ————— */
         status === "loading" ? (
-          <p className="mt-20 text-center text-sm text-ash">
-            Chargement de tes notifications…
-          </p>
+          <div
+            className="mt-8"
+            aria-busy="true"
+            aria-label="Chargement des notifications"
+          >
+            <SkeletonRow />
+            <SkeletonRow />
+            <SkeletonRow />
+            <SkeletonRow />
+          </div>
         ) : status === "error" ? (
           <div className="mt-20 flex flex-col items-center gap-4">
             <p className="text-center text-sm text-ash">

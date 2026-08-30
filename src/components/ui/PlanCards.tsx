@@ -32,7 +32,7 @@ export function PlanCards({ plans }: { plans: Plan[] }) {
             }`}
           >
             {featured && (
-              <span className="absolute right-5 top-6 inline-flex items-center gap-1 rounded-full bg-bone px-2.5 py-1 text-[10px] font-bold tracking-wide text-ink">
+              <span className="absolute right-5 top-6 inline-flex items-center gap-1 rounded-full bg-bone px-2.5 py-1 text-[11px] font-bold tracking-wide text-ink">
                 <Crown className="size-3.5" /> POPULAIRE
               </span>
             )}

@@ -1,5 +1,6 @@
 "use client";
 
+import { Button } from "@/components/ui/Button";
 /* ============================================================
    SOLANGE — profil public /membre/[handle]
    Membre réel : api.profile(handle) (annonces + posts serveur).
@@ -17,6 +18,8 @@ import { imgItem, imgLook } from "@/lib/img";
 import { EASE, compact, euro, gradientFor, initials } from "@/lib/utils";
 import { useStore } from "@/lib/store";
 import { PageShell } from "@/components/ui/PageShell";
+import { ReportSheet } from "@/components/ui/ReportSheet";
+import { Skeleton, SkeletonTile } from "@/components/ui/Skeleton";
 import { Photo } from "@/components/ui/Photo";
 import { Verified } from "@/components/chrome/icons";
 
@@ -167,7 +170,7 @@ function ProductTile({
         {tile.image && <Photo src={tile.image} alt={tile.name} />}
         {sold && (
           <span className="pointer-events-none absolute inset-0 grid place-items-center bg-black/55">
-            <span className="border border-bone/60 px-3 py-1 text-[10px] font-semibold uppercase tracking-widest text-bone">
+            <span className="border border-bone/60 px-3 py-1 text-[11px] font-semibold uppercase tracking-widest text-bone">
               Vendu
             </span>
           </span>
@@ -175,7 +178,7 @@ function ProductTile({
       </div>
 
       <div className="mt-2.5 px-0.5">
-        <p className="overline text-[9px] text-ash">{tile.brand}</p>
+        <p className="overline text-[11px] text-ash">{tile.brand}</p>
         <p className="mt-0.5 truncate text-sm text-bone">{tile.name}</p>
         <div className="mt-1 flex items-baseline justify-between gap-2">
           <span className="font-display text-[15px] font-bold text-bone">
@@ -248,7 +251,6 @@ export default function MembrePage() {
     useStore();
   const [state, setState] = useState<State>({ kind: "loading" });
   const [menuOpen, setMenuOpen] = useState(false);
-  const [reportMsg, setReportMsg] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setState({ kind: "loading" });
@@ -279,24 +281,36 @@ export default function MembrePage() {
   const blocked = isBlocked(handle);
   const isSelf = user !== null && user.handle === handle;
 
-  const report = async () => {
+  const [reportOpen, setReportOpen] = useState(false);
+  const report = () => {
     setMenuOpen(false);
-    const reason = window.prompt(`Pourquoi signaler @${handle} ?`);
-    if (!reason || !reason.trim()) return;
-    const res = await api.report("user", handle, reason.trim());
-    setReportMsg(
-      res.ok
-        ? "Signalement envoyé. Merci, notre équipe va examiner ce profil."
-        : `Signalement impossible : ${res.error}`,
-    );
+    setReportOpen(true);
   };
 
   return (
     <PageShell marginWord="Membre">
+      <ReportSheet
+        open={reportOpen}
+        onClose={() => setReportOpen(false)}
+        targetType="user"
+        targetId={handle}
+        targetLabel={`@${handle}`}
+      />
       {state.kind === "loading" && (
-        <div className="flex min-h-[55vh] flex-col items-center justify-center gap-4 text-center">
-          <span className="size-20 animate-pulse rounded-full bg-bone/10" />
-          <p className="text-sm text-ash">Chargement du profil…</p>
+        <div aria-busy="true" aria-label="Chargement du profil">
+          <div className="flex flex-col items-center gap-4 pt-6 text-center">
+            <Skeleton className="size-28 rounded-full" />
+            <Skeleton className="h-7 w-44" />
+            <Skeleton className="h-3.5 w-56" />
+            <div className="mt-2 flex gap-2">
+              <Skeleton className="h-11 w-28 rounded-full" />
+              <Skeleton className="h-11 w-11 rounded-full" />
+            </div>
+          </div>
+          <div className="mt-10 grid grid-cols-2 gap-3 md:grid-cols-3">
+            <SkeletonTile />
+            <SkeletonTile />
+          </div>
         </div>
       )}
 
@@ -308,13 +322,9 @@ export default function MembrePage() {
           <p className="mt-3 max-w-sm text-[14px] leading-relaxed text-ash">
             {state.message}
           </p>
-          <button
-            type="button"
-            onClick={() => void load()}
-            className="mt-8 inline-flex min-h-11 items-center rounded-none bg-bone px-6 text-sm font-semibold text-ink transition-transform active:scale-95"
-          >
+          <Button onClick={() => void load()} className="mt-8">
             Réessayer
-          </button>
+          </Button>
         </div>
       )}
 
@@ -476,11 +486,6 @@ export default function MembrePage() {
           </div>
 
           {/* retour de signalement */}
-          {reportMsg && (
-            <p className="mt-4 text-center text-[12.5px] text-ash md:text-left">
-              {reportMsg}
-            </p>
-          )}
 
           {blocked ? (
             /* membre bloqué : contenus masqués */
@@ -504,7 +509,7 @@ export default function MembrePage() {
             <>
               {/* annonces */}
               <section className="mt-10" aria-label="Annonces en vente">
-                <p className="overline mb-3 text-[9px] text-ash">
+                <p className="overline mb-3 text-[11px] text-ash">
                   En vente · {state.profile.products.length}
                 </p>
                 {state.profile.products.length === 0 ? (
@@ -527,7 +532,7 @@ export default function MembrePage() {
 
               {/* posts */}
               <section className="mt-10" aria-label="Posts publiés">
-                <p className="overline mb-3 text-[9px] text-ash">
+                <p className="overline mb-3 text-[11px] text-ash">
                   Posts · {state.profile.posts.length}
                 </p>
                 {state.profile.posts.length === 0 ? (

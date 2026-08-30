@@ -1,16 +1,16 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { AnimatePresence, motion } from "motion/react";
+import { Sheet } from "../ui/Sheet";
+import { motion } from "motion/react";
 import {
   Home,
   Compass,
   Users,
   Plus,
   User,
-  X,
   Camera,
   Bag,
   ChevronRight,
@@ -25,25 +25,30 @@ type TabItem = {
 };
 
 const items: TabItem[] = [
-  { href: "/", label: "Feed", Icon: Home, match: (p) => p === "/" },
-  { href: "/decouvrir", label: "Marché", Icon: Compass, match: (p) => p.startsWith("/decouvrir") },
-  { href: "/communaute", label: "Commu", Icon: Users, match: (p) => p.startsWith("/communaute") },
-  { href: "/profil", label: "Profil", Icon: User, match: (p) => p.startsWith("/profil") },
+  { href: "/", label: "Looks", Icon: Home, match: (p) => p === "/" },
+  {
+    href: "/decouvrir",
+    label: "Marché",
+    Icon: Compass,
+    match: (p) => p.startsWith("/decouvrir"),
+  },
+  {
+    href: "/communaute",
+    label: "Cercles",
+    Icon: Users,
+    match: (p) => p.startsWith("/communaute"),
+  },
+  {
+    href: "/profil",
+    label: "Profil",
+    Icon: User,
+    match: (p) => p.startsWith("/profil"),
+  },
 ];
 
 export function MobileTabBar() {
   const pathname = usePathname();
   const [composeOpen, setComposeOpen] = useState(false);
-
-  // Close on Escape.
-  useEffect(() => {
-    if (!composeOpen) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setComposeOpen(false);
-    };
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, [composeOpen]);
 
   const left = items.slice(0, 2);
   const right = items.slice(2);
@@ -51,10 +56,17 @@ export function MobileTabBar() {
   return (
     <>
       <nav className="pb-safe fixed inset-x-0 bottom-0 z-50 flex items-end justify-around px-6 pt-3 md:hidden">
-        <div className="glass pointer-events-none absolute inset-x-3 bottom-3 top-1 rounded-none" />
+        <div className="glass-bar pointer-events-none absolute inset-x-3 bottom-3 top-1 rounded-none" />
 
         {left.map(({ href, label, Icon, match, live }) => (
-          <TabLink key={href} href={href} label={label} Icon={Icon} on={match(pathname)} live={live} />
+          <TabLink
+            key={href}
+            href={href}
+            label={label}
+            Icon={Icon}
+            on={match(pathname)}
+            live={live}
+          />
         ))}
 
         <button
@@ -72,68 +84,43 @@ export function MobileTabBar() {
         </button>
 
         {right.map(({ href, label, Icon, match, live }) => (
-          <TabLink key={href} href={href} label={label} Icon={Icon} on={match(pathname)} live={live} />
+          <TabLink
+            key={href}
+            href={href}
+            label={label}
+            Icon={Icon}
+            on={match(pathname)}
+            live={live}
+          />
         ))}
       </nav>
 
-      <AnimatePresence>
-        {composeOpen && (
-          <div className="fixed inset-0 z-[60] md:hidden">
-            <motion.button
-              type="button"
-              aria-label="Fermer"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
+      <div className="md:hidden">
+        <Sheet
+          open={composeOpen}
+          onClose={() => setComposeOpen(false)}
+          eyebrow="Créer"
+          title="Publier ou vendre"
+          maxHeight="60%"
+        >
+          <div className="grid gap-3 px-5 pb-[calc(env(safe-area-inset-bottom)+1rem)] pt-4">
+            <ComposeOption
+              href="/creer"
+              Icon={Camera}
+              title="Publier un look"
+              hint="Photos, inspiration — sans vente"
               onClick={() => setComposeOpen(false)}
-              className="absolute inset-0 bg-ink/60 backdrop-blur-md"
             />
-            <motion.div
-              role="dialog"
-              aria-label="Que voulez-vous créer ?"
-              initial={{ y: "100%" }}
-              animate={{ y: 0 }}
-              exit={{ y: "100%" }}
-              transition={{ type: "spring", stiffness: 360, damping: 36 }}
-              className="pb-safe absolute inset-x-0 bottom-0 rounded-t-3xl border-t border-bone/15 bg-coal/95 px-5 pb-4 pt-5 backdrop-blur-2xl"
-            >
-              {/* grabber */}
-              <span className="mx-auto mb-4 block h-1 w-10 rounded-full bg-bone/20" />
-
-              <div className="mb-4 flex items-center justify-between">
-                <p className="font-display text-lg font-bold uppercase tracking-tight text-bone">
-                  Créer
-                </p>
-                <button
-                  type="button"
-                  onClick={() => setComposeOpen(false)}
-                  className="grid size-9 place-items-center rounded-full bg-bone/10 text-bone transition-colors hover:bg-bone/20"
-                  aria-label="Fermer"
-                >
-                  <X className="size-5" />
-                </button>
-              </div>
-
-              <div className="grid gap-3">
-                <ComposeOption
-                  href="/creer"
-                  Icon={Camera}
-                  title="Publier du contenu"
-                  hint="Photos, vidéos, inspiration"
-                  onClick={() => setComposeOpen(false)}
-                />
-                <ComposeOption
-                  href="/vendre"
-                  Icon={Bag}
-                  title="Vendre un article"
-                  hint="Marque, taille, état, prix"
-                  onClick={() => setComposeOpen(false)}
-                />
-              </div>
-            </motion.div>
+            <ComposeOption
+              href="/vendre"
+              Icon={Bag}
+              title="Déposer une pièce"
+              hint="Marque, taille, état, prix"
+              onClick={() => setComposeOpen(false)}
+            />
           </div>
-        )}
-      </AnimatePresence>
+        </Sheet>
+      </div>
     </>
   );
 }
@@ -168,7 +155,7 @@ function TabLink({
         )}
       </span>
       <span
-        className={`text-[9px] font-medium tracking-wide transition-colors ${on ? "text-bone" : "text-ash/60"}`}
+        className={`text-[11px] font-medium tracking-wide transition-colors ${on ? "text-bone" : "text-ash/60"}`}
       >
         {label}
       </span>

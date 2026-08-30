@@ -10,47 +10,8 @@ import {
   Hanger,
 } from "../chrome/icons";
 import { Avatar } from "../chrome/Avatar";
+import { RailAction } from "./RailAction";
 import { compact } from "@/lib/utils";
-
-function Action({
-  children,
-  label,
-  onClick,
-  accent,
-  pressed,
-  ariaLabel,
-}: {
-  children: React.ReactNode;
-  label: string;
-  onClick?: () => void;
-  accent?: boolean;
-  pressed?: boolean;
-  ariaLabel?: string;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      data-cursor="link"
-      aria-label={ariaLabel}
-      aria-pressed={pressed}
-      className="group flex flex-col items-center gap-1"
-    >
-      <motion.span
-        whileHover={{ y: -2, scale: 1.06 }}
-        whileTap={{ scale: 0.8 }}
-        transition={{ type: "spring", stiffness: 420, damping: 24 }}
-        className={`grid size-12 place-items-center rounded-full transition-colors ${
-          accent ? "glass-bone" : "glass"
-        } group-hover:bg-bone/15`}
-      >
-        {children}
-      </motion.span>
-      <span className="text-[11px] font-semibold text-bone/90 tabular-nums">
-        {label}
-      </span>
-    </button>
-  );
-}
 
 export function ActionRail({
   liked,
@@ -90,7 +51,7 @@ export function ActionRail({
     <div className="flex flex-col items-center gap-5">
       {/* Pièces du look — cintre, ouvre le tiroir Shop-the-look. */}
       {onShop && (
-        <Action
+        <RailAction
           label={
             shopCount && shopCount > 0
               ? `${shopCount} pièce${shopCount > 1 ? "s" : ""}`
@@ -100,10 +61,10 @@ export function ActionRail({
           ariaLabel="Voir les pièces à shopper"
         >
           <Hanger className="size-6 text-bone" />
-        </Action>
+        </RailAction>
       )}
 
-      <Action
+      <RailAction
         label={compact(likes + (liked ? 1 : 0))}
         onClick={onLike}
         pressed={liked}
@@ -117,21 +78,21 @@ export function ActionRail({
           {/* filled state is the only signal — strict B&W, no colour swap */}
           <Heart filled={liked} className="size-6 text-bone" />
         </motion.span>
-      </Action>
+      </RailAction>
 
-      <Action
+      <RailAction
         label={compact(comments)}
         onClick={onComment}
         ariaLabel="Commentaires"
       >
         <Comment className="size-6 text-bone" />
-      </Action>
+      </RailAction>
 
-      <Action label={compact(shares)} ariaLabel="Partager">
+      <RailAction label={compact(shares)} ariaLabel="Partager">
         <Share className="size-[22px] text-bone" />
-      </Action>
+      </RailAction>
 
-      <Action
+      <RailAction
         label={saved ? "Enregistré" : "Garder"}
         onClick={onSave}
         accent
@@ -139,7 +100,7 @@ export function ActionRail({
         ariaLabel={saved ? "Retirer des enregistrements" : "Enregistrer"}
       >
         <Bookmark filled={saved} className="size-6 text-bone" />
-      </Action>
+      </RailAction>
 
       {/* spinning sound disc — optionnel (retiré du feed mobile : le
           créateur vit désormais en bas de la carte) */}

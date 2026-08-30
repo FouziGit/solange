@@ -2,12 +2,12 @@ import type { Metadata } from "next";
 import { FeedModeShell } from "@/components/feed/FeedModeShell";
 
 export const metadata: Metadata = {
-  title: "Feed",
+  title: "Looks",
   description:
     "Le feed SOLANGE : des looks vidéo en plein écran, chaque pièce shoppable. Inspire-toi, achète, revends.",
   alternates: { canonical: "/" },
   openGraph: {
-    title: "Feed",
+    title: "Looks",
     description:
       "Le feed SOLANGE : des looks vidéo en plein écran, chaque pièce shoppable.",
     url: "/",

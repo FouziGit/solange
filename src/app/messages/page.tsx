@@ -13,6 +13,7 @@ import {
   type Conversation,
 } from "@/lib/mock";
 import { api, type ApiConversation } from "@/lib/api";
+import { ReportSheet } from "@/components/ui/ReportSheet";
 import { useStore } from "@/lib/store";
 import { EASE, euro } from "@/lib/utils";
 import {
@@ -234,18 +235,11 @@ function MessagesInner() {
     feedbackTimer.current = setTimeout(() => setFeedback(null), 3000);
   };
 
+  const [reportOpen, setReportOpen] = useState(false);
   const reportActive = () => {
     if (!active) return;
     setMenuOpen(false);
-    const reason = window.prompt(`Pourquoi signaler @${active.handle} ?`);
-    if (!reason?.trim()) return;
-    void api.report("user", active.handle, reason.trim()).then((res) => {
-      showFeedback(
-        res.ok
-          ? "Signalement envoyé. Merci."
-          : "Échec du signalement, réessaie plus tard.",
-      );
-    });
+    setReportOpen(true);
   };
 
   const blockActive = () => {
@@ -310,7 +304,8 @@ function MessagesInner() {
         <div className="flex-1 overflow-y-auto px-3 pb-28 md:pb-4">
           {visibleConvs.length === 0 && (
             <p className="px-3 py-6 text-[13px] text-ash">
-              Aucune conversation pour le moment.
+              Aucune conversation. Écris à un vendeur depuis une pièce du Marché
+              — la discussion vivra ici.
             </p>
           )}
           {visibleConvs.map((c) => {
@@ -338,7 +333,7 @@ function MessagesInner() {
                       {c.name}
                     </span>
                     {c.verified && <Verified className="size-3.5 text-bone" />}
-                    <span className="ml-auto text-[10px] text-ash">
+                    <span className="ml-auto text-[11px] text-ash">
                       {c.time}
                     </span>
                   </div>
@@ -348,7 +343,7 @@ function MessagesInner() {
                   </p>
                 </div>
                 {c.unread > 0 && (
-                  <span className="grid size-5 place-items-center rounded-full bg-bone text-[10px] font-bold text-ink">
+                  <span className="grid size-5 place-items-center rounded-full bg-bone text-[11px] font-bold text-ink">
                     {c.unread}
                   </span>
                 )}
@@ -451,7 +446,7 @@ function MessagesInner() {
                   <Bag className="size-5" />
                 </span>
                 <div className="min-w-0 flex-1">
-                  <p className="overline text-[9px] text-ash">
+                  <p className="overline text-[11px] text-ash">
                     {active.itemBrand}
                   </p>
                   <p className="truncate text-[13px] text-bone">
@@ -515,6 +510,15 @@ function MessagesInner() {
             {feedback}
           </span>
         </div>
+      )}
+      {active && (
+        <ReportSheet
+          open={reportOpen}
+          onClose={() => setReportOpen(false)}
+          targetType="user"
+          targetId={active.handle}
+          targetLabel={`@${active.handle}`}
+        />
       )}
     </div>
   );
