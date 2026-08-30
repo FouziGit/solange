@@ -43,9 +43,7 @@ export function FeedTopBar({
     };
   }, []);
 
-  const bellLabel = hasUnread
-    ? "Notifications — non lues"
-    : "Notifications";
+  const bellLabel = hasUnread ? "Notifications — non lues" : "Notifications";
 
   return (
     <header

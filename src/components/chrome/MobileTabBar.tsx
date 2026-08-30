@@ -26,9 +26,24 @@ type TabItem = {
 
 const items: TabItem[] = [
   { href: "/", label: "Feed", Icon: Home, match: (p) => p === "/" },
-  { href: "/decouvrir", label: "Marché", Icon: Compass, match: (p) => p.startsWith("/decouvrir") },
-  { href: "/communaute", label: "Commu", Icon: Users, match: (p) => p.startsWith("/communaute") },
-  { href: "/profil", label: "Profil", Icon: User, match: (p) => p.startsWith("/profil") },
+  {
+    href: "/decouvrir",
+    label: "Marché",
+    Icon: Compass,
+    match: (p) => p.startsWith("/decouvrir"),
+  },
+  {
+    href: "/communaute",
+    label: "Commu",
+    Icon: Users,
+    match: (p) => p.startsWith("/communaute"),
+  },
+  {
+    href: "/profil",
+    label: "Profil",
+    Icon: User,
+    match: (p) => p.startsWith("/profil"),
+  },
 ];
 
 export function MobileTabBar() {
@@ -54,7 +69,14 @@ export function MobileTabBar() {
         <div className="glass pointer-events-none absolute inset-x-3 bottom-3 top-1 rounded-none" />
 
         {left.map(({ href, label, Icon, match, live }) => (
-          <TabLink key={href} href={href} label={label} Icon={Icon} on={match(pathname)} live={live} />
+          <TabLink
+            key={href}
+            href={href}
+            label={label}
+            Icon={Icon}
+            on={match(pathname)}
+            live={live}
+          />
         ))}
 
         <button
@@ -72,7 +94,14 @@ export function MobileTabBar() {
         </button>
 
         {right.map(({ href, label, Icon, match, live }) => (
-          <TabLink key={href} href={href} label={label} Icon={Icon} on={match(pathname)} live={live} />
+          <TabLink
+            key={href}
+            href={href}
+            label={label}
+            Icon={Icon}
+            on={match(pathname)}
+            live={live}
+          />
         ))}
       </nav>
 
@@ -95,7 +124,7 @@ export function MobileTabBar() {
               animate={{ y: 0 }}
               exit={{ y: "100%" }}
               transition={{ type: "spring", stiffness: 360, damping: 36 }}
-              className="pb-safe absolute inset-x-0 bottom-0 rounded-t-3xl border-t border-bone/15 bg-coal/95 px-5 pb-4 pt-5 backdrop-blur-2xl"
+              className="pb-safe absolute inset-x-0 bottom-0 rounded-t-stage border-t border-bone/15 bg-coal/95 px-5 pb-4 pt-5 backdrop-blur-2xl"
             >
               {/* grabber */}
               <span className="mx-auto mb-4 block h-1 w-10 rounded-full bg-bone/20" />

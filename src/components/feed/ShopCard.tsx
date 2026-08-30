@@ -41,7 +41,7 @@ export function ShopCard({
       className="feed-snap relative flex h-[100dvh] w-full items-center justify-center md:py-[3vh]"
     >
       <div
-        className="relative z-10 h-full w-full overflow-hidden bg-black md:h-full md:max-h-[880px] md:w-[min(94vw,468px)] md:rounded-[30px] md:ring-1 md:ring-bone/10 md:shadow-[0_40px_120px_-20px_rgba(0,0,0,0.85)]"
+        className="relative z-10 h-full w-full overflow-hidden bg-black md:h-full md:max-h-[880px] md:w-[min(94vw,468px)] md:rounded-stage md:ring-1 md:ring-bone/10 md:shadow-[0_40px_120px_-20px_rgba(0,0,0,0.85)]"
         style={{ background: gradientFor(item.seed) }}
       >
         {/* gradient + monogram fallback (shows if the photo is missing) */}

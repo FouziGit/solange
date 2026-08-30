@@ -6,6 +6,9 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 /** Shared easing curves for Motion transitions across the app. */
+/** Durées canoniques (s) — miroir des tokens CSS --dur-* (DA §7). */
+export const DUR = { micro: 0.14, move: 0.24, set: 0.48 } as const;
+
 export const EASE = {
   luxe: [0.16, 1, 0.3, 1],
   silk: [0.22, 1, 0.36, 1],
@@ -14,7 +17,8 @@ export const EASE = {
 
 /** 24300 -> "24,3 k" · 1240000 -> "1,2 M" (FR formatting) */
 export function compact(n: number): string {
-  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1).replace(".", ",")} M`;
+  if (n >= 1_000_000)
+    return `${(n / 1_000_000).toFixed(1).replace(".", ",")} M`;
   if (n >= 1_000) return `${(n / 1_000).toFixed(1).replace(".", ",")} k`;
   return String(n);
 }
@@ -36,7 +40,10 @@ export function hash(s: string): number {
 }
 
 export function initials(name: string): string {
-  const parts = name.replace(/^@/, "").split(/[\s.]+/).filter(Boolean);
+  const parts = name
+    .replace(/^@/, "")
+    .split(/[\s.]+/)
+    .filter(Boolean);
   if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
   return (parts[0][0] + parts[1][0]).toUpperCase();
 }

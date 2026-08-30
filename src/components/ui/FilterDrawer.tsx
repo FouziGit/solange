@@ -87,7 +87,7 @@ export function FilterDrawer({
             animate={{ y: 0 }}
             exit={{ y: "100%" }}
             transition={{ type: "spring", stiffness: 360, damping: 36 }}
-            className="fixed inset-x-0 bottom-0 z-50 flex max-h-[82%] flex-col overflow-hidden rounded-t-[28px] border-t border-bone/15 bg-coal/95 backdrop-blur-2xl md:inset-y-0 md:left-auto md:right-0 md:max-h-none md:w-[400px] md:rounded-none md:rounded-l-[28px] md:border-l md:border-t-0"
+            className="fixed inset-x-0 bottom-0 z-50 flex max-h-[82%] flex-col overflow-hidden rounded-t-stage border-t border-bone/15 bg-coal/95 backdrop-blur-2xl md:inset-y-0 md:left-auto md:right-0 md:max-h-none md:w-[400px] md:rounded-none md:rounded-l-[28px] md:border-l md:border-t-0"
           >
             {/* header */}
             <div className="flex items-center justify-between px-5 pb-2 pt-4 md:pt-12">

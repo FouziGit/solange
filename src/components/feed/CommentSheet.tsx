@@ -40,7 +40,7 @@ export function CommentSheet({
             animate={{ y: 0 }}
             exit={{ y: "100%" }}
             transition={{ type: "spring", stiffness: 360, damping: 36 }}
-            className="absolute inset-x-0 bottom-0 z-40 flex max-h-[78%] flex-col overflow-hidden rounded-t-[28px] border-t border-bone/15 bg-coal/95 backdrop-blur-2xl"
+            className="absolute inset-x-0 bottom-0 z-40 flex max-h-[78%] flex-col overflow-hidden rounded-t-stage border-t border-bone/15 bg-coal/95 backdrop-blur-2xl"
           >
             <div className="flex items-center justify-between px-5 pb-2 pt-4">
               <div>

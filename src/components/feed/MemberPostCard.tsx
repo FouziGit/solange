@@ -152,7 +152,7 @@ export function MemberPostCard({
         }}
         transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
         style={{ willChange: inView ? "transform, opacity" : "auto" }}
-        className="stage relative z-10 h-full w-full overflow-hidden bg-black md:h-full md:max-h-[880px] md:w-[min(94vw,468px)] md:rounded-[30px] md:ring-1 md:ring-bone/10 md:shadow-[0_40px_120px_-20px_rgba(0,0,0,0.85)]"
+        className="relative z-10 h-full w-full overflow-hidden bg-black md:h-full md:max-h-[880px] md:w-[min(94vw,468px)] md:rounded-stage md:ring-1 md:ring-bone/10 md:shadow-[0_40px_120px_-20px_rgba(0,0,0,0.85)]"
       >
         {/* Hors fenêtre : panneau noir plat, rien ne peint offscreen. */}
         {!inView ? (

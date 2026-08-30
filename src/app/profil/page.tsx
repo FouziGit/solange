@@ -620,17 +620,17 @@ export default function ProfilPage() {
               <button
                 type="button"
                 onClick={() => setDeleteArmed(true)}
-                className="inline-flex min-h-11 items-center px-4 text-[11px] text-red-400/60 underline-offset-4 transition-colors hover:text-red-300 hover:underline"
+                className="inline-flex min-h-11 items-center px-4 text-[11px] text-danger/80 underline-offset-4 transition-colors hover:text-danger hover:underline"
               >
                 Supprimer mon compte
               </button>
             ) : (
-              <div className="mt-2 w-full max-w-sm rounded-2xl border border-red-500/20 bg-red-950/25 p-4">
+              <div className="mt-2 w-full max-w-sm rounded-2xl border border-danger/30 bg-danger/10 p-4">
                 <p className="text-[13px] leading-relaxed text-bone/85">
                   Sûr ? Toutes tes données seront effacées.
                 </p>
                 {deleteError && (
-                  <p role="alert" className="mt-2 text-[12px] text-red-300">
+                  <p role="alert" className="mt-2 text-[12px] text-danger">
                     {deleteError}
                   </p>
                 )}
@@ -639,7 +639,7 @@ export default function ProfilPage() {
                     type="button"
                     onClick={() => void destroyAccount()}
                     disabled={deleting}
-                    className="inline-flex min-h-11 items-center rounded-full bg-red-900 px-4 text-[13px] font-semibold text-red-50 transition-transform active:scale-95 disabled:opacity-60"
+                    className="inline-flex min-h-11 items-center rounded-none bg-danger px-4 text-[13px] font-semibold text-noir transition-transform active:scale-95 disabled:opacity-60"
                   >
                     {deleting ? "Suppression…" : "Supprimer mon compte"}
                   </button>
