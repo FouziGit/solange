@@ -131,3 +131,24 @@ marqué sur la commande (idempotent — un run doublé ne renvoie rien).
 Temps médian payée→expédiée et expédiée→reçue + taux de clôture propre :
 calculables depuis `history` (requête admin au Lot 4). Zéro commande
 bloquée sans issue (toute commande a toujours ≥ 1 action ou un automatisme).
+
+## Vérification E2E en PROD (2026-08-30, deux comptes réels, consignée puis purgée)
+
+| Étape                        | Résultat                                                                                              |
+| ---------------------------- | ----------------------------------------------------------------------------------------------------- |
+| Vendeur + annonce test       | `u_6f3ebda407e0` / `p_a232c6cb7c11`                                                                   |
+| Achat Mondial Relay + relais | `o_041ecd882856` — statut `payee`, history 1 entrée, `paymentRef sim_…`                               |
+| Acheteur tente `ship`        | **409** « Impossible depuis payee » ✓ (rôle vérifié serveur)                                          |
+| Vendeur expédie (+ n° suivi) | `expediee`, shipment posé ✓                                                                           |
+| Double `ship`                | **409**, aucun double effet ✓                                                                         |
+| Tiers non connecté GET ?id   | aucune donnée (liste vide) ✓                                                                          |
+| Acheteur « Bien reçu »       | `recue` puis `terminee` (system) — history complet 4 entrées ✓                                        |
+| Achat 2 Chronopost + adresse | adresse stockée, visible parties uniquement ✓                                                         |
+| Vendeur annule avec motif    | `annulee`, motif tracé, pièce `sold → available` ✓                                                    |
+| Cloches                      | acheteur 3 notifs `order`, vendeur 5 (`order` + `sale`), liens profonds ✓                             |
+| Emails                       | envoyés via Resend à chaque transition (adresses test → bounce attendu)                               |
+| Nettoyage                    | comptes supprimés (RGPD), blobs orders/products test purgés ; `sold-seeds` réels intacts (`k14`,`k4`) |
+
+Écart consigné : GET ?id sans session renvoie `{orders:[]}` 200 (la garde
+invité passe avant la branche ?id) — aucune fuite, mais forme incohérente ;
+à aligner sur 404 au prochain passage serveur (lot 4).
