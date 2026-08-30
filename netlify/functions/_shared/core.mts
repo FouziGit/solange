@@ -164,7 +164,7 @@ export async function rateLimit(
 export async function pushNotif(
   userId: string,
   notif: {
-    type: "sale" | "message" | "follow" | "report";
+    type: "sale" | "message" | "follow" | "report" | "order";
     text: string;
     link: string;
   },

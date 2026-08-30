@@ -78,6 +78,24 @@ Chaque entrée : décision, alternative écartée, raison. Relire en début de p
   écartée : prop `pressed` sur Button (mélange deux grammaires — l'action à
   sens unique et l'état réversible — et casse la règle « un seul bloc
   renversé = l'action primaire » en rendant le renversement ambigu).
+
+## Brief 2 — Lot 1
+
+- **D-016 — Délais du cycle de commande** : rappel vendeur J+3, annulation
+  auto J+7 (repère Vinted — le comportement que le public cible connaît),
+  rappel acheteur J+7 après expédition, clôture auto J+14 (pas de suivi
+  transporteur réel en beta → 2× le délai postal courant). Les commandes sur
+  pièces SEED (vendeur fictif, `sellerId null` — dont les commandes réelles
+  historiques) sont HORS cycle et hors cron : rien à expédier, et
+  l'annulation auto aurait remis en vente des pièces réellement achetées.
+  Alternative écartée : marquer ces commandes « terminées » d'office
+  (mensonge d'état).
+- **D-017 — `/commande/[id]` en rendu client assumé** : les données vivent
+  derrière un cookie httpOnly lu par les Netlify Functions (Blobs n'est
+  accessible qu'à elles) ; un RSC dynamique ouvrirait un 2ᵉ chemin d'accès
+  aux données à sécuriser en double. La page respecte l'esprit de D-013 :
+  UN fetch, squelette DA, zéro cascade. D-013 vise les pages de contenu
+  public (gate/feed/marché) — les écrans membres restent client.
 - **D-015 — Échecs réseau : bandeau inline, pas de Toast global.** Le
   pattern erreur (cause + remède + Réessayer) se pose DANS l'écran concerné
   (bandeau au Marché/Messages, chip sur le feed) ; le besoin d'un Toast

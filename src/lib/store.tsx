@@ -43,6 +43,8 @@ export type Order = {
   last4: string;
   /** Transporteur + point relais choisis (ex. "Mondial Relay · Franprix"). */
   shippingLabel?: string;
+  /** Statut serveur (lot 1) — absent pour une commande démo invité. */
+  status?: string;
   date: string;
 };
 
@@ -159,6 +161,7 @@ export function SolangeProvider({ children }: { children: ReactNode }) {
             total: so.totalEUR,
             last4: "démo",
             shippingLabel: so.shippingLabel,
+            status: so.status,
             date: new Date(so.createdAt).toLocaleDateString("fr-FR"),
           })),
         );

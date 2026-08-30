@@ -80,6 +80,7 @@ function toConversation(c: ApiConversation, myId: string): Conversation {
     itemName: c.itemName,
     itemSeed: "",
     itemPriceEUR: c.itemPriceEUR,
+    orderId: c.orderId,
     time: "—",
     unread: 0,
     messages: c.messages.map((m): Message => ({
@@ -499,6 +500,16 @@ function MessagesInner() {
                 <span className="font-display text-sm font-bold text-bone">
                   {euro(active.itemPriceEUR)}
                 </span>
+                {/* une commande existe sur cette pièce : référence directe */}
+                {active.orderId && (
+                  <Link
+                    href={`/commande/${active.orderId}`}
+                    data-cursor="link"
+                    className="shrink-0 border border-bone/25 px-2.5 py-1.5 text-[11px] font-semibold text-bone transition-colors hover:bg-bone/10"
+                  >
+                    Commande
+                  </Link>
+                )}
               </div>
             )}
 

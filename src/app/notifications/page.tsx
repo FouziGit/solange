@@ -28,7 +28,7 @@ function timeAgo(at: number): string {
 /** Icône par type de notification serveur. */
 function NotifIcon({ type }: { type: ApiNotif["type"] }) {
   const Icon =
-    type === "sale"
+    type === "sale" || type === "order"
       ? Bag
       : type === "message"
         ? Chat

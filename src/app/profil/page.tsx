@@ -14,6 +14,11 @@ import { forSale, liked } from "@/lib/data";
 import { EASE, compact, euro, gradientFor, initials } from "@/lib/utils";
 import { useStore } from "@/lib/store";
 import { api, type ApiOrder, type ApiProduct } from "@/lib/api";
+import {
+  STATUS_LABEL,
+  normalizeStatus,
+  type OrderStatus,
+} from "@/lib/order-state";
 import { imgItem } from "@/lib/img";
 import {
   Verified,
@@ -29,6 +34,36 @@ const tabs = [
   { key: "looks", label: "Looks" },
   { key: "aimes", label: "Aimés" },
 ] as const;
+
+/** Ligne commande/vente — Link vers /commande/[id] quand un suivi existe. */
+function Row({
+  href,
+  ariaLabel,
+  children,
+}: {
+  href?: string;
+  ariaLabel?: string;
+  children: React.ReactNode;
+}) {
+  const cls =
+    "glass flex items-center gap-3 rounded-2xl p-2.5 text-left transition-colors";
+  if (!href) return <div className={cls}>{children}</div>;
+  return (
+    <Link
+      href={href}
+      aria-label={ariaLabel}
+      data-cursor="link"
+      className={`${cls} hover:bg-bone/[0.08]`}
+    >
+      {children}
+    </Link>
+  );
+}
+
+/** Libellé de statut — commandes démo locales sans statut = « Payée ». */
+function statusLabel(status?: string): string {
+  return STATUS_LABEL[normalizeStatus(status) as OrderStatus] ?? "Payée";
+}
 
 function Stat({ value, label }: { value: string; label: string }) {
   return (
@@ -355,9 +390,11 @@ export default function ProfilPage() {
           </p>
           <div className="flex flex-col gap-2">
             {orders.map((o) => (
-              <div
+              // commande serveur → sa page de suivi ; commande démo → carte inerte
+              <Row
                 key={o.id}
-                className="glass flex items-center gap-3 rounded-2xl p-2.5"
+                href={o.status ? `/commande/${o.id}` : undefined}
+                ariaLabel={`Commande ${o.item.name} — ${statusLabel(o.status)}`}
               >
                 <span
                   className="grid size-14 shrink-0 place-items-center overflow-hidden rounded-xl ring-1 ring-bone/10"
@@ -387,10 +424,10 @@ export default function ProfilPage() {
                     {euro(o.total)}
                   </span>
                   <span className="inline-flex items-center gap-1 rounded-full bg-bone/10 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wider text-bone/80">
-                    <Check className="size-2.5" /> Payé
+                    <Check className="size-2.5" /> {statusLabel(o.status)}
                   </span>
                 </div>
-              </div>
+              </Row>
             ))}
           </div>
         </div>
@@ -468,9 +505,10 @@ export default function ProfilPage() {
           </p>
           <div className="flex flex-col gap-2">
             {sales.map((s) => (
-              <div
+              <Row
                 key={s.id}
-                className="glass flex items-center gap-3 rounded-2xl p-2.5"
+                href={`/commande/${s.id}`}
+                ariaLabel={`Vente ${s.name} — ${statusLabel(s.status)}`}
               >
                 <div className="min-w-0 flex-1">
                   <p className="text-[12px] text-ash">{s.brand}</p>
@@ -479,7 +517,10 @@ export default function ProfilPage() {
                   </p>
                   <p className="mt-0.5 text-[11px] text-ash">
                     Achetée par @{s.buyerHandle ?? "membre"} ·{" "}
-                    {new Date(s.createdAt).toLocaleDateString("fr-FR")}
+                    {new Date(s.createdAt).toLocaleDateString("fr-FR")} ·{" "}
+                    <span className="text-bone/80">
+                      {statusLabel(s.status)}
+                    </span>
                   </p>
                 </div>
                 <div className="flex flex-col items-end gap-1">
@@ -492,7 +533,7 @@ export default function ProfilPage() {
                     net vendeur
                   </span>
                 </div>
-              </div>
+              </Row>
             ))}
           </div>
         </div>

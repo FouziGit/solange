@@ -35,6 +35,7 @@ export type ApiOrder = {
   name: string;
   sellerHandle: string;
   sellerId?: string | null;
+  buyerId?: string;
   buyerHandle?: string;
   priceEUR: number;
   protectionEUR: number;
@@ -42,10 +43,24 @@ export type ApiOrder = {
   totalEUR: number;
   shippingMethod?: string;
   shippingLabel?: string;
+  /** Livraison à domicile uniquement — visible des deux parties de la commande. */
+  address?: { name: string; line: string; postal: string; city: string };
   commissionRate?: number;
   commissionEUR?: number;
   netSellerEUR?: number;
   status: string;
+  history?: {
+    at: number;
+    by: string;
+    from: string;
+    to: string;
+    note?: string;
+  }[];
+  shipment?: { carrier?: string; tracking?: string; at: number };
+  dispute?: { reason: string; note?: string; at: number };
+  cancelReason?: string;
+  /** Présent sur GET ?id= : mon rôle dans cette commande. */
+  role?: "buyer" | "seller";
   simulated: boolean;
   createdAt: number;
 };
@@ -60,6 +75,8 @@ export type ApiMessage = {
 export type ApiConversation = {
   id: string;
   kind?: "item" | "dm";
+  /** Posé quand une commande existe sur la pièce du fil (lot 1). */
+  orderId?: string;
   buyerId: string;
   buyerHandle: string;
   sellerId: string | null;
@@ -93,7 +110,7 @@ export type SocialState = {
 
 export type ApiNotif = {
   id: string;
-  type: "sale" | "message" | "follow" | "report";
+  type: "sale" | "message" | "follow" | "report" | "order";
   text: string;
   link: string;
   at: number;
@@ -184,10 +201,29 @@ export const api = {
       method: "POST",
       body: JSON.stringify(p),
     }),
-  order: (productId: string, shippingMethod?: string, relayLabel?: string) =>
+  order: (
+    productId: string,
+    shippingMethod?: string,
+    relayLabel?: string,
+    address?: { name: string; line: string; postal: string; city: string },
+  ) =>
     request<{ ok: boolean; order: ApiOrder }>("/api/orders", {
       method: "POST",
-      body: JSON.stringify({ productId, shippingMethod, relayLabel }),
+      body: JSON.stringify({ productId, shippingMethod, relayLabel, address }),
+    }),
+  orderById: (id: string) =>
+    request<{ order: ApiOrder }>(`/api/orders?id=${encodeURIComponent(id)}`),
+  orderTransition: (p: {
+    id: string;
+    action: "ship" | "cancel" | "receive" | "dispute";
+    carrier?: string;
+    tracking?: string;
+    reason?: "non_recue" | "non_conforme";
+    note?: string;
+  }) =>
+    request<{ ok: boolean; order: ApiOrder }>("/api/orders/transition", {
+      method: "POST",
+      body: JSON.stringify(p),
     }),
   sales: () => request<{ orders: ApiOrder[] }>("/api/orders?sales=1"),
   myProducts: () => request<{ products: ApiProduct[] }>("/api/products?mine=1"),

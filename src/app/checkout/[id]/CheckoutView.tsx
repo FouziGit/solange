@@ -9,6 +9,7 @@ import { useStore } from "@/lib/store";
 import { api, type ApiOrder } from "@/lib/api";
 import { PageShell } from "@/components/ui/PageShell";
 import { Stamp } from "@/components/ui/Stamp";
+import { FieldLabel } from "@/components/ui/FieldLabel";
 import { imgItem } from "@/lib/img";
 import { commission, commissionRate, euro, gradientFor } from "@/lib/utils";
 import {
@@ -52,8 +53,21 @@ export function CheckoutView({ item }: { item: CatalogItem }) {
   const [method, setMethod] = useState<ShipMethodId>("mondial_relay");
   const [relay, setRelay] = useState<RelayPoint | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
+  // adresse — domicile (Chronopost) uniquement, revalidée serveur (lot 1)
+  const [addrName, setAddrName] = useState("");
+  const [addrLine, setAddrLine] = useState("");
+  const [addrPostal, setAddrPostal] = useState("");
+  const [addrCity, setAddrCity] = useState("");
   const ship = shipOption(method);
   const needsRelay = ship.relay && !relay;
+  const needsAddress =
+    !ship.relay &&
+    !(
+      addrName.trim() &&
+      addrLine.trim() &&
+      addrPostal.trim() &&
+      addrCity.trim()
+    );
   const shippingLabel =
     ship.relay && relay ? `${ship.carrier} · ${relay.name}` : ship.carrier;
 
@@ -82,6 +96,10 @@ export function CheckoutView({ item }: { item: CatalogItem }) {
       setError("Choisis un point relais pour continuer.");
       return;
     }
+    if (needsAddress) {
+      setError("Complète l'adresse de livraison pour continuer.");
+      return;
+    }
     setError(null);
     setStep("processing");
 
@@ -106,7 +124,19 @@ export function CheckoutView({ item }: { item: CatalogItem }) {
     }
 
     /* ---- membre connecté : le serveur recalcule tout ---- */
-    const res = await api.order(item.id, method, relay?.name);
+    const res = await api.order(
+      item.id,
+      method,
+      relay?.name,
+      ship.relay
+        ? undefined
+        : {
+            name: addrName.trim(),
+            line: addrLine.trim(),
+            postal: addrPostal.trim(),
+            city: addrCity.trim(),
+          },
+    );
     if (res.ok) {
       const order = res.data.order;
       setServerOrder(order);
@@ -434,6 +464,51 @@ export function CheckoutView({ item }: { item: CatalogItem }) {
                 <ChevronRight className="size-4 shrink-0 text-ash" />
               </button>
             )}
+
+            {/* domicile (Chronopost) : adresse requise — le vendeur en aura
+                besoin pour expédier (lot 1) ; validée aussi côté serveur */}
+            {!ship.relay && (
+              <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                <div className="sm:col-span-2">
+                  <FieldLabel>Nom complet</FieldLabel>
+                  <input
+                    value={addrName}
+                    onChange={(e) => setAddrName(e.target.value)}
+                    autoComplete="name"
+                    className="field w-full"
+                  />
+                </div>
+                <div className="sm:col-span-2">
+                  <FieldLabel>Adresse</FieldLabel>
+                  <input
+                    value={addrLine}
+                    onChange={(e) => setAddrLine(e.target.value)}
+                    autoComplete="street-address"
+                    placeholder="N° et rue"
+                    className="field w-full"
+                  />
+                </div>
+                <div>
+                  <FieldLabel>Code postal</FieldLabel>
+                  <input
+                    value={addrPostal}
+                    onChange={(e) => setAddrPostal(e.target.value)}
+                    autoComplete="postal-code"
+                    inputMode="numeric"
+                    className="field w-full"
+                  />
+                </div>
+                <div>
+                  <FieldLabel>Ville</FieldLabel>
+                  <input
+                    value={addrCity}
+                    onChange={(e) => setAddrCity(e.target.value)}
+                    autoComplete="address-level2"
+                    className="field w-full"
+                  />
+                </div>
+              </div>
+            )}
           </div>
 
           {/* breakdown */}
@@ -550,7 +625,11 @@ export function CheckoutView({ item }: { item: CatalogItem }) {
               type="submit"
               size="lg"
               disabled={
-                step === "processing" || soldOut || !authReady || needsRelay
+                step === "processing" ||
+                soldOut ||
+                !authReady ||
+                needsRelay ||
+                needsAddress
               }
               className="mt-5"
             >
@@ -592,6 +671,11 @@ export function CheckoutView({ item }: { item: CatalogItem }) {
             {needsRelay && (
               <p className="mt-2 text-center text-[11.5px] text-ash">
                 Choisis un point relais {ship.carrier} pour continuer.
+              </p>
+            )}
+            {needsAddress && (
+              <p className="mt-2 text-center text-[11.5px] text-ash">
+                Complète l&apos;adresse de livraison pour continuer.
               </p>
             )}
 

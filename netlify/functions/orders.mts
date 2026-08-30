@@ -19,6 +19,9 @@ import {
   pushNotif,
 } from "./_shared/core.mts";
 import { SEED_CATALOG, commissionRate } from "./_shared/seed-catalog.mts";
+import { capturePayment } from "./_shared/payment.mts";
+import type { OrderRecord } from "./_shared/order-core.mts";
+import { normalizeStatus } from "../../src/lib/order-state.ts";
 
 const SHIPPING_EUR = 4.9;
 /* Barème transporteur — miroir du front (src/lib/shipping.ts). */
@@ -36,15 +39,39 @@ export default async (req: Request) => {
 
   if (req.method === "GET") {
     if (!user) return json({ orders: [] });
+    const url = new URL(req.url);
+
+    // ?id=X → UNE commande, acheteur ou vendeur uniquement (404 sinon —
+    // ne pas confirmer l'existence à un tiers). Statut normalisé en lecture.
+    const oneId = url.searchParams.get("id");
+    if (oneId) {
+      const o = (await store("orders").get(`o:${oneId}`, {
+        type: "json",
+      })) as OrderRecord | null;
+      if (!o || (o.buyerId !== user.id && o.sellerId !== user.id))
+        return bad("Commande inconnue", 404);
+      // L'adresse de livraison à domicile n'appartient qu'aux deux parties
+      // de CETTE commande — c'est déjà le périmètre de cette lecture.
+      return json({
+        order: {
+          ...o,
+          status: normalizeStatus(o.status),
+          role: o.sellerId === user.id ? "seller" : "buyer",
+        },
+      });
+    }
+
     // ?sales=1 → les VENTES du membre (commandes sur ses annonces)
-    const asSales = new URL(req.url).searchParams.get("sales") === "1";
+    const asSales = url.searchParams.get("sales") === "1";
     const key = asSales ? `sales:${user.id}` : `u:${user.id}`;
     const ids =
       ((await store("orders").get(key, { type: "json" })) as string[]) ?? [];
     const orders: unknown[] = [];
     for (const oid of ids.slice(-30).reverse()) {
-      const o = await store("orders").get(`o:${oid}`, { type: "json" });
-      if (o) orders.push(o);
+      const o = (await store("orders").get(`o:${oid}`, {
+        type: "json",
+      })) as OrderRecord | null;
+      if (o) orders.push({ ...o, status: normalizeStatus(o.status) });
     }
     return json({ orders });
   }
@@ -57,15 +84,37 @@ export default async (req: Request) => {
     productId?: string;
     shippingMethod?: string;
     relayLabel?: string;
+    address?: { name?: string; line?: string; postal?: string; city?: string };
   }>(req);
   const pid = (b?.productId ?? "").trim();
   if (!pid) return bad("Article manquant");
-  const shipSel = SHIP[(b?.shippingMethod ?? "").trim()] ?? {
+  const method = (b?.shippingMethod ?? "").trim();
+  const shipSel = SHIP[method] ?? {
     price: SHIPPING_EUR,
     carrier: "Livraison suivie",
   };
   const relayLabel =
     typeof b?.relayLabel === "string" ? b.relayLabel.slice(0, 80) : "";
+
+  // Livraison à domicile (Chronopost) : adresse requise, validée serveur.
+  // En point relais, l'adresse du relais fait foi — rien d'autre n'est stocké.
+  const isHome = method === "chronopost";
+  const addr = b?.address;
+  const field = (v: unknown, max: number) =>
+    typeof v === "string" ? v.trim().slice(0, max) : "";
+  const address = isHome
+    ? {
+        name: field(addr?.name, 80),
+        line: field(addr?.line, 120),
+        postal: field(addr?.postal, 10),
+        city: field(addr?.city, 60),
+      }
+    : undefined;
+  if (
+    isHome &&
+    (!address?.name || !address.line || !address.postal || !address.city)
+  )
+    return bad("Complète l'adresse de livraison");
 
   const products = store("products");
   // Source de vérité prix : annonce membre (Blobs) ou catalogue seed serveur.
@@ -109,6 +158,15 @@ export default async (req: Request) => {
   const net = cents(price - fee);
 
   const orderId = newId("o");
+  const now = Date.now();
+  // Paiement : UN point d'entrée (module payment.mts, simulé en beta).
+  const pay = await capturePayment({
+    id: orderId,
+    totalEUR: total,
+    buyerId: user.id,
+  });
+  if (!pay.ok) return bad(pay.error, 402);
+
   const order = {
     id: orderId,
     buyerId: user.id,
@@ -124,12 +182,15 @@ export default async (req: Request) => {
     totalEUR: total,
     shippingMethod: shipSel.carrier,
     shippingLabel,
+    address, // domicile uniquement, sinon undefined
     commissionRate: rate,
     commissionEUR: fee,
     netSellerEUR: net,
-    status: "confirmee",
+    status: "payee",
+    paymentRef: pay.reference,
+    history: [{ at: now, by: user.id, from: "creee", to: "payee" }],
     simulated: true, // AUCUN paiement réel — beta
-    createdAt: Date.now(),
+    createdAt: now,
   };
 
   // marque vendu (annonce membre : update ; pièce seed : shadow record + index)
@@ -176,6 +237,23 @@ export default async (req: Request) => {
       text: `Vendu : ${item.brand} ${item.name} — net ${eur(net)} · @${user.handle}`,
       link: "/profil",
     });
+    // Référence la commande dans le fil de messages existant sur cette
+    // pièce (aucun message fabriqué — l'en-tête du fil l'affichera).
+    const msgs = store("msgs");
+    const convIds =
+      ((await msgs.get(`u:${user.id}`, { type: "json" })) as string[]) ?? [];
+    for (const cid of convIds.slice(-30)) {
+      const c = (await msgs.get(`c:${cid}`, { type: "json" })) as {
+        productId?: string;
+        sellerId?: string | null;
+        orderId?: string;
+      } | null;
+      if (c && c.productId === pid && c.sellerId === record.sellerId) {
+        await msgs.setJSON(`c:${cid}`, { ...c, orderId });
+        break;
+      }
+    }
+
     const to = await userEmail(record.sellerId);
     if (to) {
       await sendEmail(
