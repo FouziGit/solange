@@ -180,3 +180,15 @@ que le plafond, ou un regroupement qui repart à 1. À l'échelle beta
 (un membre reçoit rarement deux événements dans la même milliseconde), le
 coût d'un compare-and-swap avec relances dépasse le bénéfice. À revoir si
 le volume augmente — `@netlify/blobs` expose `onlyIfMatch`.
+
+## Vérification en prod APRÈS correctifs (2026-08-31)
+
+Les endpoints hostiles (`attaquant.example`, `169.254.169.254`,
+`fcm.googleapis.com.attaquant.example`) sont tous **refusés** — mais par
+la garde « lot éteint » (503), qui passe avant la liste blanche. La
+liste blanche elle-même reste donc prouvée par ses **12 cas unitaires**
+tant que les clés ne sont pas posées ; elle s'exercera en prod dès
+l'allumage, et elle protège de toute façon aussi le chemin d'envoi
+(`sendPush` la revérifie avant chaque requête sortante).
+
+Compte de test supprimé, stores `push` et `circles` vides.
