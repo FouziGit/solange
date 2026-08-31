@@ -145,10 +145,22 @@ export function FeedCard({
         style={{ willChange: inView ? "transform, opacity" : "auto" }}
         className="relative z-10 h-full w-full overflow-hidden bg-black md:h-full md:max-h-[880px] md:w-[min(94vw,468px)] md:rounded-stage md:ring-1 md:ring-bone/10 md:shadow-[0_40px_120px_-20px_rgba(0,0,0,0.85)]"
       >
-        {/* Off-window cards drop everything but a flat black panel of the same
-            size — no media, animation or blur paints offscreen. */}
+        {/* Hors fenêtre : ni vidéo, ni animation, ni flou — mais l'image
+            d'attente est là. Un simple panneau noir laissait voir une carte
+            NOIRE quand on défilait vite (l'observateur n'a pas encore
+            rattrapé). Une image de ~50 Ko, chargée en paresseux, coûte
+            infiniment moins que ce trou visuel. */}
         {!inView ? (
-          <div aria-hidden="true" className="absolute inset-0 bg-black" />
+          <div aria-hidden="true" className="absolute inset-0 bg-black">
+            <img
+              src={isPost ? postHero : videoPoster(look.id)}
+              alt=""
+              draggable={false}
+              loading="lazy"
+              decoding="async"
+              className="size-full object-cover opacity-60"
+            />
+          </div>
         ) : (
           <>
             {/* media + tap layer */}

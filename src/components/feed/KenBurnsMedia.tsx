@@ -59,26 +59,50 @@ export function KenBurnsMedia({
   return (
     <div className="absolute inset-0 overflow-hidden bg-black">
       {showVideo ? (
-        /* real runway clip — hero layer, TikTok-style. The clip already moves,
-           so it gets NO ken-burns drift. Muted + playsInline is critical for
-           iOS autoplay; playback is driven by the [active, paused] effect. */
-        <video
-          ref={videoRef}
-          /* Le src n'est posé QUE sur la carte visible ou voisine : sinon le
+        /* Clip de défilé — pas de dérive ken-burns, l'image bouge déjà.
+           Muted + playsInline sont indispensables à la lecture auto iOS.
+
+           L'image d'attente est une VRAIE <img> posée DESSOUS, et non le
+           seul attribut `poster` : pendant que la source s'attache et se
+           charge, `poster` n'est pas fiable (constaté sur iPhone — la
+           carte restait noire le temps du chargement). L'image, elle,
+           peint dès qu'elle arrive ; la vidéo la recouvre ensuite. */
+        <>
+          {poster && (
+            <img
+              src={poster}
+              alt=""
+              aria-hidden="true"
+              draggable={false}
+              loading={active ? "eager" : "lazy"}
+              fetchPriority={active ? "high" : "auto"}
+              decoding="async"
+              className="absolute inset-0 size-full object-cover brightness-[0.92]"
+            />
+          )}
+          {/* la balise vidéo n'existe que sur la carte visible ou voisine :
+              ailleurs, l'image d'attente suffit et rien ne se télécharge */}
+          {inView && (
+            <video
+              ref={videoRef}
+              /* Le src n'est posé QUE sur la carte visible ou voisine : sinon le
              navigateur téléchargeait les métadonnées des 8 clips au premier
              rendu — ~900 Ko chacun. Mesuré : c'était l'élément LCP du feed
              (9,4 s en 4G bridée) alors que son poster ne pèse que 62 Ko. */
-          src={inView ? video : undefined}
-          poster={poster}
-          muted
-          loop
-          playsInline
-          /* la carte active a besoin des métadonnées pour démarrer vite ;
+              src={video}
+              muted
+              loop
+              playsInline
+              /* la carte active a besoin des métadonnées pour démarrer vite ;
              les voisines attendent d'être atteintes */
-          preload={active ? "metadata" : "none"}
-          onError={() => setVideoOk(false)}
-          className="absolute inset-0 size-full object-cover brightness-[0.92]"
-        />
+              preload={active ? "metadata" : "none"}
+              onError={() => setVideoOk(false)}
+              /* fond transparent : tant qu'il n'y a pas d'image décodée, on
+             voit l'<img> du dessous plutôt qu'un rectangle noir */
+              className="absolute inset-0 size-full bg-transparent object-cover brightness-[0.92]"
+            />
+          )}
+        </>
       ) : (
         /* moving composition — will-change only while actually animating */
         <div
