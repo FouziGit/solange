@@ -1,7 +1,7 @@
 /* eslint-disable @next/next/no-img-element */
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   AnimatePresence,
   motion,
@@ -11,11 +11,14 @@ import {
 import Link from "next/link";
 import type { ApiPost } from "@/lib/api";
 import { useStore } from "@/lib/store";
+import { catalogItem } from "@/lib/mock";
 import { compact, gradientFor, initials } from "@/lib/utils";
 import { CarouselMedia } from "./CarouselMedia";
+import { MemberVideo } from "./MemberVideo";
 import { RailAction } from "./RailAction";
+import { ShopTheLook } from "./ShopTheLook";
 import { ReportSheet } from "../ui/ReportSheet";
-import { Heart, Bookmark } from "../chrome/icons";
+import { Heart, Bookmark, Hanger } from "../chrome/icons";
 
 const group: Variants = {
   hide: {},
@@ -51,13 +54,46 @@ export function MemberPostCard({
   inView: boolean;
 }) {
   const reduce = useReducedMotion();
-  const { isLiked, toggleLike, isSaved, toggleSave, likeCount } = useStore();
+  const {
+    isLiked,
+    toggleLike,
+    isSaved,
+    toggleSave,
+    likeCount,
+    serverProducts,
+  } = useStore();
   const liked = isLiked(post.id);
   const saved = isSaved(post.id);
 
   const hasGallery = post.gallery.length > 1;
   const hero = post.gallery[0];
   const altText = `Publication de ${post.authorName} (@${post.authorHandle})`;
+
+  /* Lot 5 : pièces taguées — « Shop the look » sur une publication membre
+     exactement comme sur un look éditorial (même primitive, même feuille). */
+  const [shopOpen, setShopOpen] = useState(false);
+  const taggedPieces = useMemo(
+    () =>
+      (post.productIds ?? [])
+        .map((id) => {
+          const seed = catalogItem(id);
+          if (seed) return { ...seed, hotspot: { x: 50, y: 50 } };
+          const p = serverProducts.find((sp) => sp.id === id);
+          return p
+            ? {
+                id: p.id,
+                name: p.name,
+                brand: p.brand,
+                priceEUR: p.priceEUR,
+                size: p.size,
+                condition: p.condition,
+                hotspot: { x: 50, y: 50 },
+              }
+            : null;
+        })
+        .filter((x): x is NonNullable<typeof x> => x !== null),
+    [post.productIds, serverProducts],
+  );
 
   // légende "afficher plus / moins" — même pattern que FeedCard : clamp 2
   // lignes, le toggle n'apparaît que si le texte déborde réellement.
@@ -98,7 +134,16 @@ export function MemberPostCard({
             {/* média : carrousel si plusieurs images, image seule sinon,
                 dégradé monogramme si la publication n'a pas de photo */}
             <div className="absolute inset-0">
-              {hasGallery ? (
+              {post.video ? (
+                /* Lot 5 : une vidéo membre se lit comme un look éditorial */
+                <MemberVideo
+                  src={post.video}
+                  poster={post.poster}
+                  alt={altText}
+                  active={active}
+                  inView={inView}
+                />
+              ) : hasGallery ? (
                 <CarouselMedia
                   images={post.gallery}
                   title={`Publication de ${post.authorName}`}
@@ -136,7 +181,7 @@ export function MemberPostCard({
 
               {/* scrims de lisibilité — identiques au média des looks
                   (CarouselMedia embarque déjà les siens) */}
-              {!hasGallery && (
+              {!hasGallery && !post.video && (
                 <>
                   <div className="pointer-events-none absolute inset-x-0 top-0 h-48 bg-gradient-to-b from-black/70 via-black/20 to-transparent" />
                   <div className="pointer-events-none absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-black via-black/60 to-transparent" />
@@ -201,6 +246,16 @@ export function MemberPostCard({
               className="absolute right-3 z-20 md:!bottom-40"
             >
               <div className="flex flex-col items-center gap-5">
+                {taggedPieces.length > 0 && (
+                  <RailAction
+                    label={`${taggedPieces.length} pièce${taggedPieces.length > 1 ? "s" : ""}`}
+                    onClick={() => setShopOpen(true)}
+                    ariaLabel="Voir les pièces à shopper"
+                  >
+                    <Hanger className="size-6 text-bone" />
+                  </RailAction>
+                )}
+
                 <RailAction
                   label={compact(likeCount(post.id, 0) + (liked ? 1 : 0))}
                   onClick={() => toggleLike(post.id)}
@@ -333,6 +388,16 @@ export function MemberPostCard({
           </>
         )}
       </motion.div>
+
+      {taggedPieces.length > 0 && (
+        <ShopTheLook
+          products={taggedPieces}
+          open={shopOpen}
+          onOpenChange={setShopOpen}
+          highlightId={null}
+          variant="drawer"
+        />
+      )}
 
       <ReportSheet
         open={reportOpen}

@@ -13,7 +13,7 @@ import {
   readJson,
   rateLimit,
 } from "./_shared/core.mts";
-import { storeImages } from "./_shared/media.mts";
+import { storeImages, storeVideo } from "./_shared/media.mts";
 
 export default async (req: Request) => {
   const posts = store("posts");
@@ -43,6 +43,9 @@ export default async (req: Request) => {
     caption?: string;
     brandTags?: string[];
     images?: string[];
+    video?: string;
+    poster?: string;
+    productIds?: string[];
   }>(req);
   if (!(await rateLimit(`post:${user.id}`, 10, 24 * 3_600_000)))
     return bad("Limite de 10 publications par jour atteinte", 429);
@@ -57,6 +60,31 @@ export default async (req: Request) => {
   if (!stored.ok) return bad(stored.error);
   const gallery = stored.paths;
 
+  /* Vidéo (lot 5) — derrière un drapeau. Le contrôle fait dans le
+     navigateur est un confort : storeVideo revalide tout. L'image
+     d'attente est générée côté client (aucun transcodage disponible,
+     D-028) et voyage comme une photo ordinaire. */
+  let video: string | undefined;
+  let poster: string | undefined;
+  if (b?.video) {
+    if (process.env.NEXT_PUBLIC_VIDEO_UPLOAD !== "1")
+      return bad("Publication vidéo pas encore ouverte", 503);
+    const v = await storeVideo(b.video);
+    if (!v.ok) return bad(v.error);
+    video = v.path;
+    if (b.poster) {
+      const p = await storeImages([b.poster], 1);
+      if (p.ok) poster = p.paths[0];
+    }
+  }
+
+  /* Pièces taguées : « Shop the look » sur une publication membre comme
+     sur un look éditorial. On ne garde que des identifiants plausibles. */
+  const productIds = (b?.productIds ?? [])
+    .slice(0, 6)
+    .map((x) => String(x).slice(0, 40))
+    .filter(Boolean);
+
   const id = newId("l");
   const post = {
     id,
@@ -66,6 +94,9 @@ export default async (req: Request) => {
     caption,
     brandTags,
     gallery,
+    video,
+    poster,
+    productIds,
     createdAt: Date.now(),
   };
   await posts.setJSON(`l:${id}`, post);

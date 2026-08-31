@@ -11,7 +11,9 @@ import { ProductCard } from "@/components/ui/ProductCard";
 import { catalog, trendingTags } from "@/lib/mock";
 import { catalogBrands } from "@/lib/data";
 import { euro, gradientFor } from "@/lib/utils";
-import { api, resizeImage } from "@/lib/api";
+import { api, fileToDataUrl, resizeImage, videoPoster } from "@/lib/api";
+import { MAX_VIDEO_SECONDS, checkVideo } from "@/lib/video";
+import { Button } from "@/components/ui/Button";
 import { useStore } from "@/lib/store";
 import {
   Camera,
@@ -84,6 +86,16 @@ export default function CreerPage() {
   const [photos, setPhotos] = useState<string[]>([]);
   const [photoBusy, setPhotoBusy] = useState(false);
   const [photoError, setPhotoError] = useState<string | null>(null);
+  /* vidéo (lot 5) — derrière un drapeau : sans lui, aucun bouton */
+  const videoEnabled = process.env.NEXT_PUBLIC_VIDEO_UPLOAD === "1";
+  const [video, setVideo] = useState<{
+    dataUrl: string;
+    poster: string;
+    seconds: number;
+  } | null>(null);
+  const videoRef = useRef<HTMLInputElement>(null);
+  const [videoBusy, setVideoBusy] = useState(false);
+  const [videoError, setVideoError] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const [submitting, setSubmitting] = useState(false);
@@ -164,6 +176,35 @@ export default function CreerPage() {
     }
   }
 
+  /* ---- vidéo (lot 5) ---- */
+  async function onPickVideo(file: File | null) {
+    if (!file) return;
+    setVideoError(null);
+    // refus immédiat sur ce qu'on sait déjà (type, poids), avec le chiffre
+    const first = checkVideo(file);
+    if (!first.ok) return setVideoError(first.message);
+    setVideoBusy(true);
+    try {
+      // l'image d'attente ET la durée viennent du navigateur : aucun
+      // transcodage serveur n'existe (D-028)
+      const { poster, durationSec } = await videoPoster(file);
+      const second = checkVideo(file, durationSec);
+      if (!second.ok) {
+        setVideoError(second.message);
+        return;
+      }
+      setVideo({
+        dataUrl: await fileToDataUrl(file),
+        poster,
+        seconds: Math.round(durationSec),
+      });
+    } catch {
+      setVideoError("Vidéo illisible. Essaie un MP4 (H.264).");
+    } finally {
+      setVideoBusy(false);
+    }
+  }
+
   function removePhoto(index: number) {
     setPhotos((cur) => cur.filter((_, i) => i !== index));
     setPhotoError(null);
@@ -193,6 +234,11 @@ export default function CreerPage() {
       caption: serverCaption,
       brandTags,
       images: photos,
+      video: video?.dataUrl,
+      poster: video?.poster,
+      // lot 5 : les pièces taguées existaient côté client mais n'étaient
+      // jamais envoyées — « Shop the look » ne pouvait donc pas s'ouvrir
+      productIds: taggedItems.map((it) => it.id),
     });
     if (res.ok) {
       setPublished(true);
@@ -315,6 +361,72 @@ export default function CreerPage() {
                 <p className="mt-1 text-[11px] text-ash" role="alert">
                   {photoError}
                 </p>
+              )}
+
+              {/* ---- vidéo (lot 5, derrière un drapeau) ---- */}
+              {videoEnabled && (
+                <div className="mt-5 border-t border-bone/10 pt-5">
+                  <FieldLabel>Vidéo (facultatif)</FieldLabel>
+                  <input
+                    ref={videoRef}
+                    type="file"
+                    accept="video/mp4,video/quicktime,video/webm"
+                    onChange={(e) =>
+                      void onPickVideo(e.target.files?.[0] ?? null)
+                    }
+                    className="hidden"
+                    aria-hidden="true"
+                    tabIndex={-1}
+                  />
+                  {video ? (
+                    <div className="flex items-center gap-3">
+                      <span className="size-16 shrink-0 overflow-hidden rounded-xl ring-1 ring-bone/10">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={video.poster}
+                          alt="Image d'attente de la vidéo"
+                          className="size-full object-cover"
+                        />
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[13px] text-bone">
+                          Vidéo prête · {video.seconds} s
+                        </p>
+                        <p className="text-[11.5px] text-ash">
+                          Elle passera avant tes photos dans le feed.
+                        </p>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setVideo(null);
+                          setVideoError(null);
+                        }}
+                      >
+                        Retirer
+                      </Button>
+                    </div>
+                  ) : (
+                    <Button
+                      variant="outline"
+                      size="md"
+                      disabled={videoBusy}
+                      onClick={() => videoRef.current?.click()}
+                    >
+                      {videoBusy ? "Lecture…" : "Ajouter une vidéo"}
+                    </Button>
+                  )}
+                  <p className="mt-2 text-[11px] leading-relaxed text-ash">
+                    MP4 ou WebM, {MAX_VIDEO_SECONDS} s et 4 Mo maximum. Une
+                    image d&apos;attente est créée automatiquement.
+                  </p>
+                  {videoError && (
+                    <p className="mt-1 text-[11px] text-ash" role="alert">
+                      {videoError}
+                    </p>
+                  )}
+                </div>
               )}
             </div>
           )}

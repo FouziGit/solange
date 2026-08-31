@@ -97,6 +97,32 @@ Chaque entrée : décision, alternative écartée, raison. Relire en début de p
   UN fetch, squelette DA, zéro cascade. D-013 vise les pages de contenu
   public (gate/feed/marché) — les écrans membres restent client.
 
+## Brief 2 — Lot 5
+
+- **D-028 — Pas de transcodage : on valide et on refuse, clairement.** Le
+  stack n'offre aucun service de conversion vidéo et le brief interdit
+  d'en ajouter un sans demander. On accepte donc MP4/H.264 (le seul codec
+  lu partout, iOS compris) et WebM, ≤ 15 s, ≤ 4 Mo — cette dernière limite
+  n'est pas arbitraire : la charge utile d'une Netlify Function plafonne à
+  6 Mo et le base64 gonfle de 33 %. Un refus annonce TOUJOURS le chiffre
+  réel (« 6,2 Mo — 4 Mo maximum ») : la personne doit savoir quoi
+  corriger. L'image d'attente est extraite dans le navigateur (canvas sur
+  la frame à 0,1 s), ce qui évite d'ajouter un service pour une vignette.
+- **D-029 — Le service vidéo implémente les requêtes partielles.** Ce
+  n'est pas un raffinement : Safari commence par demander `bytes=0-1` et
+  REFUSE de lire une vidéo servie sans `Range`. Sans les 206, la
+  fonctionnalité serait morte sur iPhone — la moitié du public. La
+  fonction de découpe est testée séparément (plages ouvertes, suffixes,
+  bornes hors fichier, 416).
+- **D-030 — Mélange du feed : publications membres d'abord, puis looks.**
+  Pas de score d'engagement. À ce volume, un « algorithme » serait du
+  théâtre, et le brief interdit de fabriquer de l'engagement. Les
+  abonnements ne remontent rien : ce serait trier trois éléments. La règle
+  est écrite pour être remplacée quand il y aura assez de contenu pour
+  qu'un tri veuille dire quelque chose. Alternative écartée : un score
+  fraîcheur × engagement (invente une hiérarchie sur des données trop
+  rares pour la porter).
+
 ## Brief 2 — Lot 4
 
 - **D-024 — Le rôle admin vit dans l'environnement, pas dans la donnée.**

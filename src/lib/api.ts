@@ -94,11 +94,16 @@ export type ApiConversation = {
 
 export type ApiPost = {
   id: string;
+  authorId?: string;
   authorHandle: string;
   authorName: string;
   caption: string;
   brandTags: string[];
   gallery: string[];
+  /** Lot 5 : vidéo membre (+ son image d'attente) et pièces taguées. */
+  video?: string;
+  poster?: string;
+  productIds?: string[];
   createdAt: number;
 };
 
@@ -326,7 +331,14 @@ export const api = {
       body: JSON.stringify({ dmOpen }),
     }),
   posts: () => request<{ posts: ApiPost[] }>("/api/posts"),
-  createPost: (p: { caption: string; brandTags: string[]; images: string[] }) =>
+  createPost: (p: {
+    caption: string;
+    brandTags: string[];
+    images: string[];
+    video?: string;
+    poster?: string;
+    productIds?: string[];
+  }) =>
     request<{ ok: boolean; post: ApiPost }>("/api/posts", {
       method: "POST",
       body: JSON.stringify(p),
@@ -470,5 +482,60 @@ export function resizeImage(
       reject(new Error("image illisible"));
     };
     img.src = url;
+  });
+}
+
+/**
+ * Extrait l'image d'attente d'une vidéo, dans le navigateur (lot 5).
+ * Aucun transcodage n'existe côté serveur (D-028) : on cherche la
+ * première image utile, on la dessine sur un canvas, on renvoie un JPEG.
+ * Renvoie aussi la durée, que le serveur ne saurait pas mesurer.
+ */
+export function videoPoster(
+  file: File,
+): Promise<{ poster: string; durationSec: number }> {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const v = document.createElement("video");
+    v.preload = "metadata";
+    v.muted = true;
+    v.playsInline = true;
+
+    const fail = (why: string) => {
+      URL.revokeObjectURL(url);
+      reject(new Error(why));
+    };
+
+    v.onloadedmetadata = () => {
+      // 0,1 s : la toute première image est souvent noire
+      v.currentTime = Math.min(0.1, (v.duration || 1) / 2);
+    };
+    v.onseeked = () => {
+      const scale = Math.min(1, 720 / Math.max(v.videoWidth, v.videoHeight));
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.round(v.videoWidth * scale);
+      canvas.height = Math.round(v.videoHeight * scale);
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return fail("canvas indisponible");
+      ctx.drawImage(v, 0, 0, canvas.width, canvas.height);
+      const duration = v.duration;
+      URL.revokeObjectURL(url);
+      resolve({
+        poster: canvas.toDataURL("image/jpeg", 0.72),
+        durationSec: duration,
+      });
+    };
+    v.onerror = () => fail("vidéo illisible");
+    v.src = url;
+  });
+}
+
+/** Fichier → data URL (envoi vidéo). */
+export function fileToDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => resolve(String(r.result));
+    r.onerror = () => reject(new Error("lecture impossible"));
+    r.readAsDataURL(file);
   });
 }
