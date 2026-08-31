@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { looks } from "@/lib/mock";
 import { useStore } from "@/lib/store";
+import type { ApiPost } from "@/lib/api";
 import { FeedCard } from "./FeedCard";
 import { MemberPostCard } from "./MemberPostCard";
 import { ChevronUp } from "../chrome/icons";
@@ -15,11 +16,36 @@ export function VideoFeed() {
   const { isBlocked, memberPosts, refreshPosts, postsError } = useStore();
   const visibleLooks = looks;
 
-  // Publications membres — lues depuis le store, PRÉCHARGÉES pendant le
-  // splash : le fil monte complet, sans insertion tardive qui ferait sauter
-  // le scroll-snap. La revalidation au montage rattrape un post publié entre
-  // temps ; en cas d'échec réseau le fil reste complet avec les looks.
-  const visiblePosts = memberPosts.filter((p) => !isBlocked(p.authorHandle));
+  /* Publications membres — insérées AVANT les looks (D-030). C'est
+     précisément ce qui faisait « vibrer » le fil : quand la liste change
+     après coup (revalidation réseau, ou arrivée de la session qui filtre
+     les membres bloqués), des cartes apparaissent ou disparaissent
+     AU-DESSUS de celle qu'on regarde. Le navigateur décale alors le
+     défilement, le compteur de cartes change, l'observateur est recréé et
+     l'animation d'échelle des cartes (0,95 ↔ 1) rejoue : ça saute.
+
+     On fige donc la liste affichée, et on n'accepte une nouvelle version
+     QUE lorsque la personne est revenue en haut du fil — là, un
+     changement au-dessus ne déplace rien. */
+  const incoming = memberPosts.filter((p) => !isBlocked(p.authorHandle));
+  const [shownPosts, setShownPosts] = useState<ApiPost[]>(incoming);
+  const sameList =
+    shownPosts.length === incoming.length &&
+    shownPosts.every((p, i) => p.id === incoming[i].id);
+
+  useEffect(() => {
+    if (sameList) return;
+    const root = containerRef.current;
+    // en haut du fil (ou fil pas encore parcouru) : on peut réordonner sans
+    // rien bousculer
+    if (!root || root.scrollTop < 8) {
+      queueMicrotask(() => setShownPosts(incoming));
+    }
+    // sinon on garde la liste figée : elle sera reprise au prochain retour
+    // en haut, plutôt que de faire sauter la lecture en cours
+  }, [sameList, incoming]);
+
+  const visiblePosts = shownPosts;
   const total = visiblePosts.length + visibleLooks.length;
 
   useEffect(() => {

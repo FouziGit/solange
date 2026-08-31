@@ -122,7 +122,14 @@ export function MemberPostCard({
           scale: reduce ? 1 : active ? 1 : 0.95,
           opacity: active ? 1 : 0.5,
         }}
-        transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
+        /* L'effet de profondeur n'est animé que sur les cartes VISIBLES.
+           Auparavant les 8 cartes rejouaient 0,7 s de transform à chaque
+           changement de carte active, y compris hors écran : sur téléphone
+           ça saccadait pendant le défilement (« ça vibre »). Hors fenêtre,
+           on saute directement à l'état final — invisible, donc gratuit. */
+        transition={
+          inView ? { duration: 0.7, ease: [0.16, 1, 0.3, 1] } : { duration: 0 }
+        }
         style={{ willChange: inView ? "transform, opacity" : "auto" }}
         className="relative z-10 h-full w-full overflow-hidden bg-black md:h-full md:max-h-[880px] md:w-[min(94vw,468px)] md:rounded-stage md:ring-1 md:ring-bone/10 md:shadow-[0_40px_120px_-20px_rgba(0,0,0,0.85)]"
       >

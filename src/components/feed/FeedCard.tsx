@@ -139,7 +139,14 @@ export function FeedCard({
           scale: reduce ? 1 : active ? 1 : 0.95,
           opacity: active ? 1 : 0.5,
         }}
-        transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
+        /* L'effet de profondeur n'est animé que sur les cartes VISIBLES.
+           Auparavant les 8 cartes rejouaient 0,7 s de transform à chaque
+           changement de carte active, y compris hors écran : sur téléphone
+           ça saccadait pendant le défilement (« ça vibre »). Hors fenêtre,
+           on saute directement à l'état final — invisible, donc gratuit. */
+        transition={
+          inView ? { duration: 0.7, ease: [0.16, 1, 0.3, 1] } : { duration: 0 }
+        }
         // hint the compositor only for cards in the active/animating band;
         // far-off cards drop it so we don't promote dozens of layers
         style={{ willChange: inView ? "transform, opacity" : "auto" }}
