@@ -35,11 +35,16 @@ export function MemberVideo({
   const [saveData, setSaveData] = useState(false);
 
   useEffect(() => {
-    try {
-      setSaveData(window.matchMedia("(prefers-reduced-data: reduce)").matches);
-    } catch {
-      /* média non reconnu par ce navigateur : on joue normalement */
-    }
+    // différé d'un tick : jamais de setState synchrone dans un effet
+    queueMicrotask(() => {
+      try {
+        setSaveData(
+          window.matchMedia("(prefers-reduced-data: reduce)").matches,
+        );
+      } catch {
+        /* média non reconnu par ce navigateur : on joue normalement */
+      }
+    });
   }, []);
 
   const canPlay = active && !reduce && !saveData && !paused;
