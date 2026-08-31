@@ -97,6 +97,28 @@ Chaque entrée : décision, alternative écartée, raison. Relire en début de p
   UN fetch, squelette DA, zéro cascade. D-013 vise les pages de contenu
   public (gate/feed/marché) — les écrans membres restent client.
 
+## Brief 2 — Lot 6
+
+- **D-031 — Les mesures de performance se prennent sur la prod, pas en
+  local.** `next start` sert 245 Ko de `next-devtools` absents du site
+  déployé (vérifié : 0 occurrence en prod). Une mesure locale est donc
+  pessimiste d'environ un quart du JavaScript — c'est ce qui explique
+  l'écart entre les scores locaux (73/63/69) et réels (86/73/80), et
+  pourquoi la comparaison avec le rapport v1 (mesuré en local) était
+  trompeuse. Toute mesure consignée désormais vient de la prod, en trois
+  passes, médiane retenue.
+- **D-032 — D-013 avait raison sur le fond, tort sur la cause.** Le
+  diagnostic d'origine disait « les pages chargent leurs données en
+  client ». La mesure dit autre chose : après correction du réseau
+  (préchargement du LCP, vidéos allégées), il reste **10 s de « Render
+  Delay »** — l'image est prête en moins d'une seconde mais ne peut pas
+  peindre, faute d'exister dans le HTML serveur. Le vrai blocage est
+  `AuthGate` : composant client qui, au rendu serveur, ignore si la
+  personne a déjà passé l'accueil (drapeau en `localStorage`) et rend donc
+  le splash. Le correctif est de déplacer ce drapeau vers un **cookie**,
+  lisible par le serveur. Non fait ici : cela touche l'authentification,
+  la partie la plus sensible, et mérite sa propre passe avec ses preuves.
+
 ## Brief 2 — Lot 5
 
 - **D-028 — Pas de transcodage : on valide et on refuse, clairement.** Le

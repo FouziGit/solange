@@ -1,95 +1,110 @@
-# Rapport final — refonte design/de-slop
+# Rapport v2 — brief 2 : finir la roadmap
 
-> Branche `design/de-slop`, ~50 commits atomiques depuis `aed1cf1` (main).
-> Chaque affirmation ci-dessous a un diff, une capture ou une mesure.
-> **Rien n'a été fusionné dans `main`** : revue puis merge à la main.
+> Sept lots livrés sur `main`, chacun déployé et vérifié en production.
+> Chaque affirmation ci-dessous a un diff, une mesure ou une trace d'appel.
+> Ce qui n'a pas été atteint est dit comme tel, avec le chiffre.
 
-## 1. Ce qui a changé, et pourquoi
+## 1. Ce qui a été livré, lot par lot
 
-### Système (Phase 2.4)
-- **Tokens** : `--color-danger` (oxblood 2 thèmes), `--radius-stage`,
-  `--dur-*` + `DUR`, 3 crans de filets implicites ; ~300 l. de CSS/JSX morts
-  purgés (`ProductHotspots`, `ShopHotspots`, `.stage`, keyframes orphelins).
-- **Primitives uniques** (doc : `design/composants.md`) : `Sheet` (4 chromes
-  fusionnés, Échap + piège de focus + portal), `Button` (5 variantes DA),
-  `RailAction` (3 copies fusionnées), `FieldLabel`, `Skeleton`, `Stamp`,
-  `ReportSheet`. Solde système : **≈ −600 lignes** pour 7 primitives.
+| Lot                | Livré                                                                                                                                                                                       | Preuve                                                                                              |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| **0 — Filet**      | Plus un seul échec réseau muet (Marché, feed, Messages, Profil) ; primitive `TogglePill` remplaçant 9 boutons divergents ; tous les CTA sur `Button` ; doublon `ProductTile` supprimé       | `audit/lots/00-filet.md`                                                                            |
+| **1 — Commande**   | Cycle `payée → expédiée → reçue → terminée` + `annulée`/`litige`, machine à états unique partagée client/serveur, historique horodaté, automatismes (rappels, annulation J+7, clôture J+14) | E2E prod : 409 sur rôle interdit, double-clic sans double effet, annulation → pièce remise en vente |
+| **2 — Cercles**    | Fils réels (texte + photo), réponses, j'aime, mentions, non-lus ; le mock supprimé                                                                                                          | E2E prod : 403 sans adhésion, 404 pour un tiers, badge non-lus                                      |
+| **3 — Push**       | Web Push sans dépendance, prouvé contre le vecteur RFC 8291 §5 ; invitation jamais au premier lancement ; préférences par type + heures calmes                                              | **FCM a répondu 404 et non 401** : Google accepte notre signature VAPID                             |
+| **4 — Modération** | `/admin` : file signalements + litiges, contexte inclus, actions tracées ; bannir coupe l'authentification, suspendre coupe l'écriture, masquer sort des lectures publiques                 | E2E prod : 404 pour non-admin, masquage vérifié, suspension « lit mais ne publie pas »              |
+| **5 — Vidéo**      | Vidéos membres (validation client, image d'attente en canvas), service avec `Range`, pièces taguées, mélange du feed écrit                                                                  | **206 sur `bytes=0-1`** (la sonde Safari), 416 sur plage invalide, octets identiques au fichier     |
+| **6 — Perf**       | Vidéos −57 %, chargement conditionnel, préchargement du LCP                                                                                                                                 | 87 / 78 / 81 — **objectif 90 non atteint**, voir §3                                                 |
 
-### Les bloquants d'usage (Phase 3)
-- Checkout 375 : **débordement +34 px → 0** (`min-w-0` sur les grid items) —
-  mesuré en live avant/après.
-- Tab bar : surface `.glass-bar` opaque — le contenu ne traverse plus.
-- Cause racine d'un CSS cassé en dev : Tailwind v4 scannait `audit/` →
-  `@source not`.
-- 3 `window.prompt()` de signalement → `ReportSheet` (états complets,
-  vérifiée au-dessus de la nav — bug de stacking des transitions de page
-  corrigé par portal, screenshots avant/après dans le fil de travail).
-- Six états : matrice complète `audit/02-etats.md` ; squelettes fidèles
-  (`/membre`, `/notifications`), états vides qui invitent à l'action cœur,
-  brouillons `vendre`/`creer` persistés (sessionStorage).
+## 2. Ce qui a été trouvé en chemin, et corrigé
 
-### Identité (Phases 2 & 4)
-- **Lexique canonique** : Looks · Pièces · Marché · Cercles · Notifications ·
-  Gardées · membre — appliqué nav + pages + metadata (D-006/D-010).
-- **Signature** : le **tampon** (`Stamp` — Payée / Déposée / Publié) remplace
-  les ronds ✓ génériques ; **N° de passage** sur chaque look (vraie séquence,
-  D-011… voir DECISIONS) ; règle des formes carré=commerce/rond=organique
-  exécutée (CTA, chips, radius arbitraires → tokens).
-- Motion discipliné : AuthScreen 5 effets → 1 geste ; vidéos `/live` jouent
-  uniquement visibles ; plancher typo 11 px (90 occurrences corrigées).
+Des défauts que le brief ne demandait pas, découverts en travaillant :
 
-## 2. Captures avant/après
-`audit/captures/phase0/` (32, état zéro) vs `audit/captures/apres/` (21,
-7 écrans cœur × 3 largeurs). Comparaisons parlantes : `checkout-375`
-(débordement vs propre), `decouvrir-375` vs `marche-375` (titre Marché,
-chips 44 px, barre opaque), `feed-375` (créateur en bas, rail 5 actions,
-N° de passage).
+- **Les signalements n'avaient aucun index** : ils étaient écrits sans que
+  personne ne puisse jamais les relire. Toute la modération reposait sur
+  un email.
+- **Les annonces étaient le seul contenu non signalable** de l'app.
+- **Les pièces taguées d'une publication n'étaient jamais envoyées** au
+  serveur : « Shop the look » ne pouvait pas s'ouvrir dessus.
+- **Trois fuites RGPD à la suppression de compte**, dont deux antérieures
+  à ce brief : les publications du feed et les fils de Cercle survivaient
+  avec pseudo, nom et photos. Les publications sont purgées ; les fils
+  sont **anonymisés** plutôt que détruits — effacer un fil auquel d'autres
+  ont répondu détruirait la parole d'autrui.
+- **Une SSRF** dans l'abonnement push (endpoint non filtré) et une
+  **amplification** (le plafond ne comptait que les envois réussis).
+- **Les heures calmes ne fonctionnaient pas du tout** : en français,
+  `Intl` écrit « 03 h », donc la conversion donnait `NaN`.
+- **Un bouton mort** (« Faire une offre » du feed Pièces).
 
-## 3. Tests de la Definition of Done — résultats honnêtes
+Le lot 3 a été soumis à une revue adversariale de 30 agents (4 angles,
+chaque défaut ensuite confié à un sceptique chargé de le réfuter) :
+12 verdicts, 11 réels, tous corrigés avant l'allumage.
 
-| Test | Avant | Après | Verdict |
-|---|---|---|---|
-| Flou (`da-tests/`) | Échec — app sombre générique | Structure signature lisible (pill switch + FAB rond + média intégral, aucun autre chrome) ; l'étiquette reste illisible floutée par nature | **Partiel** — la silhouette est distinctive, pas encore l'ADN complet |
-| Logo échangé | Échec | Sur `apres-logoswap-marche-375.png`, un bandeau Vinted jure avec la typo display caps + chips carrées + zéro accent couleur | **Amélioré**, à re-juger avec un œil externe |
-| 5 secondes / 2 minutes | — | Non testé sur panel réel — hors de portée d'un agent ; parcours invité = 1 tap (« Passer ») → feed | **Non prouvé** (protocole fourni §5) |
-| Action cœur ≤ 1 tap | ✓ | Feed au lancement ; `+` central → vendre/publier en 1 tap | ✓ |
-| Six états | trous partout | matrice remplie, 3 manques consignés | ✓ (avec dette listée) |
-| Primitives uniques / balayages | — | liste noire copy 0 · console.log 0 · TODO 0 · `any` 0 · doublons 0 · unused-imports 0 · `red-*` 0 · prompt() 0 · rounded arbitraires : 1 justifié (`rounded-[50%]` génératif) · hex inline : exceptions justifiées (générateurs OG/icônes edge, themeColor, dégradés média) | ✓ |
-| Clavier | — | Sheets : Échap + piège Tab ; média feed opérable (Entrée/Espace) ; le reste = éléments natifs + `:focus-visible` global. Parcours complets non rejoués au clavier pas-à-pas | **Partiel** |
-| Perf (budget LCP<2 s, perf≥90) | non mesuré | **gate 88 · feed 80 · marché 76** (Lighthouse mobile, CPU×4, slow-4G, local `next start`) ; CLS 0 partout, TBT ≤ 40 ms ; images −54 % (5,2→2,4 Mo) | **✗ budget non tenu** — cause : pages données en full-CSR (hydratation avant contenu) + posters vidéo lourds. Plan §5.1 |
-| Régressions | — | tsc 0 · lint 0 erreur · 15/15 tests · build 63 routes à CHAQUE lot ; aucun test modifié | ✓ |
+## 3. Ce qui n'est PAS atteint
 
-## 4. Décisions et alternatives écartées
-Voir `DECISIONS.md` (D-001 → D-010) : registre tu, lexique, formes, pas de
-couleur d'accent, tests DA à l'état zéro, switch Looks|Pièces…
+**La performance.** Objectif ≥ 90, résultat **87 / 78 / 81** (prod,
+mobile bridé, 3 passes, médiane).
 
-## 5. Reste à faire, par priorité
+Le diagnostic est complet et mesuré. Après avoir corrigé tout le réseau —
+vidéos allégées de 57 %, préchargement du LCP qui ramène le « Load Delay »
+de 6 499 ms à 328 ms — il reste **10 s de « Render Delay »** : l'image est
+prête en moins d'une seconde et ne peut pas peindre, parce que l'élément
+qui la porte n'existe pas dans le HTML servi.
 
-1. **Perf structurelle (le point ✗)** : rendre la grille du Marché en Server
-   Components + streaming (la page est aujourd'hui 100 % client) ; posters
-   vidéo → AVIF ≤ 60 Ko ; `next/image` sur les grilles. Objectif LCP < 2,5 s
-   réaliste ensuite. Chantier ~2-3 jours, sans changement d'API.
-2. Passe copy mot-à-mot restante (typographie française systématique —
-   espaces insécables, « … » — et chasse aux formulations molles écran par
-   écran ; l'inventaire Phase 0 §6 est la base).
-3. Migration des CTA restants vers `Button` (écrans secondaires), résorption
-   `ProductTile`→`ProductCard` (/membre).
-4. Échecs réseau silencieux (matrice §3) ; squelette des sections profil.
-5. Découpe des fichiers massifs (messages 550 l., StreamsView 530 l.) —
-   mécanique, sans urgence.
-6. Test 5 secondes / 2 minutes sur 3 personnes réelles (protocole : ouvrir
-   la prod, chronomètre, « dis ce que fait l'app » puis « achète une pièce »).
+La cause précise : `AuthGate` est un composant client qui, au rendu
+serveur, ignore si la personne a déjà passé l'accueil — le drapeau est en
+`localStorage`. Il rend donc le splash, et rien d'autre.
 
-## 6. Idées non implémentées (interdites par le brief, à discuter)
-- « Depuis ta dernière visite » (résumé à l'ouverture) — déclencheur de
-  rétention naturel, nécessite un horodatage de session côté client.
-- Reprise exacte de position dans le feed entre sessions.
-- Toast global unique (aujourd'hui : l'écran montre le résultat — un vrai
-  besoin n'a pas émergé).
-- Analytics produit (aucun tracking aujourd'hui) : à décider explicitement.
+**Le correctif restant tient en une phrase** : déplacer ce drapeau vers un
+cookie, pour que le serveur sache qui il sert. Non fait ici parce que cela
+touche le chemin d'authentification et mérite sa propre passe, avec ses
+propres preuves, plutôt qu'une modification de fin de chantier.
 
-## 7. Environnement de vérification
-Local `next start` (build prod). Les fonctions Netlify ne tournent pas en
-local : les écrans membres réels (notifications pleines, inbox) ont été
-vérifiés en code + via la prod des lots précédents. `?e2e=1` (équivalent
-« Passer », mode invité) sert d'entrée d'outillage pour Lighthouse/captures.
+## 4. Balayages de sortie
+
+```
+console.log 0 · TODO/FIXME 0 · any 0 · catch vides 0 · prompt/alert 0
+red-* Tailwind 0 · ProductTile 0 · CommunityThread (mock) 0 · secrets 0
+tsc app 0 · tsc functions 0 · lint 0 erreur · 81 tests / 81
+```
+
+Tests passés de 15 à **81** : machines à états, permissions, crypto
+(vecteur RFC), règles anti-spam, validation vidéo, découpe `Range`.
+
+## 5. Drapeaux et variables d'environnement
+
+| Variable                                                   | État                  | Rôle                                                                                 |
+| ---------------------------------------------------------- | --------------------- | ------------------------------------------------------------------------------------ |
+| `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` / `VAPID_SUBJECT` | **posées**            | Notifications push (générées sans jamais transiter en clair)                         |
+| `ADMIN_EMAILS`                                             | **posée** (Nouh seul) | Accès à `/admin`. Ajouter Youssef : une commande, dans `audit/lots/04-moderation.md` |
+| `NEXT_PUBLIC_VIDEO_UPLOAD`                                 | **posée**             | Publication vidéo                                                                    |
+
+Tout est allumé. Aucun secret dans le dépôt (seules les valeurs
+**publiées** du RFC 8291 figurent dans un test).
+
+## 6. Ce qui demande des mains humaines
+
+1. **Push sur un vrai téléphone** — le protocole est prouvé jusqu'à FCM,
+   la réception demande un appareil. Android : aimer une pièce, accepter,
+   Profil › Notifications › Tester. iPhone : ajouter à l'écran d'accueil
+   d'abord.
+2. **Lecture vidéo sur un vrai téléphone** — le `Range` est prouvé, le
+   rendu (auto muette, son au tap) ne peut l'être que par un œil.
+3. **Test des 5 secondes sur 3 personnes réelles** — inscrit au rapport v1,
+   toujours pas fait : hors de portée d'un agent.
+4. **L'email de Youssef** pour son accès admin.
+
+## 7. Ce que je ferais avec une session de plus
+
+1. **Le cookie d'onboarding** (§3) — c'est le seul obstacle mesuré entre
+   l'app et un score ≥ 90.
+2. **Aligner les réponses aux non-authentifiés** : deux endpoints
+   renvoient 200 avec un corps vide là où un 401 serait cohérent
+   (`/api/orders?id=`, lectures privées d'un banni). Aucune fuite, mais
+   une incohérence de forme relevée deux fois.
+3. **Écritures conditionnelles** sur les compteurs push (`onlyIfMatch`),
+   consignées comme acceptées à l'échelle beta.
+4. **Le paiement réel** — le point d'entrée est isolé dans un module avec
+   son webhook prêt. Ce n'est plus une question technique mais une
+   décision : société, KYC, CGV.
