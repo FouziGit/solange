@@ -79,3 +79,30 @@ lisibles : couper l'envoi ne casse pas l'existant.
 
 Part des publications membres contenant une vidéo, et score Lighthouse du
 feed qui **ne recule pas** (mesuré avant/après, mêmes conditions).
+
+## Vérification E2E en PROD (2026-08-31, consignée puis purgée)
+
+Vraie vidéo H.264 générée avec ffmpeg (360×640, 4 s, 23 940 octets),
+publiée par un compte réel, drapeau `NEXT_PUBLIC_VIDEO_UPLOAD=1` posé.
+
+| Contrôle                                    | Résultat                                                                         |
+| ------------------------------------------- | -------------------------------------------------------------------------------- |
+| Publication (charge 31 Ko en base64)        | post créé, `video: /api/vid/v_…`, `productIds: [k1, k8]` ✓                       |
+| `GET` sans Range                            | 200, `content-type: video/mp4`, **`accept-ranges: bytes`** ✓                     |
+| **`Range: bytes=0-1`** (la sonde de Safari) | **206**, `content-range: bytes 0-1/23940` ✓ — sans ça, rien ne se lit sur iPhone |
+| `Range: bytes=10000-` (plage ouverte)       | 206, `bytes 10000-23939/23940` ✓                                                 |
+| `Range: bytes=999999-` (hors fichier)       | **416**, `content-range: bytes */23940` ✓                                        |
+| Octets servis                               | identiques au fichier source (`ftypisom`, comparaison hexadécimale) ✓            |
+| Id malformé / inexistant                    | 404 ✓                                                                            |
+| Envoi vidéo sans session                    | 401 (l'authentification passe avant le drapeau) ✓                                |
+
+Purge : post supprimé, vidéo supprimée du store `vids`, index des posts
+nettoyé. Aucun reste en production.
+
+## Reste à vérifier sur appareil réel
+
+La lecture elle-même (auto muette, son au tap, boucle, image d'attente)
+demande un vrai téléphone : le protocole HTTP est prouvé, le rendu ne
+peut l'être que par un œil. À faire en même temps que la vérification
+push : publier une courte vidéo depuis `/creer`, la retrouver dans le
+feed, toucher pour le son, toucher le cintre pour les pièces taguées.
