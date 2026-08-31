@@ -191,6 +191,7 @@ export function FeedCard({
                   image={isPost ? postHero : imgLook(look.id)}
                   video={isPost ? undefined : videoLook(look.id)}
                   poster={isPost ? undefined : videoPoster(look.id)}
+                  inView={inView}
                 />
               )}
             </div>

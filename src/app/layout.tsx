@@ -88,6 +88,19 @@ export default function RootLayout({
       lang="fr"
       className={`${montserrat.variable} ${bodoni.variable} ${hanken.variable} antialiased`}
     >
+      <head>
+        {/* Lot 6 : l'image d'attente de la PREMIÈRE carte du feed est
+            l'élément LCP. Sans ce préchargement, elle n'était demandée
+            qu'après l'hydratation — mesuré : 6,5 s de « Load Delay » sur
+            un LCP de 9 s. Le navigateur la réclame maintenant dès la
+            première milliseconde, en parallèle du JavaScript. */}
+        <link
+          rel="preload"
+          as="image"
+          href="/video/l1.jpg"
+          fetchPriority="high"
+        />
+      </head>
       <body className="bg-noir text-bone">
         <SolangeProvider>
           <FeedThemeLock />

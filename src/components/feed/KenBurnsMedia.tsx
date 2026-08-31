@@ -21,6 +21,7 @@ export function KenBurnsMedia({
   image,
   video,
   poster,
+  inView = true,
 }: {
   seed: string;
   title: string;
@@ -30,6 +31,8 @@ export function KenBurnsMedia({
   image?: string;
   video?: string;
   poster?: string;
+  /** La carte est visible ou juste à côté : seule celle-là charge sa vidéo. */
+  inView?: boolean;
 }) {
   const reduce = useReducedMotion();
   const c = composition(seed);
@@ -61,12 +64,18 @@ export function KenBurnsMedia({
            iOS autoplay; playback is driven by the [active, paused] effect. */
         <video
           ref={videoRef}
-          src={video}
+          /* Le src n'est posé QUE sur la carte visible ou voisine : sinon le
+             navigateur téléchargeait les métadonnées des 8 clips au premier
+             rendu — ~900 Ko chacun. Mesuré : c'était l'élément LCP du feed
+             (9,4 s en 4G bridée) alors que son poster ne pèse que 62 Ko. */
+          src={inView ? video : undefined}
           poster={poster}
           muted
           loop
           playsInline
-          preload="metadata"
+          /* la carte active a besoin des métadonnées pour démarrer vite ;
+             les voisines attendent d'être atteintes */
+          preload={active ? "metadata" : "none"}
           onError={() => setVideoOk(false)}
           className="absolute inset-0 size-full object-cover brightness-[0.92]"
         />
