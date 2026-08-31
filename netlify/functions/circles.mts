@@ -25,6 +25,7 @@ import {
 } from "./_shared/core.mts";
 import { storeImages } from "./_shared/media.mts";
 import {
+  CIRCLE_IDS,
   extractMentions,
   sortThreads,
   unreadCircles,
@@ -32,9 +33,9 @@ import {
   type CircleThread,
 } from "../../src/lib/circles.ts";
 
-/* Miroir des Cercles seed (src/lib/mock.ts) — à tenir en phase tant que la
-   création de Cercle n'existe pas. */
-const CIRCLE_IDS = new Set(["cm1", "cm2", "cm3", "cm4"]);
+/* Source unique : src/lib/circles.ts (partagée avec la suppression de
+   compte, qui doit savoir où chercher les fils d'un membre). */
+const KNOWN_CIRCLES = new Set<string>(CIRCLE_IDS);
 
 const EMAIL_THROTTLE_MS = 3_600_000; // 1 h / fil, comme les messages
 
@@ -112,7 +113,7 @@ export default async (req: Request) => {
     if (url.searchParams.get("unread") === "1") {
       if (!user) return json({ count: 0, circleIds: [] });
       const joined = [...(await joinedCircles(user.id))].filter((id) =>
-        CIRCLE_IDS.has(id),
+        KNOWN_CIRCLES.has(id),
       );
       const seen =
         ((await circles.get(`seen:${user.id}`, { type: "json" })) as Record<
@@ -157,7 +158,7 @@ export default async (req: Request) => {
   /* ---- marque la visite d'un Cercle (badge non-lus) ---- */
   if (op === "seen") {
     const cid = b?.circleId ?? "";
-    if (!CIRCLE_IDS.has(cid)) return bad("Cercle inconnu", 404);
+    if (!KNOWN_CIRCLES.has(cid)) return bad("Cercle inconnu", 404);
     const seen =
       ((await circles.get(`seen:${user.id}`, { type: "json" })) as Record<
         string,
@@ -171,7 +172,7 @@ export default async (req: Request) => {
   /* ---- ouvrir un fil ---- */
   if (op === "thread") {
     const cid = b?.circleId ?? "";
-    if (!CIRCLE_IDS.has(cid)) return bad("Cercle inconnu", 404);
+    if (!KNOWN_CIRCLES.has(cid)) return bad("Cercle inconnu", 404);
     if (!(await joinedCircles(user.id)).has(cid))
       return bad("Rejoins le Cercle pour ouvrir un fil", 403);
     if (!(await rateLimit(`cthread:${user.id}`, 10, 24 * 3_600_000)))

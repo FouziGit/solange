@@ -105,3 +105,78 @@ dépôt, aucune affichée dans un log partagé).
 Taux d'abonnés parmi les membres actifs, et taux de clic sur les push
 (les liens profonds portent déjà `track()`). Zéro push envoyé hors
 préférences : vérifié par les tests de règles.
+
+## Vérification en PROD (2026-08-31) — lot déployé ÉTEINT
+
+| Contrôle                      | Résultat                                                                                    |
+| ----------------------------- | ------------------------------------------------------------------------------------------- |
+| `GET /api/push` sans clés     | `{enabled:false, publicKey:null, subscribed:false}` — le drapeau tient (D-023) ✓            |
+| `/sw.js` servi à la racine    | 200, `application/javascript` ✓                                                             |
+| `POST subscribe` sans session | **401** ✓                                                                                   |
+| Réglages dans `/profil`       | **rien n'est affiché** tant que le serveur n'a pas de clés — aucun interrupteur mensonger ✓ |
+| Vecteur RFC 8291 §5           | reproduit octet pour octet (test) ✓                                                         |
+| Secrets au dépôt              | aucun ; seules les valeurs **publiées** du RFC figurent dans le test ✓                      |
+
+## Allumage — ce qu'il reste à faire (2 minutes, côté Nouh)
+
+1. `npm run push:keys` en local. Le script affiche les 3 variables et les
+   commandes `netlify env:set` prêtes à coller. **Rien n'est écrit sur le
+   disque, rien ne doit être commité.**
+2. Coller les 3 commandes (scope `functions`, contexte `production`).
+3. Redéployer (un `git push` vide ou le prochain commit suffit) — dès que
+   les clés sont là, `enabled` passe à `true`, la section Notifications
+   apparaît dans le profil et l'invitation devient possible.
+4. Vérification sur appareil : Android Chrome (directement) et iPhone **après**
+   ajout à l'écran d'accueil. Bouton « Tester » dans les réglages.
+
+Tant que l'étape 2 n'est pas faite, tout le reste de l'app fonctionne
+normalement : le lot est inerte, pas cassé.
+
+## Revue adversariale du lot (30 agents, 4 angles) — 11 défauts confirmés, tous corrigés
+
+Le lot a été relu par 4 revues indépendantes (crypto, vie privée,
+anti-spam, service worker/client), chaque défaut soulevé étant ensuite
+soumis à un sceptique chargé de le RÉFUTER. 12 verdicts rendus, 11 réels.
+Le lot étant déployé **éteint**, aucun n'était exploitable en production —
+tous sont corrigés avant l'allumage.
+
+### Sécurité (les deux plus graves)
+
+| Défaut                                                                                                                                                                                     | Correctif                                                                                                                                                                                                                                                                                                                                |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **SSRF** : l'endpoint d'abonnement n'était validé que par `startsWith("https://")`. Un membre pouvait faire émettre par le serveur des requêtes signées VAPID vers l'hôte de son choix.    | Liste blanche des services de push réels (`isAllowedPushEndpoint`, testée sur 12 cas dont `169.254.169.254` et le suffixe trompeur `fcm.googleapis.com.attaquant.example`), appliquée **à l'abonnement ET à l'envoi** (un endpoint stocké avant la garde est supprimé), plus `redirect: "manual"` (un 307 rejouerait le corps ailleurs). |
+| **Amplification** : le plafond ne comptait que les envois RÉUSSIS. En enregistrant 10 endpoints qui échouent, le plafond devenait inatteignable : 1 requête → 10 POST sortants, en boucle. | On compte désormais la **tentative**, pas le succès + `rateLimit(60/h)` sur `/api/push` comme sur les autres endpoints d'écriture.                                                                                                                                                                                                       |
+
+### Correction fonctionnelle
+
+| Défaut                                                                                                                                                             | Correctif                                                                                                                                                                                                                                   |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Les heures calmes ne marchaient pas du tout** : en `fr-FR`, `Intl.format` rend « 03 h », donc `Number()` → `NaN`, et toutes les comparaisons devenaient fausses. | `formatToParts` + filet UTC. La fonction a été **déplacée dans le module testé** (`src/lib/push-rules.ts`) : le bug existait précisément parce qu'elle vivait côté serveur, hors couverture. 4 tests ajoutés, dont l'heure d'été et minuit. |
+| `rs=4096` annoncé sans borner le clair : au-delà de 4079 octets, l'enregistrement dépassait la taille déclarée → notification perdue en silence.                   | Garde explicite qui **échoue fort** (`encryptPayload` est exportée : le prochain appelant doit se cogner au mur, pas envoyer dans le vide).                                                                                                 |
+
+### Vie privée / RGPD (suppression de compte)
+
+| Ce qui survivait à la suppression                                                                                                              | Correctif                                                                                                                                                                                                                        |
+| ---------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Les publications du feed** (pseudo, nom, légende, photos) — servies publiquement par `/api/posts` sans authentification. Antérieur au lot 3. | Purge des posts + de leurs images, sur le modèle des annonces.                                                                                                                                                                   |
+| **Les fils de Cercle** (pseudo, nom, likes). Antérieur au lot 3.                                                                               | **Anonymisation** plutôt que suppression : effacer un fil auquel d'autres ont répondu détruirait la parole d'autrui. Le fil reste, signé « Membre supprimé », sans handle ni id ; les réponses du partant, elles, disparaissent. |
+| Les compteurs de regroupement `g:<uid>:<type>` (7 clés). Introduit par le lot 3.                                                               | Purge des 7 clés.                                                                                                                                                                                                                |
+| Le `user-agent` stocké à l'abonnement, jamais lu.                                                                                              | Champ supprimé (minimisation).                                                                                                                                                                                                   |
+
+### Hygiène
+
+Le champ `grouped` de `decidePush` n'était jamais lu (code mort) — retiré
+avec son test. Sur iOS, les deux branches de la détection renvoyaient
+`ios-install` : dans un navigateur intégré (Instagram, TikTok), on
+envoyait la personne installer une app qui n'aurait pas les API — corrigé
+en `unsupported`.
+
+### Consigné, non corrigé (assumé)
+
+Les écritures `q:`/`g:` sont des lectures-modifications-écritures sans
+écriture conditionnelle : deux événements simultanés pour la même personne
+peuvent faire perdre un incrément. Conséquence maximale : un push de plus
+que le plafond, ou un regroupement qui repart à 1. À l'échelle beta
+(un membre reçoit rarement deux événements dans la même milliseconde), le
+coût d'un compare-and-swap avec relances dépasse le bénéfice. À revoir si
+le volume augmente — `@netlify/blobs` expose `onlyIfMatch`.

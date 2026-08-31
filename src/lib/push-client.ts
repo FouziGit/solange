@@ -42,8 +42,11 @@ export function pushSupport(): PushSupport {
     "PushManager" in window &&
     "Notification" in window;
   // iOS n'expose le push QUE dans une app installée sur l'écran d'accueil.
+  // Sauf dans un navigateur intégré (Instagram, TikTok…) : là, même
+  // installée, l'app n'aurait pas les API — inutile d'envoyer la personne
+  // installer quoi que ce soit.
   if (isIOS() && !isStandalone())
-    return hasApi ? { kind: "ios-install" } : { kind: "ios-install" };
+    return hasApi ? { kind: "ios-install" } : { kind: "unsupported" };
   if (!hasApi) return { kind: "unsupported" };
   if (Notification.permission === "granted") return { kind: "granted" };
   if (Notification.permission === "denied") return { kind: "denied" };

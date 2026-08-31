@@ -9,19 +9,21 @@ import {
   GROUP_WINDOW_MS,
   decidePush,
   groupedText,
+  isAllowedPushEndpoint,
   normalizePrefs,
+  parisHour,
   type PushPrefs,
   type PushType,
   type StoredPrefs,
 } from "../../../src/lib/push-rules.ts";
 
+/* Minimisation : strictement ce qu'il faut pour envoyer. Pas d'empreinte
+   d'appareil (le user-agent stocké au départ n'était jamais lu). */
 export type StoredSubscription = {
   endpoint: string;
   p256dh: string;
   auth: string;
-  ua?: string;
   createdAt: number;
-  lastOkAt?: number;
 };
 
 function vapidKeys() {
@@ -55,38 +57,22 @@ export async function getSubscriptions(
   );
 }
 
-/** Heure locale à Paris — les heures calmes sont dites en heure de chez nous. */
-function parisHour(at: number): number {
-  return Number(
-    new Intl.DateTimeFormat("fr-FR", {
-      timeZone: "Europe/Paris",
-      hour: "2-digit",
-      hour12: false,
-    }).format(new Date(at)),
-  );
+/* Plafond : fenêtre GLISSANTE d'une heure, pas un seau d'heure ronde.
+   Un seau (« heure UTC courante ») laisserait passer 8 push à 10 h 59 puis
+   8 autres à 11 h 01 — 16 en deux minutes, alors que la promesse est 8 par
+   heure. On garde donc les horodatages des envois, élagués à chaque
+   lecture. */
+async function recentSends(userId: string, now: number): Promise<number[]> {
+  const rec = (await store("push").get(`q:${userId}`, {
+    type: "json",
+  })) as number[] | { hour: number; count: number } | null;
+  // tolère l'ancien format (seau) : on repart d'une fenêtre vide
+  if (!Array.isArray(rec)) return [];
+  return rec.filter((t) => now - t < 3_600_000);
 }
 
-/** Compteur horaire glissant (plafond anti-spam). */
-async function hourlyCount(userId: string, now: number): Promise<number> {
-  const rec = (await store("push").get(`q:${userId}`, { type: "json" })) as {
-    hour: number;
-    count: number;
-  } | null;
-  const hour = Math.floor(now / 3_600_000);
-  return rec?.hour === hour ? rec.count : 0;
-}
-
-async function bumpHourly(userId: string, now: number) {
-  const push = store("push");
-  const hour = Math.floor(now / 3_600_000);
-  const rec = (await push.get(`q:${userId}`, { type: "json" })) as {
-    hour: number;
-    count: number;
-  } | null;
-  await push.setJSON(`q:${userId}`, {
-    hour,
-    count: rec?.hour === hour ? rec.count + 1 : 1,
-  });
+async function recordSend(userId: string, now: number, recent: number[]) {
+  await store("push").setJSON(`q:${userId}`, [...recent, now].slice(-50));
 }
 
 /** Regroupement : combien d'événements de ce type dans la fenêtre ? */
@@ -137,12 +123,20 @@ export async function sendPush(
 
     const now = Date.now();
     const prefs = await getPrefs(userId);
+    const recent = await recentSends(userId, now);
     const decision = decidePush(prefs, notif.type, {
       hour: parisHour(now),
-      sentThisHour: await hourlyCount(userId, now),
+      sentThisHour: recent.length,
     });
     // Refusé : l'événement reste dans la cloche (déjà écrit) — rien de perdu.
     if (!decision.send) return;
+
+    /* On compte la TENTATIVE, pas le succès. Compter les succès rendait le
+       plafond inatteignable en faisant échouer les envois exprès : le
+       serveur devenait un amplificateur (1 requête → N POST sortants).
+       Le prix : une salve d'échecs consomme le quota — acceptable, la
+       cloche garde tout. */
+    await recordSend(userId, now, recent);
 
     const count = await groupCount(userId, notif.type, now);
     const body = count > 1 ? groupedText(notif.type, count) : notif.text;
@@ -156,12 +150,20 @@ export async function sendPush(
       count,
     });
 
-    let delivered = false;
     for (const sub of subs) {
+      // Deuxième garde : un endpoint enregistré AVANT la liste blanche (ou
+      // par une version antérieure) ne doit pas être appelé pour autant.
+      if (!isAllowedPushEndpoint(sub.endpoint)) {
+        await dropSubscription(userId, sub.endpoint);
+        continue;
+      }
       try {
         const encrypted = await encryptPayload(sub, payload);
         const res = await fetch(sub.endpoint, {
           method: "POST",
+          // pas de redirection suivie : un 307 rejouerait le corps chiffré
+          // vers un hôte hors liste blanche
+          redirect: "manual",
           headers: {
             Authorization: await vapidHeader(
               sub.endpoint,
@@ -175,16 +177,13 @@ export async function sendPush(
           },
           body: encrypted as unknown as BodyInit,
         });
-        if (res.status === 404 || res.status === 410) {
+        // l'appareil a désinstallé l'app ou révoqué l'abonnement
+        if (res.status === 404 || res.status === 410)
           await dropSubscription(userId, sub.endpoint);
-          continue;
-        }
-        if (res.ok) delivered = true;
       } catch {
         // appareil injoignable : on tente les autres
       }
     }
-    if (delivered) await bumpHourly(userId, now);
   } catch {
     console.error("push_send_error");
   }

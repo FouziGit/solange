@@ -41,6 +41,10 @@ function concat(...parts: Uint8Array[]): Uint8Array {
 
 const utf8 = (s: string) => new TextEncoder().encode(s);
 
+/** Taille d'enregistrement annoncée dans l'en-tête aes128gcm. */
+const RECORD_SIZE = 4096;
+const GCM_TAG_BYTES = 16;
+
 /* ---------- HKDF (RFC 5869), la forme courte utilisée par RFC 8291 ---------- */
 
 async function hmac(key: Uint8Array, data: Uint8Array): Promise<Uint8Array> {
@@ -173,6 +177,13 @@ export async function encryptPayload(
 
   // 0x02 = délimiteur de dernier enregistrement (pas de bourrage).
   const plaintext = concat(utf8(payload), new Uint8Array([2]));
+  // Un seul enregistrement : il ne doit JAMAIS dépasser la taille annoncée
+  // dans l'en-tête (RFC 8188 §2), sinon le destinataire découpe au mauvais
+  // endroit et la notification est perdue en silence. On échoue fort.
+  if (plaintext.length + GCM_TAG_BYTES > RECORD_SIZE)
+    throw new Error(
+      `Charge push trop longue (${plaintext.length + GCM_TAG_BYTES} > ${RECORD_SIZE} octets)`,
+    );
   const aesKey = await crypto.subtle.importKey(
     "raw",
     cek as unknown as BufferSource,
@@ -189,7 +200,7 @@ export async function encryptPayload(
   );
 
   const header = new Uint8Array(5);
-  new DataView(header.buffer).setUint32(0, 4096); // taille d'enregistrement
+  new DataView(header.buffer).setUint32(0, RECORD_SIZE);
   header[4] = asPublic.length; // 65
   return concat(salt, header, asPublic, ciphertext);
 }

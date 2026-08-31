@@ -5,7 +5,9 @@ import {
   decidePush,
   groupedText,
   inQuietHours,
+  isAllowedPushEndpoint,
   normalizePrefs,
+  parisHour,
   type PushPrefs,
 } from "../push-rules";
 
@@ -43,10 +45,7 @@ describe("decidePush", () => {
   const ctx = { hour: 14, sentThisHour: 0 };
 
   it("envoie quand tout est vert", () => {
-    expect(decidePush(prefs(), "sale", ctx)).toEqual({
-      send: true,
-      grouped: false,
-    });
+    expect(decidePush(prefs(), "sale", ctx)).toEqual({ send: true });
   });
 
   it("respecte la désactivation globale", () => {
@@ -80,11 +79,14 @@ describe("decidePush", () => {
     ).toBe(true);
   });
 
-  it("signale un envoi regroupé", () => {
-    expect(decidePush(prefs(), "like", { ...ctx, grouping: true })).toEqual({
-      send: true,
-      grouped: true,
-    });
+  it("une plage calme vide (from === to) ne désactive PAS la protection horaire", () => {
+    // le contournement trouvé en revue : régler 0 h → 0 h supprime les
+    // heures calmes, mais le plafond doit rester la dernière barrière
+    const p = prefs({ quietFrom: 0, quietTo: 0 });
+    expect(decidePush(p, "like", { hour: 3, sentThisHour: 0 }).send).toBe(true);
+    expect(
+      decidePush(p, "like", { hour: 3, sentThisHour: HOURLY_CAP }),
+    ).toEqual({ send: false, reason: "cap" });
   });
 
   it("l'ordre des refus est stable : global > type > calme > plafond", () => {
@@ -107,6 +109,56 @@ describe("normalizePrefs", () => {
     expect(partial.types.like).toBe(false);
     expect(partial.types.sale).toBe(true); // défaut conservé
     expect(partial.quietFrom).toBe(DEFAULT_PREFS.quietFrom);
+  });
+});
+
+describe("isAllowedPushEndpoint — garde anti-SSRF (revue lot 3)", () => {
+  it("accepte les vrais services de push des navigateurs", () => {
+    for (const url of [
+      "https://fcm.googleapis.com/fcm/send/abc123",
+      "https://android.googleapis.com/gcm/send/xyz",
+      "https://updates.push.services.mozilla.com/wpush/v2/gAAA",
+      "https://web.push.apple.com/QF1r0xY",
+      "https://wns2-par02p.notify.windows.com/w/?token=abc",
+    ])
+      expect(isAllowedPushEndpoint(url)).toBe(true);
+  });
+
+  it("refuse tout hôte arbitraire — le serveur ne doit relayer personne", () => {
+    for (const url of [
+      "https://attaquant.example/flood",
+      "https://localhost/interne",
+      "https://169.254.169.254/latest/meta-data/", // métadonnées cloud
+      "http://fcm.googleapis.com/fcm/send/abc", // http nu
+      "https://fcm.googleapis.com.attaquant.example/x", // suffixe trompeur
+      "pas-une-url",
+      "",
+    ])
+      expect(isAllowedPushEndpoint(url)).toBe(false);
+  });
+});
+
+describe("parisHour — le bug trouvé en revue", () => {
+  it("rend un entier, jamais NaN (fr-FR formate « 03 h »)", () => {
+    // 2026-01-15T02:30:00Z = 03 h 30 à Paris (UTC+1)
+    const h = parisHour(Date.UTC(2026, 0, 15, 2, 30));
+    expect(Number.isInteger(h)).toBe(true);
+    expect(h).toBe(3);
+  });
+
+  it("suit l'heure d'été (UTC+2)", () => {
+    // 2026-07-15T02:30:00Z = 04 h 30 à Paris
+    expect(parisHour(Date.UTC(2026, 6, 15, 2, 30))).toBe(4);
+  });
+
+  it("minuit rend 0, pas 24", () => {
+    expect(parisHour(Date.UTC(2026, 0, 14, 23, 0))).toBe(0);
+  });
+
+  it("une heure calme se déclenche vraiment à 3 h du matin", () => {
+    // le bug : NaN faisait échouer inQuietHours en silence
+    const at3h = parisHour(Date.UTC(2026, 0, 15, 2, 0));
+    expect(inQuietHours(DEFAULT_PREFS, at3h)).toBe(true);
   });
 });
 

@@ -58,6 +58,19 @@ describe("encryptPayload — RFC 8291 § 5", () => {
     expect(body[21]).toBe(4); // point non compressé
   });
 
+  it("refuse une charge qui dépasserait la taille d'enregistrement annoncée", async () => {
+    // RFC 8188 §2 : un enregistrement ne peut pas dépasser rs (4096).
+    // Échouer fort vaut mieux qu'émettre un message perdu en silence.
+    const sub = { p256dh: RFC.uaPublic, auth: RFC.authSecret };
+    await expect(encryptPayload(sub, "a".repeat(4080))).rejects.toThrow(
+      /trop longue/,
+    );
+    // juste en dessous de la limite : ça passe
+    await expect(
+      encryptPayload(sub, "a".repeat(4079 - 16)),
+    ).resolves.toBeInstanceOf(Uint8Array);
+  });
+
   it("deux chiffrements du même texte diffèrent (sel + clé éphémères)", async () => {
     const sub = { p256dh: RFC.uaPublic, auth: RFC.authSecret };
     const a = await encryptPayload(sub, "même texte");

@@ -4,6 +4,10 @@
    dans src/lib/__tests__/circles.test.ts.
    ============================================================ */
 
+/** Cercles existants — miroir des Cercles seed de mock.ts. Partagé pour
+    que la suppression de compte sache où chercher mes fils. */
+export const CIRCLE_IDS = ["cm1", "cm2", "cm3", "cm4"] as const;
+
 export type CircleThread = {
   id: string;
   circleId: string;

@@ -12,6 +12,7 @@ import {
   bad,
   currentUser,
   json,
+  rateLimit,
   readJson,
   sameOrigin,
   store,
@@ -24,6 +25,7 @@ import {
   type StoredSubscription,
 } from "./_shared/push.mts";
 import {
+  isAllowedPushEndpoint,
   normalizePrefs,
   PUSH_TYPES,
   type PushPrefs,
@@ -53,6 +55,10 @@ export default async (req: Request) => {
   if (req.method !== "POST") return bad("Méthode non autorisée", 405);
   if (!sameOrigin(req)) return bad("Origine refusée", 403);
   if (!user) return bad("Connecte-toi", 401);
+  // Comme messages/circles/posts : cet endroit déclenche des requêtes
+  // sortantes (op:"test"), il ne peut pas être appelé en boucle.
+  if (!(await rateLimit(`push:${user.id}`, 60, 3_600_000)))
+    return bad("Trop de requêtes — réessaie dans un moment", 429);
 
   const b = await readJson<{
     op?: string;
@@ -71,7 +77,10 @@ export default async (req: Request) => {
     const endpoint = (s?.endpoint ?? "").trim();
     const p256dh = (s?.keys?.p256dh ?? "").trim();
     const auth = (s?.keys?.auth ?? "").trim();
-    if (!endpoint.startsWith("https://") || !p256dh || !auth)
+    // L'endpoint sera appelé PAR LE SERVEUR avec un JWT VAPID signé :
+    // sans liste blanche, n'importe qui ferait émettre des requêtes
+    // signées vers l'hôte de son choix (SSRF + fuite de jeton).
+    if (!isAllowedPushEndpoint(endpoint) || !p256dh || !auth)
       return bad("Abonnement invalide");
 
     const subs = await getSubscriptions(user.id);
@@ -79,13 +88,9 @@ export default async (req: Request) => {
     const rest = subs.filter((x) => x.endpoint !== endpoint);
     const next: StoredSubscription[] = [
       ...rest.slice(-(MAX_DEVICES - 1)),
-      {
-        endpoint,
-        p256dh,
-        auth,
-        ua: req.headers.get("user-agent")?.slice(0, 120) ?? undefined,
-        createdAt: Date.now(),
-      },
+      // minimisation : on ne garde QUE ce qui sert à envoyer (pas
+      // d'empreinte d'appareil qu'on ne lit jamais)
+      { endpoint, p256dh, auth, createdAt: Date.now() },
     ];
     await push.setJSON(`s:${user.id}`, next);
     return json({ ok: true, devices: next.length });

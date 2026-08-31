@@ -53,6 +53,41 @@ export const DEFAULT_PREFS: PushPrefs = {
   quietTo: 8,
 };
 
+/* Services de push légitimes. Un endpoint est une URL que LE SERVEUR
+   appellera, signée VAPID : accepter n'importe quel https ouvrirait une
+   SSRF (un membre ferait émettre des requêtes signées vers l'hôte de son
+   choix). On n'accepte donc que les services des navigateurs réels. */
+const PUSH_HOSTS = [
+  "android.googleapis.com",
+  "fcm.googleapis.com", // Chrome / Android
+  "updates.push.services.mozilla.com",
+  "updates-autopush.stage.mozaws.net",
+  "updates-autopush.dev.mozaws.net", // Firefox
+  "notify.windows.com",
+  "wns2-*.notify.windows.com", // Edge / Windows
+  "push.apple.com",
+  "web.push.apple.com", // Safari / iOS
+];
+
+/** Un endpoint d'abonnement pointe-t-il vers un service de push connu ? */
+export function isAllowedPushEndpoint(endpoint: string): boolean {
+  let url: URL;
+  try {
+    url = new URL(endpoint);
+  } catch {
+    return false;
+  }
+  if (url.protocol !== "https:") return false;
+  const host = url.hostname.toLowerCase();
+  return PUSH_HOSTS.some((pattern) =>
+    pattern.includes("*")
+      ? new RegExp(
+          `^${pattern.replace(/[.]/g, "\\.").replace(/\*/g, "[a-z0-9-]+")}$`,
+        ).test(host)
+      : host === pattern || host.endsWith(`.${pattern}`),
+  );
+}
+
 /** Plafond horaire : au-delà, l'événement reste dans la cloche. */
 export const HOURLY_CAP = 8;
 /** Fenêtre de regroupement d'événements de même nature. */
@@ -74,6 +109,28 @@ export function normalizePrefs(raw: StoredPrefs | null): PushPrefs {
   };
 }
 
+/**
+ * Heure locale à Paris — les heures calmes sont dites en heure de chez
+ * nous. `formatToParts` et NON `format` : en fr-FR, `format` rend
+ * « 03 h », dont `Number()` ferait `NaN` — et des heures calmes qui ne se
+ * déclencheraient jamais (le bug que la revue du lot 3 a trouvé, hors
+ * couverture parce que la fonction vivait côté serveur non testé).
+ */
+export function parisHour(at: number): number {
+  const part = new Intl.DateTimeFormat("fr-FR", {
+    timeZone: "Europe/Paris",
+    hour: "2-digit",
+    hour12: false,
+  })
+    .formatToParts(new Date(at))
+    .find((p) => p.type === "hour");
+  const h = Number(part?.value);
+  // filet : l'heure UTC vaut mieux qu'un NaN qui désactive la protection
+  return Number.isInteger(h) && h >= 0 && h <= 23
+    ? h % 24
+    : new Date(at).getUTCHours();
+}
+
 /** Heure locale (Paris) dans les heures calmes ? */
 export function inQuietHours(prefs: PushPrefs, hour: number): boolean {
   const { quietFrom: from, quietTo: to } = prefs;
@@ -84,7 +141,7 @@ export function inQuietHours(prefs: PushPrefs, hour: number): boolean {
 }
 
 export type PushDecision =
-  | { send: true; grouped: boolean }
+  | { send: true }
   | { send: false; reason: "disabled" | "type" | "quiet" | "cap" };
 
 /** LA décision d'envoi. Le serveur ne pousse que si elle dit oui. */
@@ -93,17 +150,15 @@ export function decidePush(
   type: PushType,
   ctx: {
     hour: number;
-    /** Push déjà envoyés dans l'heure en cours. */
+    /** Push envoyés dans la dernière heure glissante. */
     sentThisHour: number;
-    /** Un événement de même tag est-il en cours de regroupement ? */
-    grouping?: boolean;
   },
 ): PushDecision {
   if (!prefs.enabled) return { send: false, reason: "disabled" };
   if (!prefs.types[type]) return { send: false, reason: "type" };
   if (inQuietHours(prefs, ctx.hour)) return { send: false, reason: "quiet" };
   if (ctx.sentThisHour >= HOURLY_CAP) return { send: false, reason: "cap" };
-  return { send: true, grouped: ctx.grouping === true };
+  return { send: true };
 }
 
 /** Texte d'un lot regroupé : « 3 personnes ont aimé ta pièce ». */
