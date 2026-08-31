@@ -17,6 +17,19 @@ export const metadata: Metadata = {
 export default function Home() {
   return (
     <div id="top" className="theme-dark relative bg-noir">
+      {/* Lot 6 : l'image d'attente de la première carte est l'élément LCP
+          de CETTE page. Mesuré : sans ce préchargement elle n'était
+          demandée qu'après l'hydratation (6,5 s de « Load Delay »).
+          Posée ici et NON dans le layout : les autres pages n'en ont aucun
+          usage et la payaient pour rien (+62 Ko mesurés). React 19 hisse
+          ce <link> vers le <head>. */}
+      <link
+        rel="preload"
+        as="image"
+        href="/video/l1.jpg"
+        fetchPriority="high"
+      />
+
       {/* desktop editorial flourish in the letterbox voids */}
       <div
         aria-hidden="true"
