@@ -192,3 +192,32 @@ l'allumage, et elle protège de toute façon aussi le chemin d'envoi
 (`sendPush` la revérifie avant chaque requête sortante).
 
 Compte de test supprimé, stores `push` et `circles` vides.
+
+## ALLUMÉ en production (2026-08-31)
+
+Les clés VAPID ont été générées et posées dans l'environnement Netlify
+(scope `functions`, contexte `production`) **sans jamais transiter en
+clair** : la sortie du générateur a été parsée en variables shell,
+transmise à `netlify env:set`, puis effacée. Aucune clé n'a été affichée,
+journalisée ni commitée.
+
+| Contrôle, push ACTIF                                                                                              | Résultat                                                                                                                                                                                                                                   |
+| ----------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `GET /api/push`                                                                                                   | `enabled: true`, clé publique servie (87 caractères) ✓                                                                                                                                                                                     |
+| Endpoints hostiles (`attaquant.example`, `169.254.169.254`, `fcm.googleapis.com.attaquant.example`, `http://` nu) | **400 « Abonnement invalide »** — la liste blanche est cette fois la seule garde en jeu, elle tient ✓                                                                                                                                      |
+| Endpoint FCM légitime                                                                                             | accepté, `devices: 1` ✓                                                                                                                                                                                                                    |
+| `op:"test"` → chaîne crypto complète                                                                              | **FCM a répondu 404 et non 401/403** : Google a donc ACCEPTÉ notre signature VAPID et nous a simplement dit que cet abonnement de test n'existe pas. C'est la preuve d'interopérabilité en conditions réelles, au-delà du vecteur du RFC ✓ |
+| Purge des abonnements morts                                                                                       | l'abonnement a été retiré automatiquement au 404 (`devices: 0`) ✓                                                                                                                                                                          |
+| Préférences par défaut                                                                                            | heures calmes 22 h → 8 h, actif ✓                                                                                                                                                                                                          |
+
+Compte de test supprimé, store `push` vide.
+
+### Reste à vérifier sur appareil réel (5 minutes, côté Nouh)
+
+Le protocole ne peut pas aller plus loin sans un vrai téléphone : il faut
+un abonnement délivré par un navigateur réel.
+
+1. **Android / Chrome** : ouvrir le site, aimer une pièce (déclencheur),
+   accepter l'invitation, puis Profil › Notifications › **Tester**.
+2. **iPhone** : Partager → « Sur l'écran d'accueil », rouvrir depuis
+   l'icône, puis mêmes étapes (l'invitation détecte le mode installé).
