@@ -103,7 +103,7 @@ function ReferralCard() {
       aria-label="Parrainage"
     >
       <div className="mt-6 rounded-3xl border border-bone/12 bg-coal/60 p-5 md:max-w-md">
-        <p className="overline text-[11px] text-ash">Parrainage</p>
+        <p className="etiquette text-[11px] text-ash">Parrainage</p>
         <p className="mt-1 font-editorial text-2xl font-semibold text-bone">
           Invite, gagne.
         </p>
@@ -373,7 +373,7 @@ export default function ProfilPage() {
       {/* invité : encart mode démo + reconnexion */}
       {isGuest && (
         <div className="mt-6 rounded-2xl border border-bone/12 bg-coal/60 p-5 md:max-w-md">
-          <p className="overline text-[11px] text-ash">Mode démo</p>
+          <p className="etiquette text-[11px] text-ash">Mode démo</p>
           <p className="mt-1.5 text-[13.5px] leading-relaxed text-bone/85">
             Connecte-toi pour garder tes achats et tes favoris.
           </p>
@@ -386,7 +386,7 @@ export default function ProfilPage() {
       {/* mes commandes — populated by the checkout flow */}
       {orders.length > 0 && (
         <div className="mt-8 md:max-w-md">
-          <p className="overline mb-3 text-[11px] text-ash">
+          <p className="etiquette mb-3 text-[11px] text-ash">
             Mes commandes · {orders.length}
           </p>
           <div className="flex flex-col gap-2">
@@ -447,7 +447,7 @@ export default function ProfilPage() {
       {/* mes annonces — pièces déposées par le membre (serveur) */}
       {user && myProds.length > 0 && (
         <div className="mt-8 md:max-w-md">
-          <p className="overline mb-3 text-[11px] text-ash">
+          <p className="etiquette mb-3 text-[11px] text-ash">
             Mes annonces · {myProds.length}
           </p>
           <div className="flex flex-col gap-2">
@@ -501,7 +501,7 @@ export default function ProfilPage() {
       {/* mes ventes — commandes reçues sur mes annonces (serveur) */}
       {user && sales.length > 0 && (
         <div className="mt-8 md:max-w-md">
-          <p className="overline mb-3 text-[11px] text-ash">
+          <p className="etiquette mb-3 text-[11px] text-ash">
             Mes ventes · {sales.length}
           </p>
           <div className="flex flex-col gap-2">
@@ -628,7 +628,7 @@ export default function ProfilPage() {
       {/* réglages — messages directs */}
       {user && dmOpen !== null && (
         <div className="mt-8 rounded-2xl border border-bone/10 p-4 md:max-w-md">
-          <p className="overline mb-2 text-[11px] text-ash">Réglages</p>
+          <p className="etiquette mb-2 text-[11px] text-ash">Réglages</p>
           <button
             type="button"
             onClick={() => void toggleDm()}

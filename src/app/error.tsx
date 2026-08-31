@@ -15,7 +15,7 @@ export default function Error({
     <PageShell marginWord="Incident" className="grid place-items-center">
       <div className="flex max-w-md flex-col items-center text-center">
         <LogoMark variant="white" className="mb-8 size-12 opacity-90" />
-        <span className="overline text-[11px] text-ash">Erreur</span>
+        <span className="etiquette text-[11px] text-ash">Erreur</span>
         <h1 className="font-editorial mt-4 text-4xl font-semibold tracking-tight text-bone md:text-5xl">
           Quelque chose s’est cassé
         </h1>

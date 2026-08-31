@@ -223,7 +223,7 @@ export default function FilPage() {
               <h2 className="font-display text-[17px] font-bold leading-snug tracking-tight text-bone">
                 {state.thread.title}
                 {state.thread.pinned && (
-                  <span className="overline ml-2 border border-bone/25 px-1.5 py-0.5 align-middle text-[10px] font-semibold text-bone/70">
+                  <span className="etiquette ml-2 border border-bone/25 px-1.5 py-0.5 align-middle text-[10px] font-semibold text-bone/70">
                     Épinglé
                   </span>
                 )}

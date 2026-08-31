@@ -89,7 +89,7 @@ export function CustomCursor() {
           transition={{ type: "spring", stiffness: 380, damping: 26 }}
         >
           {variant === "media" && (
-            <span className="overline text-[8px] text-bone">voir</span>
+            <span className="etiquette text-[8px] text-bone">voir</span>
           )}
         </motion.div>
       </motion.div>

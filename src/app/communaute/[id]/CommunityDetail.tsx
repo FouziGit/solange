@@ -153,13 +153,13 @@ export function CommunityDetail({ community: c }: { community: Community }) {
               <Verified className="size-3.5 shrink-0 text-bone" />
             )}
           </p>
-          <p className="overline text-[10px] text-ash">Animé par</p>
+          <p className="etiquette text-[10px] text-ash">Animé par</p>
         </div>
       </div>
 
       {/* ---- fils réels ---- */}
       <div className="mt-8 flex items-center justify-between">
-        <p className="overline text-[11px] text-bone/50">Fils</p>
+        <p className="etiquette text-[11px] text-bone/50">Fils</p>
         {joined && state.kind === "ready" && state.threads.length > 0 && (
           <Button size="sm" onClick={() => setComposeOpen(true)}>
             Ouvrir un fil
@@ -234,7 +234,7 @@ export function CommunityDetail({ community: c }: { community: Community }) {
                   <p className="flex items-center gap-2 text-[13.5px] font-semibold text-bone">
                     <span className="truncate">{t.title}</span>
                     {t.pinned && (
-                      <span className="overline shrink-0 border border-bone/25 px-1.5 py-0.5 text-[10px] text-bone/70">
+                      <span className="etiquette shrink-0 border border-bone/25 px-1.5 py-0.5 text-[10px] text-bone/70">
                         Épinglé
                       </span>
                     )}

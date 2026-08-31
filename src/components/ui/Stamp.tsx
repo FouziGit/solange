@@ -21,7 +21,7 @@ export function Stamp({ children }: { children: React.ReactNode }) {
       className="inline-block border-2 border-bone px-4 py-2"
     >
       <span className="block border border-bone/40 px-3 py-1.5">
-        <span className="overline block text-[13px] leading-none text-bone">
+        <span className="etiquette block text-[13px] leading-none text-bone">
           {children}
         </span>
       </span>

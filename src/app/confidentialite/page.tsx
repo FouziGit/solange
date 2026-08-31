@@ -17,7 +17,7 @@ function Section({
 }) {
   return (
     <section className="rounded-2xl border border-bone/10 bg-coal/40 p-5">
-      <h2 className="overline text-[11px] text-ash">{label}</h2>
+      <h2 className="etiquette text-[11px] text-ash">{label}</h2>
       <div className="mt-2 text-[13.5px] leading-relaxed text-bone/85">
         {children}
       </div>
@@ -29,7 +29,7 @@ export default function ConfidentialitePage() {
   return (
     <PageShell marginWord="Privé">
       <div className="mx-auto w-full max-w-xl">
-        <p className="overline text-[11px] text-ash">SOLANGE</p>
+        <p className="etiquette text-[11px] text-ash">SOLANGE</p>
         <h1 className="mt-2 font-display text-3xl font-bold tracking-tight text-bone md:text-4xl">
           Confidentialité
         </h1>

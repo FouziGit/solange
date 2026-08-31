@@ -389,7 +389,7 @@ export function CheckoutView({ item }: { item: CatalogItem }) {
 
           {/* ---- livraison : choix du transporteur ---- */}
           <div className="mt-4 rounded-2xl border border-bone/10 p-4">
-            <p className="overline mb-3 text-[11px] text-ash">Livraison</p>
+            <p className="etiquette mb-3 text-[11px] text-ash">Livraison</p>
             <div className="flex flex-col gap-2">
               {SHIP_OPTIONS.map((o) => {
                 const on = method === o.id;
@@ -527,7 +527,7 @@ export function CheckoutView({ item }: { item: CatalogItem }) {
 
           {/* Stripe Connect split */}
           <div className="mt-3 rounded-2xl border border-bone/10 bg-bone/[0.02] p-4">
-            <p className="overline mb-2 text-[11px] text-ash">
+            <p className="etiquette mb-2 text-[11px] text-ash">
               Répartition · Stripe Connect
             </p>
             <Row label={`Le vendeur reçoit`}>{euro(net)}</Row>
@@ -744,7 +744,7 @@ function Field({
 }) {
   return (
     <label className={`block ${className ?? ""}`}>
-      <span className="overline mb-1.5 block text-[11px] text-ash">
+      <span className="etiquette mb-1.5 block text-[11px] text-ash">
         {label}
       </span>
       {children}

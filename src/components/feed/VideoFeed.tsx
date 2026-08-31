@@ -79,7 +79,7 @@ export function VideoFeed() {
 
         {/* end-of-feed marker after the last look */}
         <div className="feed-snap flex h-[60dvh] flex-col items-center justify-center gap-3 px-10 text-center">
-          <span className="overline text-[11px] text-bone/60">Fin du fil</span>
+          <span className="etiquette text-[11px] text-bone/60">Fin du fil</span>
           <p className="max-w-[24ch] text-[12.5px] text-ash/80">
             Tu as tout vu. Remonte pour revoir les looks.
           </p>
@@ -140,7 +140,7 @@ export function VideoFeed() {
             >
               <ChevronUp className="size-5 text-bone/70" />
             </motion.div>
-            <span className="overline text-[11px] text-bone/60">défile</span>
+            <span className="etiquette text-[11px] text-bone/60">défile</span>
           </motion.div>
         )}
       </AnimatePresence>

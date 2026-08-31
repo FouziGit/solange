@@ -5,6 +5,8 @@
  */
 export function FieldLabel({ children }: { children: React.ReactNode }) {
   return (
-    <span className="overline mb-2 block text-[11px] text-ash">{children}</span>
+    <span className="etiquette mb-2 block text-[11px] text-ash">
+      {children}
+    </span>
   );
 }

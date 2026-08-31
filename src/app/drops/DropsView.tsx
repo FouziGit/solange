@@ -164,7 +164,7 @@ export function DropsView({ drops }: { drops: Drop[] }) {
           {/* bottom content */}
           <div className="absolute inset-x-0 bottom-0 p-5 md:p-7">
             {featured.collab && (
-              <p className="overline text-[11px] text-bone/60">
+              <p className="etiquette text-[11px] text-bone/60">
                 {featured.collab}
               </p>
             )}

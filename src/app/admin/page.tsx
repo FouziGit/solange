@@ -206,7 +206,7 @@ export default function AdminPage() {
           {/* ---- litiges de commande : les plus urgents ---- */}
           {state.disputes.length > 0 && (
             <section className="mt-8" aria-label="Litiges de commande">
-              <p className="overline mb-3 text-[11px] text-danger">
+              <p className="etiquette mb-3 text-[11px] text-danger">
                 Litiges · {state.disputes.length}
               </p>
               <div className="flex flex-col gap-2">
@@ -269,7 +269,7 @@ export default function AdminPage() {
 
           {/* ---- signalements ---- */}
           <section className="mt-8" aria-label="Signalements">
-            <p className="overline mb-3 text-[11px] text-ash">
+            <p className="etiquette mb-3 text-[11px] text-ash">
               Signalements · {items.length}
             </p>
 
@@ -294,7 +294,7 @@ export default function AdminPage() {
                       )}
                       <div className="min-w-0 flex-1">
                         <p className="flex flex-wrap items-center gap-2">
-                          <span className="overline border border-bone/25 px-1.5 py-0.5 text-[10px] text-bone/70">
+                          <span className="etiquette border border-bone/25 px-1.5 py-0.5 text-[10px] text-bone/70">
                             {TARGET_LABEL[it.targetType as ReportTargetType] ??
                               it.targetType}
                           </span>
@@ -302,7 +302,7 @@ export default function AdminPage() {
                             {it.context?.label ?? it.targetId}
                           </span>
                           {it.context?.hidden && (
-                            <span className="overline text-[10px] text-danger">
+                            <span className="etiquette text-[10px] text-danger">
                               masqué
                             </span>
                           )}
@@ -409,7 +409,7 @@ export default function AdminPage() {
           {/* ---- journal d'audit ---- */}
           <section className="mt-10" aria-label="Journal d'audit">
             <div className="flex items-center justify-between">
-              <p className="overline text-[11px] text-ash">Journal</p>
+              <p className="etiquette text-[11px] text-ash">Journal</p>
               <Button
                 variant="ghost"
                 size="sm"

@@ -77,7 +77,7 @@ export function ReportSheet({
         ) : (
           <>
             <label className="flex flex-col gap-2">
-              <span className="overline text-[11px] text-ash">
+              <span className="etiquette text-[11px] text-ash">
                 Ce qui ne va pas
               </span>
               <textarea

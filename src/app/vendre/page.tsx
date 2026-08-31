@@ -403,7 +403,7 @@ export default function VendrePage() {
                     )}
                   </span>
                   <div className="min-w-0">
-                    <p className="overline text-[11px] text-ash">
+                    <p className="etiquette text-[11px] text-ash">
                       {brand || "Marque"}
                     </p>
                     <p className="truncate text-sm text-bone">

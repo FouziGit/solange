@@ -410,7 +410,7 @@ export default function MembrePage() {
             <>
               {/* annonces */}
               <section className="mt-10" aria-label="Annonces en vente">
-                <p className="overline mb-3 text-[11px] text-ash">
+                <p className="etiquette mb-3 text-[11px] text-ash">
                   En vente · {state.profile.products.length}
                 </p>
                 {state.profile.products.length === 0 ? (
@@ -428,7 +428,7 @@ export default function MembrePage() {
 
               {/* posts */}
               <section className="mt-10" aria-label="Posts publiés">
-                <p className="overline mb-3 text-[11px] text-ash">
+                <p className="etiquette mb-3 text-[11px] text-ash">
                   Posts · {state.profile.posts.length}
                 </p>
                 {state.profile.posts.length === 0 ? (

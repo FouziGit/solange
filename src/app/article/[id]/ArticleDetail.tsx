@@ -110,7 +110,7 @@ export function ArticleDetail({
 
           {/* size + condition pills */}
           <div className="mt-6">
-            <p className="overline text-[11px] text-ash">Taille</p>
+            <p className="etiquette text-[11px] text-ash">Taille</p>
             <div className="mt-2 flex flex-wrap gap-2">
               {[item.size].map((s) => (
                 <Chip key={s} active={size === s} onClick={() => setSize(s)}>

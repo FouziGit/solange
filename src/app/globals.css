@@ -213,12 +213,17 @@ body {
   font-style: italic;
   letter-spacing: 0.02em;
 }
-/* card/metadata labels */
-.overline {
+/* L'ÉTIQUETTE (DA §5) — libellés de carte et de métadonnée.
+   NE PAS renommer en `.overline` : Tailwind possède un utilitaire du même
+   nom (`text-decoration-line: overline`) qui s'appliquait EN PLUS de
+   celui-ci et dessinait un vrai trait au-dessus de chaque libellé de
+   l'app. Deux règles, même sélecteur, les deux actives. */
+.etiquette {
   font-family: var(--font-hanken), sans-serif;
   text-transform: uppercase;
   letter-spacing: 0.32em;
   font-weight: 600;
+  text-decoration: none;
 }
 
 /* ---------- Surfaces ---------- */

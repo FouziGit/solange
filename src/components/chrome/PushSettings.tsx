@@ -115,7 +115,7 @@ export function PushSettings() {
 
   return (
     <section className="mt-8 md:max-w-md" aria-label="Notifications">
-      <p className="overline mb-3 text-[11px] text-ash">Notifications</p>
+      <p className="etiquette mb-3 text-[11px] text-ash">Notifications</p>
 
       <div className="border border-bone/12 p-4">
         {!state.subscribed ? (

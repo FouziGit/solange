@@ -138,7 +138,7 @@ function LiveBadge({ className }: { className?: string }) {
         <span className="absolute inline-flex size-full animate-ping rounded-full bg-bone opacity-70" />
         <span className="relative inline-flex size-2 rounded-full bg-bone" />
       </span>
-      <span className="overline text-[11px] text-bone">En direct</span>
+      <span className="etiquette text-[11px] text-bone">En direct</span>
     </span>
   );
 }
@@ -526,7 +526,7 @@ export function StreamsView({ streams }: { streams: Stream[] }) {
             <h2 className="font-editorial text-2xl font-semibold tracking-tight text-bone">
               À venir
             </h2>
-            <span className="overline text-[11px] text-bone/35">
+            <span className="etiquette text-[11px] text-bone/35">
               Nº {String(upcoming.length).padStart(2, "0")}
             </span>
           </div>

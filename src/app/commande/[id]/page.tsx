@@ -274,7 +274,7 @@ export default function CommandePage() {
               {/* adresse de livraison — le vendeur en a besoin, il peut la copier */}
               {o.address && (
                 <div className="mt-6 border border-bone/15 p-4">
-                  <p className="overline text-[11px] text-ash">
+                  <p className="etiquette text-[11px] text-ash">
                     Adresse de livraison
                   </p>
                   <p className="mt-2 text-[13.5px] leading-relaxed text-bone">
@@ -461,7 +461,7 @@ export default function CommandePage() {
               {/* historique */}
               {o.history && o.history.length > 0 && (
                 <div className="mt-6">
-                  <p className="overline mb-3 text-[11px] text-ash">
+                  <p className="etiquette mb-3 text-[11px] text-ash">
                     Historique
                   </p>
                   <ol className="flex flex-col gap-2.5">

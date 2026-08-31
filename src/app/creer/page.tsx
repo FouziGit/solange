@@ -659,7 +659,7 @@ export default function CreerPage() {
                   /* sharp editorial card — actu / achats */
                   <div className="border border-bone/15 bg-ink/40">
                     <div className="flex items-center justify-between border-b border-bone/15 px-4 py-2.5">
-                      <span className="overline text-[11px] text-ash">
+                      <span className="etiquette text-[11px] text-ash">
                         {kind === "actu" ? "Actu / collection" : "Mes achats"}
                       </span>
                       <span
@@ -692,7 +692,7 @@ export default function CreerPage() {
                     </div>
                     {kind === "achats" && linkedItems.length > 0 && (
                       <div className="border-t border-bone/15 p-3">
-                        <span className="overline mb-2 block text-[11px] text-ash">
+                        <span className="etiquette mb-2 block text-[11px] text-ash">
                           Pièces liées · {linkedItems.length}
                         </span>
                         <div className="grid grid-cols-2 gap-2.5">
