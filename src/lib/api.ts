@@ -152,6 +152,51 @@ export type ApiCircleReply = {
   at: number;
 };
 
+/** File de modération (lot 4) — réservée aux admins. */
+export type ModReportItem = {
+  id: string;
+  targetType: string;
+  targetId: string;
+  reason: string;
+  reporterHandle: string;
+  status: "open" | "done";
+  at: number;
+  resolvedBy?: string;
+  resolvedAt?: number;
+  action?: string;
+  context: {
+    label: string;
+    excerpt?: string;
+    image?: string;
+    authorId?: string;
+    authorHandle?: string;
+    hidden?: boolean;
+    link?: string;
+  } | null;
+  priorReports: number;
+};
+
+export type ModDispute = {
+  id: string;
+  brand: string;
+  name: string;
+  buyerHandle: string;
+  sellerHandle: string;
+  totalEUR: number;
+  dispute?: { reason: string; note?: string; at: number };
+  createdAt: number;
+};
+
+export type ModAuditEntry = {
+  id: string;
+  at: number;
+  adminHandle: string;
+  action: string;
+  targetType: string;
+  targetId: string;
+  note?: string;
+};
+
 async function request<T>(
   path: string,
   init?: RequestInit,
@@ -286,6 +331,33 @@ export const api = {
       method: "POST",
       body: JSON.stringify(p),
     }),
+  /* — Modération (lot 4, admins) — */
+  modQueue: (queue: "open" | "done" | "all" = "open") =>
+    request<{ items: ModReportItem[]; disputes: ModDispute[] }>(
+      `/api/admin?queue=${queue}`,
+    ),
+  modAudit: () => request<{ audit: ModAuditEntry[] }>("/api/admin?audit=1"),
+  modAct: (p: {
+    reportId: string;
+    action: "dismiss" | "warn" | "hide" | "suspend" | "ban";
+    authorId?: string;
+    days?: number;
+    note?: string;
+  }) =>
+    request<{ ok: boolean; applied: boolean }>("/api/admin", {
+      method: "POST",
+      body: JSON.stringify({ op: "act", ...p }),
+    }),
+  modDispute: (
+    orderId: string,
+    decision: "cancel" | "close" | "return",
+    note?: string,
+  ) =>
+    request<{ ok: boolean }>("/api/admin", {
+      method: "POST",
+      body: JSON.stringify({ op: "dispute", orderId, decision, note }),
+    }),
+
   /* — Notifications push (lot 3) — */
   pushConfig: () =>
     request<{

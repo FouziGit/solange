@@ -6,6 +6,11 @@
 import { getStore } from "@netlify/blobs";
 import { SignJWT, jwtVerify } from "jose";
 import { createHash, randomInt, randomUUID } from "node:crypto";
+import {
+  canWrite,
+  writeBlockedMessage,
+  type ModeratedUser,
+} from "../../../src/lib/moderation.ts";
 
 export type SessionUser = {
   id: string;
@@ -71,11 +76,30 @@ export async function sessionUserId(req: Request): Promise<string | null> {
   }
 }
 
+/** Le compte en session. Un compte BANNI (lot 4) ne passe plus ici : il
+    est déconnecté partout d'un coup, sans exception à écrire endpoint par
+    endpoint. Les champs de modération voyagent avec l'utilisateur pour que
+    les gardes d'écriture n'aient pas à relire le compte. */
 export async function currentUser(req: Request): Promise<SessionUser | null> {
   const id = await sessionUserId(req);
   if (!id) return null;
-  const u = await store("users").get(`u:${id}`, { type: "json" });
-  return (u as SessionUser) ?? null;
+  const u = (await store("users").get(`u:${id}`, {
+    type: "json",
+  })) as (SessionUser & { banned?: boolean }) | null;
+  if (!u || u.banned) return null;
+  return u;
+}
+
+/** Garde d'écriture : un membre suspendu lit tout, mais ne publie rien.
+    À appeler dans chaque endpoint qui CRÉE du contenu. */
+export async function assertCanWrite(
+  user: SessionUser,
+): Promise<Response | null> {
+  const rec = (await store("users").get(`u:${user.id}`, {
+    type: "json",
+  })) as ModeratedUser | null;
+  const verdict = canWrite(rec, Date.now());
+  return verdict.allowed ? null : bad(writeBlockedMessage(verdict), 403);
 }
 
 /** Garde CSRF minimale : les mutations doivent venir de notre propre origine. */

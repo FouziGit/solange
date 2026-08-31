@@ -7,6 +7,7 @@ import {
   json,
   bad,
   newId,
+  assertCanWrite,
   currentUser,
   sameOrigin,
   readJson,
@@ -21,8 +22,11 @@ export default async (req: Request) => {
     const idx = ((await posts.get("idx", { type: "json" })) as string[]) ?? [];
     const out: unknown[] = [];
     for (const id of idx.slice(-30).reverse()) {
-      const p = await posts.get(`l:${id}`, { type: "json" });
-      if (p) out.push(p);
+      const p = (await posts.get(`l:${id}`, { type: "json" })) as {
+        hidden?: boolean;
+      } | null;
+      // lot 4 : un contenu masqué par la modération sort des lectures publiques
+      if (p && !p.hidden) out.push(p);
     }
     return json({ posts: out });
   }
@@ -31,6 +35,9 @@ export default async (req: Request) => {
   if (!sameOrigin(req)) return bad("Origine refusée", 403);
   const user = await currentUser(req);
   if (!user) return bad("Connecte-toi pour publier", 401);
+  // lot 4 : un membre suspendu lit tout mais ne publie rien
+  const blocked = await assertCanWrite(user);
+  if (blocked) return blocked;
 
   const b = await readJson<{
     caption?: string;

@@ -136,6 +136,9 @@ export default async (req: Request) => {
   };
   if (item.status !== "available")
     return bad("Cette pièce vient d'être vendue", 409);
+  // lot 4 : une pièce masquée par la modération ne s'achète plus
+  if ((item as { hidden?: boolean }).hidden)
+    return bad("Cette pièce n'est plus disponible", 409);
   if (record && record.sellerId === user.id)
     return bad("Tu ne peux pas acheter ta propre annonce", 403);
 

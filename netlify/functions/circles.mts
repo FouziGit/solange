@@ -12,6 +12,7 @@ import type { Config } from "@netlify/functions";
 import {
   APP_URL,
   bad,
+  assertCanWrite,
   currentUser,
   json,
   newId,
@@ -50,7 +51,8 @@ async function getThread(id: string): Promise<CircleThread | null> {
   const t = (await store("circles").get(`t:${id}`, {
     type: "json",
   })) as CircleThread | null;
-  return t && !t.deleted ? t : null;
+  // supprimé par l'auteur OU masqué par la modération (lot 4) : invisible
+  return t && !t.deleted && !(t as { hidden?: boolean }).hidden ? t : null;
 }
 
 export default async (req: Request) => {
@@ -142,6 +144,9 @@ export default async (req: Request) => {
   if (req.method !== "POST") return bad("Méthode non autorisée", 405);
   if (!sameOrigin(req)) return bad("Origine refusée", 403);
   if (!user) return bad("Connecte-toi pour participer", 401);
+  // lot 4 : un membre suspendu lit tout mais ne publie rien
+  const blocked = await assertCanWrite(user);
+  if (blocked) return blocked;
 
   const b = await readJson<{
     op?: string;

@@ -10,6 +10,8 @@ import {
   sameOrigin,
   readJson,
   rateLimit,
+  pushNotif,
+  sha256,
   sendEmail,
   APP_URL,
 } from "./_shared/core.mts";
@@ -48,6 +50,27 @@ export default async (req: Request) => {
     status: "open",
     at: Date.now(),
   });
+  // Lot 4 : index — sans lui les signalements étaient écrits sans que
+  // personne ne puisse jamais les relire.
+  const idx = ((await reports.get("idx", { type: "json" })) as string[]) ?? [];
+  idx.push(id);
+  await reports.setJSON("idx", idx);
+
+  // Lot 4 : les admins reçoivent aussi cloche + push (le mail seul se perd).
+  const users = store("users");
+  for (const raw of (process.env.ADMIN_EMAILS ?? "").split(",")) {
+    const mail = raw.trim().toLowerCase();
+    if (!mail) continue;
+    const uid = (await users.get(`email:${sha256(mail)}`, {
+      type: "text",
+    })) as string | null;
+    if (uid && uid !== user.id)
+      await pushNotif(uid, {
+        type: "report",
+        text: `Signalement à traiter — ${targetType}`,
+        link: "/admin",
+      });
+  }
 
   await sendEmail(
     process.env.REPORT_EMAIL ?? "fouzi.benzidane@gmail.com",

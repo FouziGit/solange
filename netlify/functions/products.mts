@@ -8,6 +8,7 @@ import {
   json,
   bad,
   newId,
+  assertCanWrite,
   currentUser,
   sameOrigin,
   readJson,
@@ -62,6 +63,9 @@ export default async (req: Request) => {
       const mine = me ? p.sellerId === me.id : false;
       if (mineOnly && !mine) continue;
       if (!mineOnly && p.status === "withdrawn") continue; // retirée = invisible au public
+      // lot 4 : masquée par la modération — invisible au public, mais son
+      // auteur la voit encore (il doit comprendre ce qui lui arrive)
+      if (!mine && p.hidden) continue;
       out.push({ ...p, mine });
     }
     // état vendu des pièces seed (shadows) pour griser le catalogue côté UI
@@ -101,6 +105,9 @@ export default async (req: Request) => {
   if (!sameOrigin(req)) return bad("Origine refusée", 403);
   const user = await currentUser(req);
   if (!user) return bad("Connecte-toi pour déposer une annonce", 401);
+  // lot 4 : un membre suspendu lit tout mais ne publie rien
+  const blocked = await assertCanWrite(user);
+  if (blocked) return blocked;
 
   if (!(await rateLimit(`prod:${user.id}`, 10, 24 * 3_600_000)))
     return bad("Limite de 10 annonces par jour atteinte", 429);

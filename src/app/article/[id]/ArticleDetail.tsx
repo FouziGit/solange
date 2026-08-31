@@ -12,6 +12,7 @@ import { Avatar } from "@/components/chrome/Avatar";
 import { Button } from "@/components/ui/Button";
 import { LuxeMedia } from "@/components/ui/LuxeMedia";
 import { ProductCard } from "@/components/ui/ProductCard";
+import { ReportSheet } from "@/components/ui/ReportSheet";
 import { Chip } from "@/components/ui/Chip";
 import { Bag, Heart, Send } from "@/components/chrome/icons";
 
@@ -23,6 +24,7 @@ export function ArticleDetail({
   similar: CatalogItem[];
 }) {
   const { isSaved, toggleSave, isSold, likeCount } = useStore();
+  const [reportOpen, setReportOpen] = useState(false);
   const saved = isSaved(item.id);
   const sold = isSold(item.id);
   const [size, setSize] = useState(item.size);
@@ -206,8 +208,27 @@ export function ArticleDetail({
             Protection acheteur (démo) — paiement simulé, aucune transaction
             réelle. Commission dégressive reversée au vendeur.
           </p>
+
+          {/* Lot 4 : les annonces étaient le SEUL contenu non signalable
+              de l'app (messages, membres, posts et fils l'étaient). */}
+          <button
+            type="button"
+            onClick={() => setReportOpen(true)}
+            data-cursor="link"
+            className="mt-4 min-h-11 text-[12.5px] text-ash underline-offset-4 transition-colors hover:text-bone hover:underline"
+          >
+            Signaler cette pièce
+          </button>
         </motion.div>
       </div>
+
+      <ReportSheet
+        open={reportOpen}
+        onClose={() => setReportOpen(false)}
+        targetType="product"
+        targetId={item.id}
+        targetLabel={`${item.brand} ${item.name}`}
+      />
 
       {/* similar */}
       {similar.length > 0 && (

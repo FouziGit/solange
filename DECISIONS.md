@@ -97,6 +97,33 @@ Chaque entrée : décision, alternative écartée, raison. Relire en début de p
   UN fetch, squelette DA, zéro cascade. D-013 vise les pages de contenu
   public (gate/feed/marché) — les écrans membres restent client.
 
+## Brief 2 — Lot 4
+
+- **D-024 — Le rôle admin vit dans l'environnement, pas dans la donnée.**
+  Le brief demandait un script d'attribution ; `ADMIN_EMAILS` (liste
+  séparée par des virgules) fait mieux : rien à migrer donc rien à
+  défaire, révocation instantanée au redéploiement suivant, et un dump de
+  la base ne contient aucun privilège. `isAdmin()` accepte AUSSI un champ
+  `role: "admin"` sur le compte, pour rester compatible avec D-018 et
+  permettre plus tard une promotion depuis l'interface. Alternative
+  écartée : un script de migration (crée un état à défaire, et le
+  privilège devient une donnée qu'on peut oublier de retirer).
+- **D-025 — L'espace d'administration répond 404, jamais 403.** Un 403
+  confirmerait qu'il existe. La route est absente de toute navigation et
+  l'API se comporte comme si elle n'existait pas pour un non-admin.
+- **D-026 — Bannir coupe l'authentification, suspendre coupe l'écriture.**
+  Le bannissement est vérifié dans `currentUser()` : un banni est
+  déconnecté partout d'un coup, sans exception à écrire endpoint par
+  endpoint (impossible d'en oublier un). La suspension passe par une garde
+  unique `assertCanWrite()` posée sur les quatre endpoints de création —
+  un suspendu continue de lire, ce qui est le but : il doit pouvoir voir
+  ce qu'on lui reproche.
+- **D-027 — Masquer ≠ supprimer.** Le masquage pose `hidden: true` sur le
+  contenu lui-même (une seule vérité, lue par toutes les surfaces
+  publiques) et l'auteur continue de voir sa propre annonce : il doit
+  comprendre ce qui lui arrive plutôt que de la voir disparaître sans
+  explication. Une pièce masquée ne s'achète plus non plus.
+
 ## Brief 2 — Lot 3
 
 - **D-020 — Web Push sans dépendance, mais PROUVÉ.** Le réflexe serait
