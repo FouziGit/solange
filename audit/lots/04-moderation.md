@@ -109,3 +109,52 @@ Délai médian entre signalement et traitement (calculable : `at` →
 `resolvedAt`), et part des signalements traités. Zéro action de
 modération sans trace : le journal d'audit est écrit dans la même
 fonction que l'action.
+
+## Vérification E2E en PROD (2026-08-31, consignée puis purgée)
+
+`ADMIN_EMAILS` a été posée avec l'adresse de Nouh (scope functions,
+contexte production). Le compte admin a été utilisé réellement.
+
+### Les gardes d'accès
+
+| Contrôle                                     | Résultat                                               |
+| -------------------------------------------- | ------------------------------------------------------ |
+| Anonyme sur `/api/admin`                     | **404 « Introuvable »** ✓                              |
+| Connecté mais NON admin                      | **404** — même réponse, aucune différence observable ✓ |
+| Action de modération tentée par un non-admin | **404** (pas 403 : rien ne fuit) ✓                     |
+| Connexion avec l'adresse listée              | accès à la file, `@fouzi.benzidane` ✓                  |
+
+### Le cycle de modération
+
+| Étape                   | Résultat                                                                                                                                                     |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| File                    | 1 signalement, avec le contexte complet (type, titre, auteur, motif, antécédents de l'auteur) ✓                                                              |
+| **Masquer** une annonce | disparue des lectures publiques ✓, **son auteur la voit encore** ✓ (il doit comprendre), **achat refusé 409** ✓                                              |
+| **Suspendre** 3 jours   | le membre LIT toujours (`/api/me` valide) ✓, mais publier une annonce **403 « Publication suspendue jusqu'au 3 septembre »** ✓, envoyer un message **403** ✓ |
+| **Bannir**              | session **coupée partout** malgré un cookie encore valide ✓, aucune donnée privée renvoyée ✓                                                                 |
+| Journal d'audit         | `@fouzi.benzidane · hide · product p_…` ✓                                                                                                                    |
+
+### Écart consigné
+
+Un banni reçoit **200 avec une réponse vide** sur les lectures privées
+(`/api/notifications`) plutôt qu'un 401 : il est traité comme un visiteur
+déconnecté. Aucune fuite — mais forme incohérente, le même écart que
+celui relevé au Lot 1 sur `GET /api/orders?id=` sans session. Les deux se
+règlent d'un coup au passage serveur du Lot 7.
+
+Purge : annonce de test supprimée (et retirée de l'index), store
+`reports` vidé, compte de test supprimé. Aucun reste en production.
+
+## Reste à faire — l'accès de Youssef
+
+`ADMIN_EMAILS` ne contient pour l'instant **que l'adresse de Nouh**.
+Pour ajouter Youssef, une seule commande (les deux adresses, séparées par
+une virgule, sans espace superflu — la comparaison les tolère de toute
+façon) :
+
+```bash
+netlify env:set ADMIN_EMAILS "fouzi.benzidane@gmail.com,<email-de-youssef>" --scope functions --context production
+```
+
+Puis un redéploiement (le prochain commit suffit). Pour révoquer un
+accès : la même commande sans l'adresse concernée.
