@@ -160,11 +160,15 @@ export async function rateLimit(
   return true;
 }
 
-/** Notification in-app (cloche). Silent-fail. */
+/** LE point d'émission d'un événement : cloche (toujours) + push web
+    (lot 3, si l'appareil est abonné et les préférences le permettent).
+    Silent-fail des deux côtés — une notification ratée ne fait jamais
+    échouer la vente, le message ou la réponse qui l'a déclenchée. */
 export async function pushNotif(
   userId: string,
   notif: {
-    type: "sale" | "message" | "follow" | "report" | "order" | "circle";
+    type:
+      "sale" | "message" | "follow" | "report" | "order" | "circle" | "like";
     text: string;
     link: string;
   },
@@ -177,5 +181,12 @@ export async function pushNotif(
     await notifs.setJSON(`n:${userId}`, list.slice(-50));
   } catch {
     console.error("notif_push_error");
+  }
+  // import différé : casse le cycle core ↔ push (push lit `store` d'ici)
+  try {
+    const { sendPush } = await import("./push.mts");
+    await sendPush(userId, notif);
+  } catch {
+    console.error("push_dispatch_error");
   }
 }

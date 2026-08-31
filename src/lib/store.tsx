@@ -26,6 +26,7 @@ import {
   savedIds,
   type CatalogItem,
 } from "@/lib/mock";
+import { markMeaningfulAction } from "@/lib/push-client";
 import {
   api,
   type ApiPost,
@@ -243,6 +244,9 @@ export function SolangeProvider({ children }: { children: ReactNode }) {
       setLiked((s) => {
         const next = toggle(s, id);
         sync("liked", id, next.has(id));
+        // lot 3 : première action qui compte → l'invitation aux
+        // notifications devient légitime (jamais au premier lancement)
+        if (next.has(id)) markMeaningfulAction();
         return next;
       }),
     [sync],
@@ -290,6 +294,7 @@ export function SolangeProvider({ children }: { children: ReactNode }) {
       setJoined((s) => {
         const next = toggle(s, communityId);
         sync("joined", communityId, next.has(communityId));
+        if (next.has(communityId)) markMeaningfulAction();
         return next;
       }),
     [sync],

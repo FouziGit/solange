@@ -7,6 +7,7 @@ import { SideNav } from "@/components/chrome/SideNav";
 import { MobileTabBar } from "@/components/chrome/MobileTabBar";
 import { FeedThemeLock } from "@/components/chrome/FeedThemeLock";
 import { AuthGate } from "@/components/chrome/AuthGate";
+import { PushInvite } from "@/components/chrome/PushInvite";
 import { SolangeProvider } from "@/lib/store";
 
 // Display / titles — Montserrat: geometric, minimalist-luxe, modern.
@@ -98,6 +99,7 @@ export default function RootLayout({
             <SideNav />
             <main className="md:pl-[88px]">{children}</main>
             <MobileTabBar />
+            <PushInvite />
           </AuthGate>
         </SolangeProvider>
       </body>

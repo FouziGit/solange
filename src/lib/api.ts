@@ -3,6 +3,8 @@
    Toutes les écritures passent ici ; le serveur revalide tout.
    ============================================================ */
 
+import type { PushPrefs } from "./push-rules";
+
 export type SessionUser = {
   id: string;
   email: string;
@@ -284,6 +286,36 @@ export const api = {
       method: "POST",
       body: JSON.stringify(p),
     }),
+  /* — Notifications push (lot 3) — */
+  pushConfig: () =>
+    request<{
+      enabled: boolean;
+      publicKey: string | null;
+      subscribed: boolean;
+      devices?: number;
+      prefs?: PushPrefs;
+    }>("/api/push"),
+  pushSubscribe: (subscription: unknown) =>
+    request<{ ok: boolean; devices: number }>("/api/push", {
+      method: "POST",
+      body: JSON.stringify({ op: "subscribe", subscription }),
+    }),
+  pushUnsubscribe: (endpoint?: string) =>
+    request<{ ok: boolean; devices: number }>("/api/push", {
+      method: "POST",
+      body: JSON.stringify({ op: "unsubscribe", endpoint }),
+    }),
+  pushPrefs: (prefs: PushPrefs) =>
+    request<{ ok: boolean; prefs: PushPrefs }>("/api/push", {
+      method: "POST",
+      body: JSON.stringify({ op: "prefs", prefs }),
+    }),
+  pushTest: () =>
+    request<{ ok: boolean }>("/api/push", {
+      method: "POST",
+      body: JSON.stringify({ op: "test" }),
+    }),
+
   /* — Cercles (lot 2) — */
   circleThreads: (circleId: string) =>
     request<{ threads: ApiThread[]; lastSeenAt: number }>(

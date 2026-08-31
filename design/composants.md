@@ -112,6 +112,19 @@ aucun emoji.
 - **Utiliser pour** : tout signalement (post, membre, pièce, message) — ne
   jamais recréer un prompt/flow local.
 
+### `chrome/PushInvite` + `chrome/PushSettings` (lot 3)
+
+- **PushInvite** : l'invitation aux notifications. Monté une fois dans le
+  layout ; il décide SEUL de s'afficher (jamais au premier lancement,
+  seulement après une action qui compte, au plus une fois par mois). Ne
+  jamais l'appeler à la main depuis un écran.
+- **PushSettings** : le bloc de réglages du profil. Ne s'affiche pas du
+  tout quand le serveur n'a pas de clés VAPID (D-023) — on ne montre pas
+  un interrupteur qui ne ferait rien.
+- Les deux interrupteurs restants (dmOpen, NotifySwitch de Drops) plus
+  ceux-ci font 3 usages : la primitive `Switch` devient justifiée, à
+  extraire au prochain passage sur les réglages.
+
 ## À venir (lots suivants, voir DECISIONS)
 
 Toast (si un besoin réel émerge — pour l'instant l'écran montre le résultat).

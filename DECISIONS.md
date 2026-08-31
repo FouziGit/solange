@@ -97,6 +97,36 @@ Chaque entrée : décision, alternative écartée, raison. Relire en début de p
   UN fetch, squelette DA, zéro cascade. D-013 vise les pages de contenu
   public (gate/feed/marché) — les écrans membres restent client.
 
+## Brief 2 — Lot 3
+
+- **D-020 — Web Push sans dépendance, mais PROUVÉ.** Le réflexe serait
+  d'ajouter `web-push`. Or `jose` est déjà au projet (sessions) et couvre
+  la moitié VAPID (JWT ES256), et WebCrypto couvre RFC 8291 (ECDH P-256 →
+  HKDF → AES-128-GCM). Le vrai risque du fait-maison — une crypto
+  subtilement fausse — est levé par un test qui rejoue le **vecteur
+  officiel du RFC 8291 §5** : mêmes clés, même sel, sortie identique octet
+  pour octet (`src/lib/__tests__/webpush.test.ts`). Une dépendance non
+  testée serait un acte de foi ; un vecteur officiel est une preuve.
+  Alternative écartée : `web-push` (+4 dépendances transitives dans le
+  bundle des functions pour du code qu'on peut vérifier en 5 lignes de
+  test).
+- **D-021 — Anti-spam en trois règles, la cloche comme filet.** Plafond de
+  8 push/heure, regroupement des événements de même type sur 10 min
+  (« 3 personnes ont aimé ta pièce », même `tag` → le système REMPLACE la
+  notification au lieu d'empiler), heures calmes 22 h → 8 m (heure de
+  Paris). Un push refusé n'est JAMAIS un événement perdu : la cloche est
+  écrite avant, toujours. Alternative écartée : un compteur global par
+  type (aurait laissé passer 7 types × 8 = 56 notifications par heure).
+- **D-022 — Le service worker ne fait QUE du push.** Aucune mise en cache :
+  la stratégie de cache est une décision de performance qui appartient au
+  Lot 6, et un cache mal réglé servirait du contenu périmé (prix, statut
+  de commande) — le pire bug possible sur un marketplace.
+- **D-023 — Le drapeau, c'est l'absence de clés.** Sans
+  `VAPID_PUBLIC_KEY`/`VAPID_PRIVATE_KEY`, `sendPush` ne fait rien et l'UI
+  n'affiche AUCUN réglage (plutôt que d'exposer un interrupteur qui ne
+  ferait rien). Le lot est donc déployé éteint par construction, sans
+  variable de drapeau supplémentaire à gérer.
+
 ## Brief 2 — Lot 2
 
 - **D-018 — Épinglage réservé au rôle `admin`.** Le brief donne l'épinglage

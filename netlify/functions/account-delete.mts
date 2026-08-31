@@ -49,8 +49,21 @@ export default async (req: Request) => {
   await orders.delete(`sales:${user.id}`).catch(() => {});
   const msgs = store("msgs");
   await msgs.delete(`u:${user.id}`).catch(() => {});
-  await store("social").delete(`s:${user.id}`).catch(() => {});
-  await store("notifs").delete(`n:${user.id}`).catch(() => {});
+  await store("social")
+    .delete(`s:${user.id}`)
+    .catch(() => {});
+  await store("notifs")
+    .delete(`n:${user.id}`)
+    .catch(() => {});
+  // lot 3 : abonnements push (données d'appareil), préférences, compteurs
+  const push = store("push");
+  await push.delete(`s:${user.id}`).catch(() => {});
+  await push.delete(`p:${user.id}`).catch(() => {});
+  await push.delete(`q:${user.id}`).catch(() => {});
+  // lot 2 : dernières visites des Cercles
+  await store("circles")
+    .delete(`seen:${user.id}`)
+    .catch(() => {});
 
   const users = store("users");
   await users.delete(`email:${sha256(user.email)}`).catch(() => {});

@@ -47,6 +47,20 @@ export default async (req: Request) => {
       >) ?? {};
     map[id] = Math.max(0, (map[id] ?? 0) + (b?.on ? 1 : -1));
     await counters.setJSON("likes", map);
+
+    // Lot 3 : le j'aime sur une ANNONCE MEMBRE prévient son vendeur (le
+    // catalogue seed n'a pas de propriétaire réel à prévenir).
+    if (b?.on) {
+      const p = (await store("products").get(`p:${id}`, {
+        type: "json",
+      })) as { sellerId?: string; brand?: string; name?: string } | null;
+      if (p?.sellerId && p.sellerId !== user.id)
+        await pushNotif(p.sellerId, {
+          type: "like",
+          text: `@${user.handle} a aimé ${p.brand} ${p.name}`,
+          link: "/profil",
+        });
+    }
   }
 
   // Follow d'un membre réel → notification cloche.
