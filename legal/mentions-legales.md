@@ -37,10 +37,15 @@ Le service SOLANGE, accessible à l'adresse
 Le service et les données qu'il traite sont hébergés par :
 
 **Netlify, Inc.**
-512 2nd Street, Suite 200
-San Francisco, CA 94107
+512 2nd Street
+San Francisco, Californie
 États-Unis
 `https://www.netlify.com`
+
+[À COMPLÉTER : vérifier l'adresse postale complète et à jour de Netlify,
+Inc. sur ses propres mentions légales avant publication, et y ajouter son
+numéro de téléphone. L'article 6-III de la LCEN exige les coordonnées
+exactes de l'hébergeur, et une adresse approximative ne les vaut pas.]
 
 Les conséquences de cet hébergement sur vos données personnelles, et
 notamment les transferts hors de l'Union européenne, sont décrites dans

@@ -47,12 +47,17 @@ Ces éléments ne sont **pas des cookies** : ils ne sont jamais envoyés à
 nos serveurs et restent sur votre appareil. Ils servent uniquement au
 confort d'usage.
 
-| Élément                                    | Rôle                                                                            | Effacement                         |
-| ------------------------------------------ | ------------------------------------------------------------------------------- | ---------------------------------- |
-| `solange:onboarded`                        | ne pas vous réafficher l'écran d'accueil à chaque ouverture                     | réglages du navigateur             |
-| `solange:push-asked`, `solange:push-acted` | ne pas vous redemander l'activation des notifications si vous avez déjà répondu | idem                               |
-| Brouillons d'annonce et de publication     | ne pas perdre ce que vous avez commencé à écrire si vous quittez l'écran        | effacés à la fermeture de l'onglet |
-| Membres bloqués, préférences d'affichage   | appliquer vos choix sur cet appareil                                            | réglages du navigateur             |
+| Élément                                             | Rôle                                                                            | Effacement                         |
+| --------------------------------------------------- | ------------------------------------------------------------------------------- | ---------------------------------- |
+| `solange:onboarded`                                 | ne pas vous réafficher l'écran d'accueil à chaque ouverture                     | réglages du navigateur             |
+| `solange:push-asked`, `solange:push-acted`          | ne pas vous redemander l'activation des notifications si vous avez déjà répondu | idem                               |
+| `solange:brouillon-vente`, `solange:brouillon-post` | ne pas perdre ce que vous avez commencé à écrire si vous quittez l'écran        | effacés à la fermeture de l'onglet |
+
+Cette liste est exhaustive à la date de cette page. Les autres choix que
+vous faites dans le service — membres bloqués, pièces gardées,
+abonnements, préférences de notification — sont enregistrés sur nos
+serveurs et rattachés à votre compte, pas à votre navigateur : ils sont
+décrits dans la [politique de confidentialité](/confidentialite).
 
 ## 4. Si cela change
 

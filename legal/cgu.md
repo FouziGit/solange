@@ -191,8 +191,11 @@ aux présentes conditions ou à la charte de modération.
 
 Ces mesures sont soumises, sans exception :
 
-- à une **notification motivée** adressée à la personne concernée,
-  indiquant les faits reprochés, la mesure prise et sa durée ;
+- à une **notification** adressée à la personne concernée. Ce que
+  contient cette notification aujourd'hui, mesure par mesure, est décrit
+  sans fard à l'article 5 de la [charte de
+  modération](/charte-moderation) : le bannissement n'en déclenche
+  aucune à ce jour, et le motif détaillé s'obtient sur demande ;
 - à un **droit de contestation** exercé dans les conditions de la charte
   de modération, examiné par une personne ;
 - à la **proportionnalité** de la mesure au manquement constaté.

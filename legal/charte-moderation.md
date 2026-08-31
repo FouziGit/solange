@@ -11,11 +11,21 @@ effectiveDate: "[À COMPLÉTER : date de publication]"
      produit (signalement, masquage, suspension 3/7/30 jours,
      bannissement, journal d'audit horodaté), à une exception près :
 
-     LE DROIT DE CONTESTATION DE L'ARTICLE 6 N'EXISTE PAS ENCORE dans le
-     service. Il est décrit ici parce qu'il conditionne la validité des
-     sanctions décrites aux articles 4 et 5 : une exclusion sans recours
-     est un déséquilibre significatif. Sa mise en œuvre relève de la
-     Phase 3. Ce document ne doit pas être publié avant.
+     Le droit de contestation de l'article 6 s'exerce PAR COURRIEL : il
+     n'existe pas de bouton dédié dans le service, et le document le dit
+     plutôt que de le laisser croire. La voie est réelle (l'adresse est
+     relevée), donc le document est publiable en l'état.
+
+     DEUX ÉCARTS SONT ASSUMÉS ET ÉCRITS TELS QUELS, faute de pouvoir les
+     corriger sans toucher au code fonctionnel (hors périmètre de ce
+     chantier) :
+       - le bannissement ne donne lieu à AUCUNE notification
+         (netlify/functions/admin.mts : « le bannissement déconnecte :
+         pas de notification qui n'arriverait pas ») ;
+       - le signalant n'est jamais informé de la suite donnée.
+     Les deux figurent en tête de audit/legal/99-a-completer.md. Le
+     premier est le plus urgent : une exclusion définitive sans exposé
+     des motifs est le point le plus contestable du dispositif.
 
      La qualification au regard du règlement (UE) 2022/2065 sur les
      services numériques doit être confirmée : les obligations varient
@@ -71,13 +81,17 @@ vous n'avez pas de compte, si vous êtes concerné par un contenu sans être
 Membre, ou si vous invoquez une atteinte à vos droits (droit à l'image,
 droit d'auteur, contrefaçon).
 
-**Ce qui vous est confirmé.** Tout signalement fait l'objet d'une prise en
-compte visible dans le service. Vous êtes informé de la suite qui lui est
-donnée.
+**Ce qui vous est confirmé.** L'envoi de votre signalement vous est
+confirmé à l'écran, et il est transmis immédiatement à l'équipe.
 
-Un signalement manifestement abusif ou répété de mauvaise foi peut lui-
-même donner lieu à une mesure : le nombre de signalements par personne
-est par ailleurs limité pour éviter les usages massifs.
+**Ce que nous ne faisons pas encore :** vous informer, ensuite, de la
+suite qui lui a été donnée. Nous préférons vous le dire plutôt que de
+laisser croire à un retour qui n'arrive pas. Si vous souhaitez connaître
+l'issue d'un signalement, écrivez-nous.
+
+Vous pouvez adresser jusqu'à **dix signalements par période de vingt-
+quatre heures**. Un signalement manifestement abusif ou répété de
+mauvaise foi peut lui-même donner lieu à une mesure.
 
 ## 3. Qui décide, et comment
 
@@ -110,8 +124,21 @@ se retourne contre lui.]
 | Suspension de **3, 7 ou 30 jours** | vous pouvez consulter le service mais plus rien y publier ni y acheter ou vendre. Vos commandes en cours suivent leur cours | manquement caractérisé, ou récidive              |
 | Bannissement                       | l'accès au compte est fermé                                                                                                 | manquement grave, ou répétition après suspension |
 
-**Toute mesure vous est notifiée** dans le service et par courriel, avec
-le motif, la nature de la mesure et sa durée.
+**Ce que vous recevez aujourd'hui, mesure par mesure.** Nous décrivons
+l'état réel du service, qui n'est pas encore celui que nous visons :
+
+| Mesure                | Ce que vous recevez aujourd'hui                                                             |
+| --------------------- | ------------------------------------------------------------------------------------------- |
+| Masquage d'un contenu | une notification dans le service, sans motif détaillé                                       |
+| Avertissement         | une notification dans le service **et** un courriel, avec le motif rédigé par le modérateur |
+| Suspension            | une notification dans le service indiquant la durée, sans motif détaillé                    |
+| Bannissement          | **rien à ce jour** : la fermeture du compte vous déconnecte sans message                    |
+
+Les deux dernières lignes ne sont pas satisfaisantes, et nous ne le
+cachons pas : une mesure sans exposé des motifs est difficile à
+contester. La notification motivée de toute mesure, bannissement compris,
+est en cours de mise en place. En attendant, **écrivez-nous et nous vous
+communiquerons le motif** : ce droit vous est acquis dès aujourd'hui.
 
 Les mesures sont **proportionnées** au manquement : nous tenons compte de
 sa gravité, de son caractère intentionnel ou non, et de vos antécédents.
@@ -124,10 +151,11 @@ alors dans les meilleurs délais, et l'article 6 s'applique pleinement.
 
 **Toute décision vous concernant peut être contestée.**
 
-Vous disposez de **trente jours** à compter de sa notification pour
-demander son réexamen, depuis le service ou par courriel à
-**solange@nouhbenzidane.fr**, en exposant vos observations et en joignant
-tout élément utile.
+Vous disposez de **trente jours** à compter du jour où vous avez
+connaissance de la mesure pour en demander le réexamen, **par courriel à
+solange@nouhbenzidane.fr**, en exposant vos observations et en joignant
+tout élément utile. Il n'existe pas encore de bouton dédié dans le
+service : le courriel est la voie, et elle est effective.
 
 - Votre contestation est **examinée par une personne**, et non par un
   traitement automatisé.
