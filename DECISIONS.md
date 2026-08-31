@@ -225,3 +225,24 @@ Chaque entrée : décision, alternative écartée, raison. Relire en début de p
   global n'a toujours pas émergé (composants.md §À venir). L'envoi de
   message échoué fait exception : rollback de l'optimiste + texte restitué
   dans le champ + feedback local existant de l'écran.
+
+- **D-032 — Les documents légaux s'écrivent au « vous », pas au « tu ».**
+  Le produit tutoie partout (DA.md), et cette règle ne change pas dans
+  l'interface. Mais les documents structurants (mentions légales, CGU,
+  CGV, confidentialité, cookies, charte de modération, politique mineurs)
+  emploient le « vous » : c'est la convention du domaine, elle signale
+  qu'on quitte l'univers de marque pour un texte contractuel opposable, et
+  elle se lit sans ambiguïté en cas de litige. Le texte d'interface qui
+  _renvoie_ vers ces documents (case d'acceptation, liens, rappels) reste
+  au « tu » : la bascule se fait à l'entrée du document, pas avant.
+  Alternative écartée : tout tutoyer par cohérence de marque — un contrat
+  au tutoiement fragilise sa portée sans rien gagner.
+
+- **D-033 — Une seule source pour le texte légal :** `legal/*.md`. Les
+  pages du produit affichent ce texte, elles n'en gardent pas de copie.
+  Chaque document porte une `version` et une `date d'effet` ; la version
+  est partagée avec le code (`src/lib/legal.ts`) pour que l'acceptation
+  enregistrée côté serveur constitue une preuve horodatée et versionnée.
+  Alternative écartée : rédiger directement dans les composants React —
+  c'est ce qui a produit la politique de confidentialité aujourd'hui
+  fausse (« email de connexion uniquement »), personne ne relisant du JSX.
