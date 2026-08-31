@@ -13,7 +13,6 @@ import { imgItem, imgLook, videoLook, videoPoster } from "@/lib/img";
 import { useStore } from "@/lib/store";
 import { KenBurnsMedia } from "./KenBurnsMedia";
 import { CarouselMedia } from "./CarouselMedia";
-import { CreatorHeader } from "./CreatorHeader";
 import { Avatar } from "../chrome/Avatar";
 import { TogglePill } from "../ui/TogglePill";
 import { ActionRail } from "./ActionRail";
@@ -237,29 +236,6 @@ export function FeedCard({
               ))}
             </AnimatePresence>
 
-            {/* top: creator + mute — clears the floating feed top bar via safe-area */}
-            <motion.div
-              initial={false}
-              animate={{ opacity: active ? 1 : 0, y: active ? 0 : -12 }}
-              transition={{
-                duration: 0.6,
-                ease: [0.16, 1, 0.3, 1],
-                delay: active ? 0.1 : 0,
-              }}
-              style={{
-                paddingTop: "calc(env(safe-area-inset-top) + 6.75rem)",
-              }}
-              className="absolute inset-x-0 top-0 z-20 hidden items-start justify-between gap-3 p-4 md:flex"
-            >
-              {/* Desktop uniquement : en mobile le créateur vit EN BAS pour
-                  laisser tout l'écran à la vidéo. */}
-              <CreatorHeader
-                creator={look.creator}
-                following={following}
-                onToggleFollow={() => toggleFollow(look.creator.handle)}
-              />
-            </motion.div>
-
             {/* action rail — bottom clears the floating tab bar + caption block */}
             <motion.div
               initial={false}
@@ -298,13 +274,10 @@ export function FeedCard({
               }}
               className="absolute inset-x-0 bottom-0 z-20 space-y-3 p-4 pr-20 md:!pb-9"
             >
-              {/* Créateur — rangée compacte TikTok-style au-dessus de la
-                  légende (mobile ; le desktop garde l'en-tête haut). Le mute
-                  vit ici, collé au contenu, plus rien ne flotte en haut. */}
-              <motion.div
-                variants={item}
-                className="flex items-center gap-2.5 md:hidden"
-              >
+              {/* Créateur — rangée compacte au-dessus de la légende, sur
+                  TOUTES les tailles. Rien ne flotte plus en haut : le média
+                  garde l'écran entier, mobile comme ordinateur. */}
+              <motion.div variants={item} className="flex items-center gap-2.5">
                 <Link
                   href={`/membre/${look.creator.handle}`}
                   className="flex min-h-11 min-w-0 items-center gap-2.5"

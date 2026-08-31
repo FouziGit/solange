@@ -189,50 +189,6 @@ export function MemberPostCard({
               )}
             </div>
 
-            {/* haut : auteur (lien profil membre) — dégage la barre flottante
-                via safe-area, mêmes paddings que FeedCard */}
-            <motion.div
-              initial={false}
-              animate={{ opacity: active ? 1 : 0, y: active ? 0 : -12 }}
-              transition={{
-                duration: 0.6,
-                ease: [0.16, 1, 0.3, 1],
-                delay: active ? 0.1 : 0,
-              }}
-              style={{
-                paddingTop: "calc(env(safe-area-inset-top) + 6.75rem)",
-              }}
-              className="absolute inset-x-0 top-0 z-20 hidden items-start justify-between gap-3 p-4 md:flex"
-            >
-              <Link
-                href={`/membre/${encodeURIComponent(post.authorHandle)}`}
-                data-cursor="link"
-                className="group flex min-h-11 min-w-0 items-center gap-3"
-                aria-label={`Voir le profil de @${post.authorHandle}`}
-              >
-                <div className="relative shrink-0">
-                  <span className="absolute -inset-[3px] rounded-full bg-bone/25" />
-                  {/* monogramme initiales — pas de portrait pour les membres */}
-                  <span
-                    className="relative grid size-11 place-items-center overflow-hidden rounded-full text-2xl ring-2 ring-ink"
-                    style={{ background: gradientFor(post.authorHandle) }}
-                  >
-                    <span className="font-display text-[0.42em] font-bold tracking-wide text-bone/85">
-                      {initials(post.authorName)}
-                    </span>
-                  </span>
-                </div>
-                <div className="min-w-0">
-                  <span className="block truncate text-[15px] font-semibold text-bone transition-colors group-hover:text-bone/80">
-                    @{post.authorHandle}
-                  </span>
-                  <p className="truncate text-[11px] text-ash">
-                    {post.authorName} · membre
-                  </p>
-                </div>
-              </Link>
-            </motion.div>
-
             {/* rail d'actions à droite — même dégagement que FeedCard */}
             <motion.div
               initial={false}
@@ -309,10 +265,7 @@ export function MemberPostCard({
               className="absolute inset-x-0 bottom-0 z-20 space-y-3 p-4 pr-20 md:!pb-9"
             >
               {/* auteur — rangée compacte en bas (mobile), profil cliquable */}
-              <motion.div
-                variants={item}
-                className="flex items-center gap-2.5 md:hidden"
-              >
+              <motion.div variants={item} className="flex items-center gap-2.5">
                 <Link
                   href={`/membre/${encodeURIComponent(post.authorHandle)}`}
                   className="flex min-h-11 min-w-0 items-center gap-2.5"
