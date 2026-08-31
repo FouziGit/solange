@@ -41,10 +41,21 @@ export function Sheet({
   const [mounted, setMounted] = useState(false);
   useEffect(() => queueMicrotask(() => setMounted(true)), []);
 
+  /* `onClose` est presque toujours écrite en ligne par l'appelant, donc
+     recréée à CHAQUE rendu. La garder en dépendance d'effet rejouait tout
+     le corps à chaque frappe — y compris le `focus()` du panneau, qui
+     volait le focus du champ en cours de saisie (une lettre, puis il
+     fallait recliquer). On la lit via une ref : l'effet ne dépend plus
+     que de `open`. */
+  const onCloseRef = useRef(onClose);
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
+
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape") onCloseRef.current();
       if (e.key === "Tab") {
         // piège de focus : Tab boucle à l'intérieur du panneau (a11y)
         const panel = panelRef.current;
@@ -66,9 +77,11 @@ export function Sheet({
       }
     };
     document.addEventListener("keydown", onKey);
+    // le focus initial se pose UNE fois, à l'ouverture — jamais pendant
+    // que la personne écrit
     panelRef.current?.focus({ preventScroll: true });
     return () => document.removeEventListener("keydown", onKey);
-  }, [open, onClose]);
+  }, [open]);
 
   /* fixed = plein viewport, AU-DESSUS de la tab bar (z-50) et du FAB */
   const pos = container === "fixed" ? "fixed" : "absolute";
@@ -85,20 +98,34 @@ export function Sheet({
             exit={{ opacity: 0 }}
             onClick={onClose}
             aria-hidden="true"
-            className={`${pos} inset-0 ${zScrim} bg-ink/70 backdrop-blur-[2px]`}
+            /* `pointer-events-none` quand la feuille se ferme : le nœud peut
+               survivre à l'animation de sortie (AnimatePresence dans un
+               portail ne le démonte pas toujours). Invisible mais toujours
+               `fixed inset-0`, il intercepterait TOUS les clics de la page.
+               Vérifié en prod : le voile finit bien à `opacity: 0`, mais il
+               reste dans le DOM — donc on le neutralise explicitement. */
+            className={`${pos} inset-0 ${zScrim} bg-ink/70 backdrop-blur-[2px] ${
+              open ? "" : "pointer-events-none"
+            }`}
           />
           <motion.div
             ref={panelRef}
             role="dialog"
             aria-modal="true"
             aria-label={ariaLabel ?? eyebrow}
+            /* une fois fermé, le panneau résiduel ne doit ni capter un clic
+               ni être annoncé comme une boîte de dialogue ouverte */
+            aria-hidden={open ? undefined : true}
+            inert={open ? undefined : true}
             tabIndex={-1}
             initial={{ y: "100%" }}
             animate={{ y: 0 }}
             exit={{ y: "100%" }}
             transition={{ type: "spring", stiffness: 360, damping: 36 }}
             style={{ maxHeight: desktopSide ? undefined : maxHeight }}
-            className={`${pos} inset-x-0 bottom-0 ${zPanel} flex flex-col overflow-hidden rounded-t-stage border-t border-bone/15 bg-coal/95 outline-none backdrop-blur-2xl ${
+            className={`${pos} inset-x-0 bottom-0 ${zPanel} ${
+              open ? "" : "pointer-events-none"
+            } flex flex-col overflow-hidden rounded-t-stage border-t border-bone/15 bg-coal/95 outline-none backdrop-blur-2xl ${
               desktopSide
                 ? "md:inset-y-0 md:left-auto md:right-0 md:max-h-none md:w-[400px] md:rounded-none md:rounded-l-stage md:border-l md:border-t-0"
                 : ""
