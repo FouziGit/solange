@@ -42,9 +42,9 @@ describe("filterCatalog", () => {
 
   it("combines category and priceMax", () => {
     const out = filterCatalog({ category: "Luxe", priceMax: 500 });
-    expect(out.every((it) => it.category === "Luxe" && it.priceEUR <= 500)).toBe(
-      true,
-    );
+    expect(
+      out.every((it) => it.category === "Luxe" && it.priceEUR <= 500),
+    ).toBe(true);
     // Prada (680 €) excluded, Margiela coat (420 €) included
     expect(out.some((it) => it.id === "k9")).toBe(false);
     expect(out.some((it) => it.id === "k2")).toBe(true);

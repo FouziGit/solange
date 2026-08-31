@@ -32,8 +32,6 @@ effectiveDate: "[À COMPLÉTER : date de publication]"
 
 # Conditions générales de vente
 
-Version 1.0 — en vigueur depuis le [À COMPLÉTER : date].
-
 ## 1. Objet et parties
 
 Les présentes conditions régissent les ventes de Pièces conclues entre

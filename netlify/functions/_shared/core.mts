@@ -4,6 +4,7 @@
    HS256 (jose) en cookie httpOnly. Zéro donnée sensible loggée.
    ============================================================ */
 import { getStore } from "@netlify/blobs";
+import type { LegalConsent } from "../../../src/lib/legal-consent.ts";
 import { SignJWT, jwtVerify } from "jose";
 import { createHash, randomInt, randomUUID } from "node:crypto";
 import {
@@ -17,6 +18,10 @@ export type SessionUser = {
   email: string;
   handle: string;
   name: string;
+  /** Preuve d'acceptation des conditions : version du socle + date.
+      Absente sur tous les comptes créés avant sa mise en place — c'est
+      voulu, ils passeront par l'écran de réacceptation. */
+  legal?: LegalConsent;
 };
 
 export const store = (name: string) =>

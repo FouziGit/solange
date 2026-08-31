@@ -1,9 +1,11 @@
 "use client";
 
 import { useRef, useState } from "react";
+import Link from "next/link";
 import { AnimatePresence, motion } from "motion/react";
 import { api } from "@/lib/api";
 import { useStore } from "@/lib/store";
+import { MIN_AGE } from "@/lib/legal";
 import { LogoMark } from "./Brandmark";
 import { Check } from "./icons";
 
@@ -26,12 +28,24 @@ export function AuthScreen({ onComplete }: { onComplete: () => void }) {
   const [error, setError] = useState<string | null>(null);
   const [codeErr, setCodeErr] = useState(false);
   const codeRef = useRef<HTMLInputElement>(null);
+  /* Acceptation recueillie AVANT l'envoi du code : on ne fait pas
+     recevoir un email à quelqu'un pour lui poser la question ensuite.
+     Les deux cases sont distinctes et non pré-cochées — une case
+     pré-cochée ne vaut pas consentement. L'acceptation est ensuite
+     transmise à /api/auth/verify, qui l'horodate côté serveur. */
+  const [acceptLegal, setAcceptLegal] = useState(false);
+  const [ageDeclared, setAgeDeclared] = useState(false);
 
   const valid = emailRe.test(email.trim());
+  const canSend = valid && acceptLegal && ageDeclared;
 
   const sendCode = async () => {
     if (!valid) {
       setError("Entre une adresse email valide.");
+      return;
+    }
+    if (!acceptLegal || !ageDeclared) {
+      setError("Coche les deux cases pour continuer.");
       return;
     }
     setBusy(true);
@@ -55,7 +69,10 @@ export function AuthScreen({ onComplete }: { onComplete: () => void }) {
     setError(null);
     if (d.length === 6 && !busy) {
       setBusy(true);
-      const res = await api.verify(email.trim().toLowerCase(), d);
+      const res = await api.verify(email.trim().toLowerCase(), d, {
+        acceptLegal,
+        ageDeclared,
+      });
       setBusy(false);
       if (res.ok) {
         await refreshSession();
@@ -162,15 +179,78 @@ export function AuthScreen({ onComplete }: { onComplete: () => void }) {
                     {error}
                   </p>
                 )}
+
+                <div className="mt-1 flex flex-col gap-3 text-left">
+                  <label className="flex cursor-pointer items-start gap-3">
+                    <input
+                      type="checkbox"
+                      checked={acceptLegal}
+                      onChange={(e) => {
+                        setAcceptLegal(e.target.checked);
+                        setError(null);
+                      }}
+                      className="mt-0.5 size-5 shrink-0 accent-bone"
+                    />
+                    <span className="text-[12.5px] leading-relaxed text-bone/80">
+                      J&apos;accepte les{" "}
+                      <Link
+                        href="/cgu"
+                        className="text-bone underline underline-offset-4"
+                      >
+                        conditions d&apos;utilisation
+                      </Link>{" "}
+                      et les{" "}
+                      <Link
+                        href="/cgv"
+                        className="text-bone underline underline-offset-4"
+                      >
+                        conditions de vente
+                      </Link>
+                      , et j&apos;ai lu la{" "}
+                      <Link
+                        href="/confidentialite"
+                        className="text-bone underline underline-offset-4"
+                      >
+                        politique de confidentialité
+                      </Link>
+                      .
+                    </span>
+                  </label>
+                  <label className="flex cursor-pointer items-start gap-3">
+                    <input
+                      type="checkbox"
+                      checked={ageDeclared}
+                      onChange={(e) => {
+                        setAgeDeclared(e.target.checked);
+                        setError(null);
+                      }}
+                      className="mt-0.5 size-5 shrink-0 accent-bone"
+                    />
+                    <span className="text-[12.5px] leading-relaxed text-bone/80">
+                      Je déclare avoir {MIN_AGE} ans ou plus.
+                    </span>
+                  </label>
+                </div>
+
                 <motion.button
                   onClick={() => void sendCode()}
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.97 }}
-                  disabled={!valid || busy}
+                  disabled={!canSend || busy}
                   className="mt-1 rounded-full bg-bone py-3.5 text-sm font-semibold text-ink transition-opacity disabled:opacity-40"
                 >
                   {busy ? "Envoi…" : "Recevoir le code"}
                 </motion.button>
+
+                <p className="mt-1 text-center text-[11px] leading-relaxed text-ash">
+                  Les paiements sont simulés : aucune somme n&apos;est débitée.{" "}
+                  <Link
+                    href="/informations-legales"
+                    className="underline underline-offset-4 transition-colors hover:text-bone"
+                  >
+                    Informations légales
+                  </Link>
+                </p>
               </motion.div>
             )}
 

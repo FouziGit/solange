@@ -12,8 +12,7 @@ export default async (req: Request) => {
 
   const users = store("users");
   const userId = (await users.get(`handle:${handle}`, { type: "text" })) as
-    | string
-    | null;
+    string | null;
   if (!userId) return bad("Profil inconnu", 404);
   const u = (await users.get(`u:${userId}`, { type: "json" })) as {
     handle: string;

@@ -13,8 +13,6 @@ effectiveDate: "[À COMPLÉTER : date de publication]"
 
 # Mentions légales
 
-Version 1.0 — en vigueur depuis le [À COMPLÉTER : date].
-
 ## 1. Éditeur du service
 
 Le service SOLANGE, accessible à l'adresse

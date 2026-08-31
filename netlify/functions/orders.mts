@@ -22,6 +22,10 @@ import { SEED_CATALOG, commissionRate } from "./_shared/seed-catalog.mts";
 import { capturePayment } from "./_shared/payment.mts";
 import type { OrderRecord } from "./_shared/order-core.mts";
 import { normalizeStatus } from "../../src/lib/order-state.ts";
+import {
+  buildSaleConsent,
+  saleAcceptanceIsValid,
+} from "../../src/lib/legal-consent.ts";
 
 const SHIPPING_EUR = 4.9;
 /* Barème transporteur — miroir du front (src/lib/shipping.ts). */
@@ -85,9 +89,16 @@ export default async (req: Request) => {
     shippingMethod?: string;
     relayLabel?: string;
     address?: { name?: string; line?: string; postal?: string; city?: string };
+    acceptCgv?: boolean;
   }>(req);
   const pid = (b?.productId ?? "").trim();
   if (!pid) return bad("Article manquant");
+
+  /* Acceptation des CGV pour CETTE vente. Vérifiée ici, pas seulement à
+     l'écran : une commande sans acceptation ne serait opposable à
+     personne. Elle est horodatée sur la commande juste en dessous. */
+  if (!saleAcceptanceIsValid(b))
+    return bad("Accepte les conditions de vente pour commander", 400);
   const method = (b?.shippingMethod ?? "").trim();
   const shipSel = SHIP[method] ?? {
     price: SHIPPING_EUR,
@@ -190,6 +201,9 @@ export default async (req: Request) => {
     commissionEUR: fee,
     netSellerEUR: net,
     status: "payee",
+    /* preuve d'acceptation des CGV, propre à cette vente : elle reste
+       valable même si les CGV changent ensuite */
+    cgv: buildSaleConsent(now),
     paymentRef: pay.reference,
     history: [{ at: now, by: user.id, from: "creee", to: "payee" }],
     simulated: true, // AUCUN paiement réel — beta

@@ -35,10 +35,7 @@ export function Photo({
       loading={eager ? "eager" : "lazy"}
       decoding="async"
       onError={() => setFailedSrc(src)}
-      className={cn(
-        "absolute inset-0 size-full object-cover",
-        className,
-      )}
+      className={cn("absolute inset-0 size-full object-cover", className)}
     />
   );
 }

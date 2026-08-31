@@ -1,9 +1,22 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 import { useStore } from "@/lib/store";
+import { LEGAL_DOCS } from "@/lib/legal";
 import { AuthScreen } from "./AuthScreen";
+import { LegalGate } from "./LegalGate";
 import { LogoMark } from "./Brandmark";
+
+/* Les documents légaux restent atteignables SANS compte : l'article 6-III
+   de la LCEN demande un accès « facile, direct et permanent », et l'écran
+   d'inscription y renvoie avant de faire cocher quoi que ce soit. Sans
+   cette dérogation, les liens de la case d'acceptation ne mèneraient
+   nulle part. */
+const LEGAL_PATHS = new Set<string>([
+  "/informations-legales",
+  ...LEGAL_DOCS.map((d) => d.href),
+]);
 
 export const ONBOARD_KEY = "solange:onboarded";
 
@@ -15,6 +28,7 @@ export const ONBOARD_KEY = "solange:onboarded";
  */
 export function AuthGate({ children }: { children: React.ReactNode }) {
   const { user, authReady } = useStore();
+  const pathname = usePathname();
   // One-time, hydration-safe read of the persisted onboarding flag (localStorage
   // is client-only, so we resolve it after mount rather than during SSR).
   const [state, setState] = useState({ ready: false, authed: false });
@@ -61,7 +75,8 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
     );
   }
 
-  if (!authed) return <AuthScreen onComplete={complete} />;
+  if (!authed && !LEGAL_PATHS.has(pathname))
+    return <AuthScreen onComplete={complete} />;
 
-  return <>{children}</>;
+  return <LegalGate>{children}</LegalGate>;
 }

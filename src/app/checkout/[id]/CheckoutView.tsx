@@ -47,6 +47,10 @@ export function CheckoutView({ item }: { item: CatalogItem }) {
   const [orderId, setOrderId] = useState("");
   const [serverOrder, setServerOrder] = useState<ApiOrder | null>(null);
   const [error, setError] = useState<string | null>(null);
+  /* Acceptation des CGV pour cette vente. Non pré-cochée, exigée aussi
+     par le serveur (netlify/functions/orders.mts) : la case seule ne
+     prouverait rien, c'est l'horodatage sur la commande qui compte. */
+  const [cgvAccepted, setCgvAccepted] = useState(false);
   const [soldOut, setSoldOut] = useState(false); // 409 pendant le paiement
 
   // livraison — choisie avant paiement (Vinted-like)
@@ -136,6 +140,7 @@ export function CheckoutView({ item }: { item: CatalogItem }) {
             postal: addrPostal.trim(),
             city: addrCity.trim(),
           },
+      cgvAccepted,
     );
     if (res.ok) {
       const order = res.data.order;
@@ -621,6 +626,29 @@ export function CheckoutView({ item }: { item: CatalogItem }) {
               </div>
             )}
 
+            <label className="mt-5 flex cursor-pointer items-start gap-3">
+              <input
+                type="checkbox"
+                checked={cgvAccepted}
+                onChange={(e) => setCgvAccepted(e.target.checked)}
+                className="mt-0.5 size-5 shrink-0 accent-bone"
+              />
+              <span className="text-[12.5px] leading-relaxed text-bone/80">
+                J&apos;accepte les{" "}
+                <Link
+                  href="/cgv"
+                  className="text-bone underline underline-offset-4"
+                >
+                  conditions de vente
+                </Link>
+                . La vente se conclut avec le vendeur, pas avec SOLANGE, et{" "}
+                <span className="font-semibold text-bone">
+                  ce paiement est simulé
+                </span>{" "}
+                : aucune somme n&apos;est débitée.
+              </span>
+            </label>
+
             <Button
               type="submit"
               size="lg"
@@ -629,9 +657,10 @@ export function CheckoutView({ item }: { item: CatalogItem }) {
                 soldOut ||
                 !authReady ||
                 needsRelay ||
-                needsAddress
+                needsAddress ||
+                !cgvAccepted
               }
-              className="mt-5"
+              className="mt-4"
             >
               <AnimatePresence mode="wait" initial={false}>
                 {soldOut ? (

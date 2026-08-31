@@ -9,12 +9,7 @@
    ============================================================ */
 
 export type OrderStatus =
-  | "payee"
-  | "expediee"
-  | "recue"
-  | "terminee"
-  | "annulee"
-  | "litige";
+  "payee" | "expediee" | "recue" | "terminee" | "annulee" | "litige";
 
 export type OrderAction =
   | "ship" // vendeur : j'ai expédié
@@ -75,10 +70,7 @@ export const DELAYS = {
 } as const;
 
 export type DueAction =
-  | "remind_ship"
-  | "auto_cancel"
-  | "remind_receive"
-  | "auto_close";
+  "remind_ship" | "auto_cancel" | "remind_receive" | "auto_close";
 
 /** Ce que le cron doit faire MAINTENANT pour une commande donnée.
     Pure : horloge injectée, idempotence par les marqueurs remind*At. */

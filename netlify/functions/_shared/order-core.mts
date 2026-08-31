@@ -31,6 +31,10 @@ export type OrderRecord = {
   shipment?: { carrier?: string; tracking?: string; at: number };
   dispute?: { reason: string; note?: string; at: number };
   cancelReason?: string;
+  /** Preuve d'acceptation des CGV au moment de la commande (version du
+      socle + horodatage). Absente sur les commandes antérieures à sa mise
+      en place — c'est un fait, pas une acceptation implicite. */
+  cgv?: { version: number; at: number };
   shippedAt?: number;
   remindShipAt?: number;
   remindReceiveAt?: number;

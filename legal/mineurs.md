@@ -20,8 +20,6 @@ effectiveDate: "[À COMPLÉTER : date de publication]"
 
 # Accès des mineurs
 
-Version 1.0 — en vigueur depuis le [À COMPLÉTER : date].
-
 ## 1. Âge minimum
 
 L'inscription à SOLANGE est réservée aux personnes âgées d'au moins

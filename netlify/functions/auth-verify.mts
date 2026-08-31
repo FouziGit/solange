@@ -1,5 +1,10 @@
 /* POST /api/auth/verify — vérifie l'OTP, crée le compte au premier login,
-   pose le cookie de session httpOnly. Max 5 essais par code. */
+   pose le cookie de session httpOnly. Max 5 essais par code.
+
+   Enregistre aussi la PREUVE D'ACCEPTATION des conditions : version du
+   socle (celle du serveur, jamais celle annoncée par le client) et
+   horodatage. Sans elle, rien n'est opposable en cas de litige. Le
+   client envoie deux cases distinctes, toutes deux obligatoires. */
 import type { Config } from "@netlify/functions";
 import {
   store,
@@ -12,6 +17,11 @@ import {
   readJson,
   type SessionUser,
 } from "./_shared/core.mts";
+import {
+  acceptancePayloadIsValid,
+  buildConsent,
+} from "../../src/lib/legal-consent.ts";
+import { LEGAL_VERSION } from "../../src/lib/legal.ts";
 
 function handleFrom(email: string): string {
   const base =
@@ -27,10 +37,23 @@ export default async (req: Request) => {
   if (req.method !== "POST") return bad("Méthode non autorisée", 405);
   if (!sameOrigin(req)) return bad("Origine refusée", 403);
 
-  const body = await readJson<{ email?: string; code?: string }>(req);
+  const body = await readJson<{
+    email?: string;
+    code?: string;
+    acceptLegal?: boolean;
+    ageDeclared?: boolean;
+  }>(req);
   const email = body?.email?.trim().toLowerCase() ?? "";
   const code = (body?.code ?? "").replace(/\D/g, "");
   if (!email || code.length !== 6) return bad("Code invalide");
+
+  // Vérifié AVANT de consommer le code : sinon un refus ici obligerait à
+  // redemander un code pour une case oubliée.
+  if (!acceptancePayloadIsValid(body))
+    return bad(
+      "Tu dois accepter les conditions et déclarer ton âge pour continuer.",
+      400,
+    );
 
   const otps = store("otps");
   const key = sha256(email);
@@ -75,7 +98,10 @@ export default async (req: Request) => {
         .replace(/[._-]/g, " ")
         .replace(/\b\w/g, (c) => c.toUpperCase()),
     };
-    await users.setJSON(`u:${userId}`, user);
+    await users.setJSON(`u:${userId}`, {
+      ...user,
+      legal: buildConsent(Date.now()),
+    });
     await users.set(`email:${key}`, userId);
     await users.set(`handle:${handle}`, userId);
   }
@@ -83,6 +109,15 @@ export default async (req: Request) => {
   const user = (await users.get(`u:${userId}`, {
     type: "json",
   })) as SessionUser;
+
+  // Compte existant : on enregistre (ou rafraîchit) la preuve, puisque
+  // l'acceptation vient d'être recueillie à l'écran.
+  if (user.legal?.version !== LEGAL_VERSION) {
+    await users.setJSON(`u:${userId}`, {
+      ...user,
+      legal: buildConsent(Date.now()),
+    });
+  }
   return json(
     {
       ok: true,

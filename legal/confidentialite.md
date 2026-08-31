@@ -18,8 +18,6 @@ effectiveDate: "[À COMPLÉTER : date de publication]"
 
 # Politique de confidentialité
 
-Version 1.0 — en vigueur depuis le [À COMPLÉTER : date].
-
 Ce document décrit ce que SOLANGE fait des données personnelles des
 personnes qui utilisent le service. Il décrit le fonctionnement réel du
 service, pas une intention.

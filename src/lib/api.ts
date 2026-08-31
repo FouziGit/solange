@@ -4,12 +4,16 @@
    ============================================================ */
 
 import type { PushPrefs } from "./push-rules";
+import type { LegalConsent } from "./legal-consent";
 
 export type SessionUser = {
   id: string;
   email: string;
   handle: string;
   name: string;
+  /** Preuve d'acceptation des conditions. `null` sur les comptes créés
+      avant sa mise en place : ils passent par l'écran de réacceptation. */
+  legal?: LegalConsent | null;
 };
 
 export type ApiProduct = {
@@ -243,10 +247,21 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ email }),
     }),
-  verify: (email: string, code: string) =>
+  /* Les deux booléens sont OBLIGATOIRES côté serveur : sans eux, pas de
+     compte. Ils correspondent à deux cases distinctes, non pré-cochées. */
+  verify: (
+    email: string,
+    code: string,
+    consent: { acceptLegal: boolean; ageDeclared: boolean },
+  ) =>
     request<{ ok: boolean; user: SessionUser }>("/api/auth/verify", {
       method: "POST",
-      body: JSON.stringify({ email, code }),
+      body: JSON.stringify({ email, code, ...consent }),
+    }),
+  acceptLegal: () =>
+    request<{ ok: boolean; legal: LegalConsent }>("/api/legal/accept", {
+      method: "POST",
+      body: JSON.stringify({ acceptLegal: true, ageDeclared: true }),
     }),
   logout: () =>
     request<{ ok: boolean }>("/api/auth/logout", { method: "POST" }),
@@ -279,15 +294,25 @@ export const api = {
       method: "POST",
       body: JSON.stringify(p),
     }),
+  /* acceptCgv : acceptation des CGV pour CETTE vente, exigée par le
+     serveur. Elle est horodatée sur la commande, ce qui la garde
+     opposable même si les CGV changent après coup. */
   order: (
     productId: string,
     shippingMethod?: string,
     relayLabel?: string,
     address?: { name: string; line: string; postal: string; city: string },
+    acceptCgv = false,
   ) =>
     request<{ ok: boolean; order: ApiOrder }>("/api/orders", {
       method: "POST",
-      body: JSON.stringify({ productId, shippingMethod, relayLabel, address }),
+      body: JSON.stringify({
+        productId,
+        shippingMethod,
+        relayLabel,
+        address,
+        acceptCgv,
+      }),
     }),
   orderById: (id: string) =>
     request<{ order: ApiOrder }>(`/api/orders?id=${encodeURIComponent(id)}`),

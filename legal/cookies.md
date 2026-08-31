@@ -15,8 +15,6 @@ effectiveDate: "[À COMPLÉTER : date de publication]"
 
 # Cookies et stockage local
 
-Version 1.0 — en vigueur depuis le [À COMPLÉTER : date].
-
 ## 1. Pourquoi vous ne voyez pas de bandeau
 
 SOLANGE n'affiche pas de bandeau de consentement aux cookies, pour une

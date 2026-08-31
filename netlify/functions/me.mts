@@ -24,6 +24,10 @@ export default async (req: Request) => {
       handle: user.handle,
       name: user.name,
       email: user.email,
+      /* Preuve d'acceptation : le client s'en sert uniquement pour
+         savoir s'il doit afficher l'écran de (ré)acceptation. La
+         décision qui compte reste côté serveur. */
+      legal: user.legal ?? null,
     },
     social: {
       liked: [],

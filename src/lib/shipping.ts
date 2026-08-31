@@ -83,9 +83,7 @@ const STREETS = [
  *  stable for a given code. Real carrier API plugs in here later. */
 export function relayPointsNear(postal: string): RelayPoint[] {
   const digits = postal.replace(/\D/g, "");
-  const seed = digits
-    ? [...digits].reduce((a, c) => a + Number(c), 0)
-    : 3;
+  const seed = digits ? [...digits].reduce((a, c) => a + Number(c), 0) : 3;
   return Array.from({ length: 5 }).map((_, i) => {
     const shop = SHOPS[(seed + i) % SHOPS.length];
     const street = STREETS[(seed + i * 2) % STREETS.length];

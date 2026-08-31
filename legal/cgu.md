@@ -21,8 +21,6 @@ effectiveDate: "[À COMPLÉTER : date de publication]"
 
 # Conditions générales d'utilisation
 
-Version 1.0 — en vigueur depuis le [À COMPLÉTER : date].
-
 ## 1. Objet
 
 Les présentes conditions régissent l'accès et l'utilisation du service

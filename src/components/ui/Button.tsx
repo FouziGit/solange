@@ -61,7 +61,9 @@ export function Button({
     return (
       <Link
         href={href}
-        onClick={onClick as unknown as React.MouseEventHandler<HTMLAnchorElement>}
+        onClick={
+          onClick as unknown as React.MouseEventHandler<HTMLAnchorElement>
+        }
         aria-label={ariaLabel}
         target={target}
         rel={rel}

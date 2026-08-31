@@ -26,8 +26,6 @@ effectiveDate: "[À COMPLÉTER : date de publication]"
 
 # Charte de modération
 
-Version 1.0 — en vigueur depuis le [À COMPLÉTER : date].
-
 Cette charte fait partie intégrante des [conditions générales
 d'utilisation](/cgu). Elle décrit ce qui est interdit sur SOLANGE,
 comment le signaler, qui décide, ce que vous risquez et **comment

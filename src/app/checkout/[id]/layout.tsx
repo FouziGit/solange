@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title: "Paiement",
-  description: "Paiement sécurisé SOLANGE — simulation Stripe Connect (mode test).",
+  description:
+    "Paiement sécurisé SOLANGE — simulation Stripe Connect (mode test).",
   robots: { index: false },
 };
 

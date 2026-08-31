@@ -715,12 +715,15 @@ export default function ProfilPage() {
             )}
           </>
         )}
-        <div className="flex items-center gap-1">
+        {/* Les sept documents vivent derrière une page unique (LCEN 6-III :
+            accès facile, direct et permanent). Les liens directs restent
+            valides, ils sont simplement regroupés. */}
+        <div className="flex flex-wrap items-center gap-1">
           <Link
-            href="/mentions-legales"
+            href="/informations-legales"
             className="inline-flex min-h-11 items-center px-2 text-[11px] text-ash/60 underline-offset-4 transition-colors hover:text-bone hover:underline"
           >
-            Mentions légales
+            Informations légales
           </Link>
           <span aria-hidden="true" className="text-[11px] text-ash/40">
             ·
@@ -730,6 +733,15 @@ export default function ProfilPage() {
             className="inline-flex min-h-11 items-center px-2 text-[11px] text-ash/60 underline-offset-4 transition-colors hover:text-bone hover:underline"
           >
             Confidentialité
+          </Link>
+          <span aria-hidden="true" className="text-[11px] text-ash/40">
+            ·
+          </span>
+          <Link
+            href="/charte-moderation"
+            className="inline-flex min-h-11 items-center px-2 text-[11px] text-ash/60 underline-offset-4 transition-colors hover:text-bone hover:underline"
+          >
+            Modération
           </Link>
         </div>
       </div>
