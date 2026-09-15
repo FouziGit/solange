@@ -15,6 +15,7 @@ import {
   sendEmail,
   APP_URL,
 } from "./_shared/core.mts";
+import { escapeHtml } from "../../src/lib/guards.ts";
 
 const TYPES = new Set(["product", "post", "user", "message", "thread"]);
 
@@ -72,15 +73,26 @@ export default async (req: Request) => {
       });
   }
 
-  await sendEmail(
-    process.env.REPORT_EMAIL ?? "fouzi.benzidane@gmail.com",
-    `⚠️ Signalement — ${targetType} ${targetId}`,
-    `<p style="font-size:15px;margin:0 0 14px">@${user.handle} signale <strong>${targetType} ${targetId}</strong></p>
-     <p style="font-size:14px;color:#b8b3a8;border-left:2px solid #3a3a3c;padding-left:12px;margin:0 0 20px">${reason
-       .replace(/&/g, "&amp;")
-       .replace(/</g, "&lt;")}</p>
-     <p style="margin:0;font-size:12px;color:#8a857b">Réf ${id} · ${APP_URL}</p>`,
-  );
+  /* Destinataire en variable d'environnement. Sans elle, l'envoi n'a pas
+     lieu : mieux vaut un signalement non routé et visible dans les logs
+     qu'un signalement parti vers une adresse personnelle en dur qu'aucun
+     document ne mentionne. */
+  const to = process.env.REPORT_EMAIL?.trim();
+  if (to) {
+    await sendEmail(
+      to,
+      `⚠️ Signalement — ${targetType} ${targetId}`.slice(0, 180),
+      `<p style="font-size:15px;margin:0 0 14px">@${escapeHtml(user.handle)} signale <strong>${escapeHtml(targetType)} ${escapeHtml(targetId)}</strong></p>
+     <p style="font-size:14px;color:#b8b3a8;border-left:2px solid #3a3a3c;padding-left:12px;margin:0 0 20px">${escapeHtml(reason)}</p>
+     <p style="margin:0;font-size:12px;color:#8a857b">Réf ${escapeHtml(id)} · ${APP_URL}</p>`,
+    );
+  } else {
+    console.warn(
+      "[report] REPORT_EMAIL absente — signalement",
+      id,
+      "non routé",
+    );
+  }
 
   return json({ ok: true });
 };

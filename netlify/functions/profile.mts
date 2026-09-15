@@ -3,6 +3,7 @@
 import type { Config } from "@netlify/functions";
 import { store, json, bad } from "./_shared/core.mts";
 import { userSettings } from "./settings.mts";
+import { isVisible } from "../../src/lib/guards.ts";
 
 export default async (req: Request) => {
   const handle = decodeURIComponent(
@@ -28,7 +29,10 @@ export default async (req: Request) => {
       string,
       unknown
     > | null;
-    if (p && !p.shadow && p.sellerId === userId && p.status !== "withdrawn")
+    /* isVisible : une pièce masquée par la modération disparaissait du
+       Marché mais restait affichée sur le profil public de son vendeur —
+       la sanction ne tenait donc que sur une surface. */
+    if (isVisible(p) && p.sellerId === userId && p.status !== "withdrawn")
       mine.push(p);
   }
 
@@ -41,7 +45,7 @@ export default async (req: Request) => {
       string,
       unknown
     > | null;
-    if (p && p.authorId === userId) myPosts.push(p);
+    if (isVisible(p) && p.authorId === userId) myPosts.push(p);
   }
 
   const settings = await userSettings(userId);

@@ -22,6 +22,7 @@ import {
   buildConsent,
 } from "../../src/lib/legal-consent.ts";
 import { LEGAL_VERSION } from "../../src/lib/legal.ts";
+import { handleCandidates } from "../../src/lib/guards.ts";
 
 function handleFrom(email: string): string {
   const base =
@@ -81,15 +82,23 @@ export default async (req: Request) => {
   if (!userId) {
     userId = newId("u");
     const base = handleFrom(email);
-    let handle = base;
-    for (
-      let i = 0;
-      await users.get(`handle:${handle}`, { type: "text" });
-      i++
-    ) {
-      handle = `${base}${Math.floor(100 + Math.random() * 900)}`;
-      if (i > 5) break;
+    /* Réservation du pseudo par ÉCRITURE CONDITIONNELLE, pas par « je lis
+       puis j'écris ». L'ancienne boucle abandonnait après six essais et
+       écrivait quand même : elle réattribuait alors un pseudo déjà pris, et
+       l'index `handle:` du membre précédent pointait vers le nouveau compte.
+       `onlyIfNew` fait trancher le stockage : si la clé existe déjà,
+       l'écriture ne passe pas et on essaie la suivante. Le dernier recours
+       est l'identifiant du compte, unique par construction. */
+    const candidats = handleCandidates(base, userId);
+    let handle = "";
+    for (const c of candidats) {
+      const res = await users.set(`handle:${c}`, userId, { onlyIfNew: true });
+      if (res.modified) {
+        handle = c;
+        break;
+      }
     }
+    if (!handle) return bad("Impossible d'attribuer un pseudonyme", 500);
     const user: SessionUser = {
       id: userId,
       email,
@@ -103,7 +112,7 @@ export default async (req: Request) => {
       legal: buildConsent(Date.now()),
     });
     await users.set(`email:${key}`, userId);
-    await users.set(`handle:${handle}`, userId);
+    // `handle:` est déjà posé par la réservation conditionnelle ci-dessus.
   }
 
   const user = (await users.get(`u:${userId}`, {

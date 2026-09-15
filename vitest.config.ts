@@ -9,6 +9,12 @@ export default defineConfig({
   },
   test: {
     environment: "node",
-    include: ["src/**/__tests__/**/*.test.ts"],
+    /* Les 23 fonctions Netlify étaient hors de la suite : « 110 tests
+       verts » ne disait rien de la santé du backend. Elles ont désormais
+       un endroit où poser leurs tests. */
+    include: [
+      "src/**/__tests__/**/*.test.ts",
+      "netlify/**/__tests__/**/*.test.ts",
+    ],
   },
 });

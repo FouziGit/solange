@@ -22,6 +22,7 @@ import { SEED_CATALOG, commissionRate } from "./_shared/seed-catalog.mts";
 import { capturePayment } from "./_shared/payment.mts";
 import type { OrderRecord } from "./_shared/order-core.mts";
 import { normalizeStatus } from "../../src/lib/order-state.ts";
+import { isPayableAmount, isValidId, lookupOwn } from "../../src/lib/guards.ts";
 import {
   buildSaleConsent,
   saleAcceptanceIsValid,
@@ -92,7 +93,7 @@ export default async (req: Request) => {
     acceptCgv?: boolean;
   }>(req);
   const pid = (b?.productId ?? "").trim();
-  if (!pid) return bad("Article manquant");
+  if (!isValidId(pid)) return bad("Article manquant");
 
   /* Acceptation des CGV pour CETTE vente. Vérifiée ici, pas seulement à
      l'écran : une commande sans acceptation ne serait opposable à
@@ -100,10 +101,10 @@ export default async (req: Request) => {
   if (!saleAcceptanceIsValid(b))
     return bad("Accepte les conditions de vente pour commander", 400);
   const method = (b?.shippingMethod ?? "").trim();
-  const shipSel = SHIP[method] ?? {
+  const shipSel = lookupOwn(SHIP, method, {
     price: SHIPPING_EUR,
     carrier: "Livraison suivie",
-  };
+  });
   const relayLabel =
     typeof b?.relayLabel === "string" ? b.relayLabel.slice(0, 80) : "";
 
@@ -174,6 +175,12 @@ export default async (req: Request) => {
   const orderId = newId("o");
   const now = Date.now();
   // Paiement : UN point d'entrée (module payment.mts, simulé en beta).
+  /* Dernier filet avant le paiement. Aujourd'hui le paiement est simulé et
+     un NaN ne coûte rien ; le jour où capturePayment parle à un vrai
+     prestataire, un montant non fini part en production. Ce contrôle doit
+     exister AVANT cette bascule, pas après. */
+  if (!isPayableAmount(total)) return bad("Montant de commande invalide", 400);
+
   const pay = await capturePayment({
     id: orderId,
     totalEUR: total,

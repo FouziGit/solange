@@ -9,6 +9,8 @@ import {
   sameOrigin,
   readJson,
   pushNotif,
+  rateLimit,
+  assertCanWrite,
 } from "./_shared/core.mts";
 
 const KINDS = new Set(["liked", "saved", "follows", "joined", "blocked"]);
@@ -18,11 +20,20 @@ export default async (req: Request) => {
   if (!sameOrigin(req)) return bad("Origine refusée", 403);
   const user = await currentUser(req);
   if (!user) return bad("Connexion requise", 401);
+  const blocked = assertCanWrite(user);
+  if (blocked) return blocked;
 
   const b = await readJson<{ kind?: string; id?: string; on?: boolean }>(req);
   const kind = b?.kind ?? "";
   const id = (b?.id ?? "").slice(0, 80);
   if (!KINDS.has(kind) || !id) return bad("Requête invalide");
+
+  /* Ces écritures notifient des tiers (j'aime sur une annonce, nouvel
+     abonné). Sans plafond, une boucle suivre / ne plus suivre remplit la
+     cloche de quelqu'un d'autre jusqu'à la rendre inutilisable. Le seuil
+     est large : il gêne la boucle, pas l'usage. */
+  if (!(await rateLimit(`social:${user.id}`, 300, 3_600_000)))
+    return bad("Trop d'actions — réessaie dans un moment", 429);
 
   const social = store("social");
   const state =
@@ -31,6 +42,9 @@ export default async (req: Request) => {
       string[]
     >) ?? {};
   const set = new Set(state[kind] ?? []);
+  /* Vrai changement d'état ? Toggler deux fois ne doit pas renotifier :
+     c'est l'autre moitié du correctif anti-boucle ci-dessus. */
+  const changed = b?.on ? !set.has(id) : set.has(id);
   if (b?.on) set.add(id);
   else set.delete(id);
   if (set.size > 2000) return bad("Limite atteinte", 429); // anti-spam simple
@@ -38,7 +52,9 @@ export default async (req: Request) => {
   await social.setJSON(`s:${user.id}`, state);
 
   // Compteur global de likes (map unique — approximation assumée en beta).
-  if (kind === "liked") {
+  if (kind === "liked" && changed) {
+    /* `changed` est indispensable ici : sans lui, aimer deux fois de suite
+       incrémente deux fois un compteur que l'ensemble ne compte qu'une. */
     const counters = store("counters");
     const map =
       ((await counters.get("likes", { type: "json" })) as Record<
@@ -50,7 +66,7 @@ export default async (req: Request) => {
 
     // Lot 3 : le j'aime sur une ANNONCE MEMBRE prévient son vendeur (le
     // catalogue seed n'a pas de propriétaire réel à prévenir).
-    if (b?.on) {
+    if (b?.on && changed) {
       const p = (await store("products").get(`p:${id}`, {
         type: "json",
       })) as { sellerId?: string; brand?: string; name?: string } | null;
@@ -64,7 +80,7 @@ export default async (req: Request) => {
   }
 
   // Follow d'un membre réel → notification cloche.
-  if (kind === "follows" && b?.on) {
+  if (kind === "follows" && b?.on && changed) {
     const targetId = (await store("users").get(`handle:${id}`, {
       type: "text",
     })) as string | null;
