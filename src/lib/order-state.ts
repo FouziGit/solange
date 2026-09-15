@@ -35,7 +35,15 @@ const TRANSITIONS: Record<
   { from: OrderStatus[]; to: OrderStatus; roles: OrderRole[] }
 > = {
   ship: { from: ["payee"], to: "expediee", roles: ["seller"] },
-  cancel: { from: ["payee"], to: "annulee", roles: ["seller", "system"] },
+  /* L'acheteur avait payé sans jamais pouvoir annuler : seuls le vendeur
+     et les automatismes le pouvaient. Tant que rien n'est expédié, se
+     raviser est légitime — et le lui refuser le pousse vers sa banque le
+     jour où l'argent sera réel. */
+  cancel: {
+    from: ["payee"],
+    to: "annulee",
+    roles: ["buyer", "seller", "system"],
+  },
   receive: { from: ["expediee"], to: "recue", roles: ["buyer"] },
   dispute: { from: ["expediee", "recue"], to: "litige", roles: ["buyer"] },
   close: { from: ["recue", "expediee"], to: "terminee", roles: ["system"] },

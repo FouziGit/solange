@@ -53,8 +53,23 @@ export default async (req: Request) => {
     const me = await currentUser(req);
     const mineOnly = new URL(req.url).searchParams.get("mine") === "1";
     if (mineOnly && !me) return json({ products: [], soldSeeds: [] });
+    /* La troncature s'appliquait AVANT le filtre `mine` : passé la 61ᵉ
+       annonce du site, la plus ancienne sortait du Marché ET du profil de
+       son propre vendeur, qui ne pouvait donc plus la retirer — alors
+       qu'elle restait parfaitement achetable, /api/orders lisant la pièce
+       en direct. On balaie donc plus loin quand on cherche les siennes, et
+       on s'arrête dès qu'on en a assez.
+
+       Le balayage reste borné : au-delà, il faudra un index par vendeur.
+       C'est la pagination, et elle n'est pas dans ce lot. */
+    const PAGE = 60;
+    const SCAN_MAX = 600;
+    const parcours = mineOnly
+      ? idx.slice(-SCAN_MAX).reverse()
+      : idx.slice(-PAGE).reverse();
     const out: unknown[] = [];
-    for (const id of idx.slice(-60).reverse()) {
+    for (const id of parcours) {
+      if (out.length >= PAGE) break;
       const p = (await products.get(`p:${id}`, { type: "json" })) as Record<
         string,
         unknown

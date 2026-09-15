@@ -23,8 +23,13 @@ export default async (req: Request) => {
 
   const products = store("products");
   const idx = ((await products.get("idx", { type: "json" })) as string[]) ?? [];
+  /* Même piège qu'au Marché : tronquer AVANT de filtrer par vendeur vide
+     le profil public d'un membre dès que le site dépasse 60 annonces. On
+     balaie plus loin, on s'arrête dès qu'on en a assez. */
+  const PAGE = 60;
   const mine: unknown[] = [];
-  for (const id of idx.slice(-60).reverse()) {
+  for (const id of idx.slice(-600).reverse()) {
+    if (mine.length >= PAGE) break;
     const p = (await products.get(`p:${id}`, { type: "json" })) as Record<
       string,
       unknown
@@ -40,7 +45,8 @@ export default async (req: Request) => {
   const pidx =
     ((await postsStore.get("idx", { type: "json" })) as string[]) ?? [];
   const myPosts: unknown[] = [];
-  for (const id of pidx.slice(-30).reverse()) {
+  for (const id of pidx.slice(-300).reverse()) {
+    if (myPosts.length >= 30) break;
     const p = (await postsStore.get(`l:${id}`, { type: "json" })) as Record<
       string,
       unknown

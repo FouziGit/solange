@@ -32,11 +32,15 @@ describe("nextStatus — permissions par rôle", () => {
     expect(nextStatus("recue", "dispute", "seller")).toBeNull();
   });
 
-  it("l'annulation avant expédition : vendeur ou système, jamais après envoi", () => {
+  /* Ce test affirmait que l'acheteur ne pouvait pas annuler. C'était exact,
+     et c'était le défaut : quelqu'un qui a payé et dont rien n'est parti
+     doit pouvoir se raviser. La règle a changé, l'assertion suit. */
+  it("l'annulation avant expédition : les deux parties et le système, jamais après envoi", () => {
     expect(nextStatus("payee", "cancel", "seller")).toBe("annulee");
     expect(nextStatus("payee", "cancel", "system")).toBe("annulee");
-    expect(nextStatus("payee", "cancel", "buyer")).toBeNull();
+    expect(nextStatus("payee", "cancel", "buyer")).toBe("annulee");
     expect(nextStatus("expediee", "cancel", "seller")).toBeNull();
+    expect(nextStatus("expediee", "cancel", "buyer")).toBeNull();
   });
 
   it("la clôture : système uniquement", () => {
@@ -97,5 +101,25 @@ describe("dueActions — automatismes (horloge injectée, idempotents)", () => {
         t0 + DELAYS.autoCloseMs * 2,
       ),
     ).toEqual([]);
+  });
+});
+
+describe("annulation par l'acheteur — avant expédition seulement", () => {
+  it("l'acheteur peut annuler une commande payée non expédiée", () => {
+    expect(nextStatus("payee", "cancel", "buyer")).toBe("annulee");
+  });
+
+  it("il ne peut plus annuler une fois la pièce partie", () => {
+    expect(nextStatus("expediee", "cancel", "buyer")).toBeNull();
+    expect(nextStatus("recue", "cancel", "buyer")).toBeNull();
+  });
+
+  it("le vendeur et les automatismes gardent ce droit", () => {
+    expect(nextStatus("payee", "cancel", "seller")).toBe("annulee");
+    expect(nextStatus("payee", "cancel", "system")).toBe("annulee");
+  });
+
+  it("un tiers ne peut pas annuler la commande d'autrui", () => {
+    expect(nextStatus("payee", "cancel", "admin")).toBeNull();
   });
 });

@@ -376,6 +376,61 @@ export default function CommandePage() {
                     </>
                   )}
 
+                  {/* L'acheteur peut se raviser tant que rien n'est parti.
+                      Le serveur autorise désormais cette transition
+                      (order-state, rôle `buyer` depuis `payee`) ; sans ce
+                      bouton, le droit existait sans exister. */}
+                  {!seller && status === "payee" && (
+                    <>
+                      <p className="text-[13px] leading-relaxed text-ash">
+                        Le vendeur n&apos;a pas encore expédié. Tu peux annuler.
+                      </p>
+                      {!cancelArmed ? (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setCancelArmed(true)}
+                          className="self-start"
+                        >
+                          Annuler ma commande
+                        </Button>
+                      ) : (
+                        <div className="border border-bone/15 p-3.5">
+                          <p className="text-[13px] text-bone">
+                            Annuler définitivement&nbsp;? La pièce repartira en
+                            vente.
+                          </p>
+                          <div className="mt-3 flex gap-2">
+                            <Button
+                              variant="danger"
+                              size="sm"
+                              disabled={busy}
+                              onClick={() =>
+                                void transition(
+                                  {
+                                    id: o.id,
+                                    action: "cancel",
+                                    note: "Annulée par l'acheteur avant expédition",
+                                  },
+                                  "order_cancel_buyer",
+                                )
+                              }
+                            >
+                              {busy ? "Un instant…" : "Annuler"}
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setCancelArmed(false)}
+                            >
+                              Garder ma commande
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  )}
+
                   {!seller && status === "expediee" && (
                     <>
                       <Button

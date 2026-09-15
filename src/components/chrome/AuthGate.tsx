@@ -27,12 +27,17 @@ export const ONBOARD_KEY = "solange:onboarded";
  * une fois ». A brief branded splash covers the first client tick.
  */
 export function AuthGate({ children }: { children: React.ReactNode }) {
-  const { user, authReady } = useStore();
+  const { user } = useStore();
   const pathname = usePathname();
   // One-time, hydration-safe read of the persisted onboarding flag (localStorage
   // is client-only, so we resolve it after mount rather than during SSR).
   const [state, setState] = useState({ ready: false, authed: false });
-  const ready = state.ready && authReady;
+  /* `authReady` attendait la fin de refreshSession() — un fetch /api/me
+     mesuré à 717 ms à froid en production. Le splash restait donc affiché
+     le temps d'un aller-retour réseau, sur TOUTES les routes. Le drapeau
+     d'accueil vient du navigateur, il suffit à décider quoi rendre ; la
+     session arrive ensuite et déverrouille d'elle-même via `user`. */
+  const ready = state.ready;
   const authed = state.authed || user !== null;
 
   useEffect(() => {
