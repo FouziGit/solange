@@ -56,6 +56,9 @@ type Store = {
   toggleSave(id: string): void;
   isFollowing(handle: string): boolean;
   toggleFollow(handle: string): void;
+  /** Les pseudos réellement suivis. L'écran Gardées les résolvait via le
+      jeu de démonstration : un vendeur réel suivi n'y apparaissait jamais. */
+  followedList: string[];
   savedItems(): CatalogItem[];
   isJoined(communityId: string): boolean;
   toggleJoin(communityId: string): void;
@@ -148,13 +151,21 @@ export function SolangeProvider({ children }: { children: ReactNode }) {
         setUser(res.data.user);
         const s = res.data.social;
         if (s) {
-          // état serveur = source de vérité pour un membre connecté
-          // Chaque clé peut manquer (le serveur ne stocke que les kinds touchés)
+          /* État serveur = source de vérité pour un membre connecté — et
+             cette fois le code le fait vraiment. Il unionnait jusqu'ici
+             avec les valeurs de démonstration : un vrai compte héritait
+             donc de pièces gardées, d'abonnements et de Cercles qu'il
+             n'avait jamais choisis, et qui revenaient à chaque
+             rafraîchissement puisque la fusion était refaite à chaque
+             fois. Les valeurs de démonstration restent l'état INITIAL,
+             c'est-à-dire celui du visiteur sans compte.
+             Chaque clé peut manquer : le serveur ne stocke que les kinds
+             réellement touchés. */
           setLiked(new Set(s.liked ?? []));
           setBlocked(new Set(s.blocked ?? []));
-          setSaved(new Set([...savedIds, ...(s.saved ?? [])]));
-          setFollowing(new Set([...followedHandles, ...(s.follows ?? [])]));
-          setJoined(new Set([...joinedCommunityIds, ...(s.joined ?? [])]));
+          setSaved(new Set(s.saved ?? []));
+          setFollowing(new Set(s.follows ?? []));
+          setJoined(new Set(s.joined ?? []));
         }
         const o = res.data.orders ?? [];
         setOrders(
@@ -345,6 +356,7 @@ export function SolangeProvider({ children }: { children: ReactNode }) {
       toggleSave,
       isFollowing,
       toggleFollow,
+      followedList: [...following],
       savedItems,
       isJoined,
       toggleJoin,

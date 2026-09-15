@@ -9,19 +9,36 @@ import { Button } from "@/components/ui/Button";
 import { TogglePill } from "@/components/ui/TogglePill";
 import { Avatar } from "@/components/chrome/Avatar";
 import { Verified } from "@/components/chrome/icons";
-import { followedHandles, looks } from "@/lib/mock";
+import { looks } from "@/lib/mock";
 import type { Creator } from "@/lib/mock";
 import { useStore } from "@/lib/store";
 
 type Tab = "pieces" | "vendeurs";
 
-/** Resolve followed handles to creator records via the looks dataset. */
-function followedCreators(): Creator[] {
+/** Résout les pseudos suivis en fiches affichables.
+    Avant, la résolution passait par le seul jeu de démonstration : un
+    vendeur RÉEL suivi disparaissait de la liste, et la liste restait
+    figée sur trois personnages quoi qu'on suive. On part désormais des
+    pseudos réellement suivis ; ceux qu'on ne connaît pas sont rendus
+    avec une fiche minimale plutôt que d'être ignorés. */
+type SuiviAffichable = Pick<Creator, "handle" | "name" | "seed"> & {
+  verified?: boolean;
+};
+
+function resoudreSuivis(handles: string[]): SuiviAffichable[] {
   const byHandle = new Map<string, Creator>();
   for (const l of looks) byHandle.set(l.creator.handle, l.creator);
-  return followedHandles
-    .map((h) => byHandle.get(h))
-    .filter((c): c is Creator => c !== undefined);
+  return handles.map(
+    (h) =>
+      byHandle.get(h) ?? {
+        /* Fiche minimale : on n'invente NI nombre d'abonnés NI badge.
+           Le nombre d'abonnés d'un membre réel n'est pas connu ici, et
+           l'afficher au jugé serait un compteur fabriqué de plus. */
+        handle: h,
+        name: h,
+        seed: h,
+      },
+  );
 }
 
 function FollowToggle({ handle }: { handle: string }) {
@@ -39,9 +56,9 @@ function FollowToggle({ handle }: { handle: string }) {
 
 export default function FavorisPage() {
   const [tab, setTab] = useState<Tab>("pieces");
-  const { savedItems } = useStore();
+  const { savedItems, followedList } = useStore();
   const saved = savedItems();
-  const creators = useMemo(() => followedCreators(), []);
+  const creators = useMemo(() => resoudreSuivis(followedList), [followedList]);
 
   return (
     <PageShell marginWord="Gardées">
@@ -103,8 +120,10 @@ export default function FavorisPage() {
               key={c.handle}
               className="glass flex items-center gap-3 rounded-2xl px-3.5 py-3"
             >
+              {/* menait vers /profil : chaque vendeur suivi renvoyait le
+                  membre vers SA propre page, jamais vers celle du vendeur */}
               <Link
-                href="/profil"
+                href={`/membre/${c.handle}`}
                 data-cursor="link"
                 className="flex min-w-0 flex-1 items-center gap-3"
               >

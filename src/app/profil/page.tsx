@@ -170,6 +170,10 @@ export default function ProfilPage() {
   const [referral, setReferral] = useState(false);
   const { orders, user, authReady, signOut, savedItems, refreshProducts } =
     useStore();
+  const { memberPosts } = useStore();
+  const mesPublications = user
+    ? memberPosts.filter((p) => p.authorHandle === user.handle)
+    : [];
   const saleItems = forSale();
   const likedItems = liked();
   const isGuest = authReady && user === null;
@@ -346,7 +350,11 @@ export default function ProfilPage() {
 
       {/* referral / invite — toggled by the Share button above */}
       <AnimatePresence initial={false}>
-        {referral && <ReferralCard />}
+        {/* Le parrainage promet « 5 € par ami » avec un code identique pour
+            tout le monde et aucun mécanisme derrière. Tant qu'il n'existe
+            pas, un membre réel ne doit pas le voir : il reste visible en
+            mode démo, où rien n'est présenté comme vrai. */}
+        {referral && !user && <ReferralCard />}
       </AnimatePresence>
 
       {/* stats — réelles (store) pour un membre connecté, mock sinon */}
@@ -573,39 +581,86 @@ export default function ProfilPage() {
       {/* content */}
       <div className="mt-6">
         {tab === "looks" ? (
-          <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
-            {looks.map((l, i) => (
-              <motion.div
-                key={l.id}
-                initial={{ opacity: 0, y: 16 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{
-                  duration: 0.5,
-                  ease: EASE.luxe,
-                  delay: Math.min(i * 0.05, 0.3),
-                }}
-                className="group relative aspect-[3/4] overflow-hidden rounded-2xl ring-1 ring-bone/10"
-                style={{ background: gradientFor(l.seed) }}
-              >
-                <div
-                  className="absolute inset-0"
-                  style={{
-                    background:
-                      "radial-gradient(60% 50% at 50% 30%, rgba(255,255,255,0.12), transparent 62%)",
+          user ? (
+            /* Un membre réel voit SES publications. Avant, il voyait le
+               vestiaire d'un personnage fictif présenté comme le sien. */
+            mesPublications.length ? (
+              <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
+                {mesPublications.map((p) => (
+                  <Link
+                    key={p.id}
+                    href="/"
+                    className="group relative block aspect-[3/4] overflow-hidden rounded-2xl ring-1 ring-bone/10"
+                    style={{ background: gradientFor(p.id) }}
+                  >
+                    {p.poster || p.gallery[0] ? (
+                      /* eslint-disable-next-line @next/next/no-img-element */
+                      <img
+                        src={p.poster || p.gallery[0]}
+                        alt={p.caption || "Publication"}
+                        loading="lazy"
+                        className="absolute inset-0 size-full object-cover"
+                      />
+                    ) : null}
+                    <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent p-3">
+                      <span className="line-clamp-2 text-[11px] text-bone/85">
+                        {p.caption}
+                      </span>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            ) : (
+              <div className="py-14 text-center">
+                <p className="text-[14px] text-bone">
+                  Tu n&apos;as encore rien publié.
+                </p>
+                <p className="mt-1.5 text-[12.5px] text-ash">
+                  Tes publications apparaîtront ici.
+                </p>
+                <Link
+                  href="/creer"
+                  className="mt-4 inline-flex min-h-11 items-center border border-bone/30 px-4 text-[12.5px] font-semibold text-bone transition-colors hover:bg-bone/10"
+                >
+                  Publier
+                </Link>
+              </div>
+            )
+          ) : (
+            <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
+              {looks.map((l, i) => (
+                <motion.div
+                  key={l.id}
+                  initial={{ opacity: 0, y: 16 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{
+                    duration: 0.5,
+                    ease: EASE.luxe,
+                    delay: Math.min(i * 0.05, 0.3),
                   }}
-                />
-                <div className="absolute inset-0 grid place-items-center">
-                  <span className="font-editorial text-3xl font-semibold text-bone/85 transition-transform duration-700 group-hover:scale-110">
-                    {l.title}
-                  </span>
-                </div>
-                <div className="absolute inset-x-0 bottom-0 flex items-center justify-between bg-gradient-to-t from-black/70 to-transparent p-3 text-[11px] text-bone/80">
-                  <span>@{l.creator.handle}</span>
-                  <span className="tabular-nums">♡ {compact(l.likes)}</span>
-                </div>
-              </motion.div>
-            ))}
-          </div>
+                  className="group relative aspect-[3/4] overflow-hidden rounded-2xl ring-1 ring-bone/10"
+                  style={{ background: gradientFor(l.seed) }}
+                >
+                  <div
+                    className="absolute inset-0"
+                    style={{
+                      background:
+                        "radial-gradient(60% 50% at 50% 30%, rgba(255,255,255,0.12), transparent 62%)",
+                    }}
+                  />
+                  <div className="absolute inset-0 grid place-items-center">
+                    <span className="font-editorial text-3xl font-semibold text-bone/85 transition-transform duration-700 group-hover:scale-110">
+                      {l.title}
+                    </span>
+                  </div>
+                  <div className="absolute inset-x-0 bottom-0 flex items-center justify-between bg-gradient-to-t from-black/70 to-transparent p-3 text-[11px] text-bone/80">
+                    <span>@{l.creator.handle}</span>
+                    <span className="tabular-nums">♡ {compact(l.likes)}</span>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          )
         ) : (
           <div className="columns-2 gap-3 md:columns-3 xl:columns-4">
             {(tab === "vente" ? saleItems : likedItems).map((it, i) => (
