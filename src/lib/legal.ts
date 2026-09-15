@@ -87,3 +87,21 @@ export const LEGAL_DOCS: LegalDoc[] = [
 export function legalDoc(slug: string): LegalDoc | undefined {
   return LEGAL_DOCS.find((d) => d.slug === slug);
 }
+
+/** Un document dont les mentions obligatoires ne sont pas renseignées.
+
+    Les sept documents ont été mis en ligne avec leurs marqueurs visibles :
+    « Dénomination sociale : [À COMPLÉTER] » s'affichait tel quel au
+    lecteur. Tant que l'exploitant n'a pas fourni ces informations, on ne
+    peut pas les inventer — mais on peut au moins ne pas faire passer un
+    brouillon pour un texte en vigueur. */
+export function hasPlaceholders(texte: string): boolean {
+  return /\[À COMPLÉTER/i.test(texte);
+}
+
+/** Une date d'effet réelle, pas un marqueur. Sans elle, le document n'est
+    opposable à personne — et l'acceptation qu'on horodate pointe vers un
+    texte qui n'est jamais entré en vigueur. */
+export function hasEffectiveDate(valeur: string | undefined): boolean {
+  return !!valeur && !valeur.includes("[") && valeur.trim().length > 0;
+}

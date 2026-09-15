@@ -7,7 +7,7 @@ import {
   needsAcceptance,
   saleAcceptanceIsValid,
 } from "../legal-consent";
-import { LEGAL_VERSION } from "../legal";
+import { LEGAL_VERSION, hasEffectiveDate, hasPlaceholders } from "../legal";
 
 describe("acceptancePayloadIsValid", () => {
   it("exige les DEUX cases, explicitement à true", () => {
@@ -105,5 +105,31 @@ describe("saleAcceptanceIsValid — acceptation des CGV à la commande", () => {
 
   it("la preuve de vente ne porte PAS de déclaration d'âge : elle n'a rien à y faire", () => {
     expect(buildSaleConsent(0)).not.toHaveProperty("age");
+  });
+});
+
+describe("documents incomplets — ne pas les faire passer pour en vigueur", () => {
+  it("repère un marqueur non renseigné", () => {
+    expect(
+      hasPlaceholders("Dénomination : [À COMPLÉTER : raison sociale]"),
+    ).toBe(true);
+    expect(hasPlaceholders("[à compléter : date]")).toBe(true);
+  });
+
+  it("ne se déclenche pas sur un texte propre", () => {
+    expect(hasPlaceholders("Dénomination sociale : SOLANGE SAS")).toBe(false);
+    expect(hasPlaceholders("Un crochet [ordinaire] ne compte pas.")).toBe(
+      false,
+    );
+  });
+
+  it("refuse une date d'effet qui est encore un marqueur", () => {
+    expect(hasEffectiveDate("[À COMPLÉTER : date de publication]")).toBe(false);
+    expect(hasEffectiveDate("")).toBe(false);
+    expect(hasEffectiveDate(undefined)).toBe(false);
+  });
+
+  it("accepte une vraie date", () => {
+    expect(hasEffectiveDate("15 septembre 2026")).toBe(true);
   });
 });

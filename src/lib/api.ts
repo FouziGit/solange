@@ -376,7 +376,18 @@ export const api = {
   modAudit: () => request<{ audit: ModAuditEntry[] }>("/api/admin?audit=1"),
   modAct: (p: {
     reportId: string;
-    action: "dismiss" | "warn" | "hide" | "suspend" | "ban";
+    /* Les trois « un- » lèvent une mesure : la charte de modération les
+       annonce (« la mesure est levée et ses effets effacés »), elles
+       n'existaient nulle part. */
+    action:
+      | "dismiss"
+      | "warn"
+      | "hide"
+      | "suspend"
+      | "ban"
+      | "unhide"
+      | "unsuspend"
+      | "unban";
     authorId?: string;
     days?: number;
     note?: string;

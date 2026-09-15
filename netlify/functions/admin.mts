@@ -21,6 +21,7 @@ import {
   userEmail,
   type SessionUser,
 } from "./_shared/core.mts";
+import { lookupOwn } from "../../src/lib/guards.ts";
 import { applyTransition, type OrderRecord } from "./_shared/order-core.mts";
 import { isAdmin, type ModAction } from "../../src/lib/moderation.ts";
 import { CIRCLE_IDS } from "../../src/lib/circles.ts";
@@ -178,12 +179,12 @@ async function setHidden(
   targetId: string,
   hidden: boolean,
 ): Promise<boolean> {
-  const map: Record<string, [string, string]> = {
+  const map: Record<string, [string, string] | null> = {
     product: ["products", `p:${targetId}`],
     post: ["posts", `l:${targetId}`],
     thread: ["circles", `t:${targetId}`],
   };
-  const entry = map[targetType];
+  const entry = lookupOwn<[string, string] | null>(map, targetType, null);
   if (!entry) return false;
   const [storeName, key] = entry;
   const s = store(storeName);
@@ -395,6 +396,49 @@ export default async (req: Request) => {
         text: `Publication suspendue ${days} jours par la modération.`,
         link: "/profil",
       });
+    }
+  } else if (action === "unhide") {
+    applied = await setHidden(report.targetType, report.targetId, false);
+    if (applied && authorId)
+      await pushNotif(authorId, {
+        type: "report",
+        text: "Ton contenu a été rétabli après réexamen.",
+        link: "/profil",
+      });
+  } else if (action === "unsuspend" || action === "unban") {
+    /* La charte de modération annonce qu'une contestation fondée « lève la
+       mesure et efface ses effets ». Aucun endpoint ne le permettait : une
+       sanction était donc irréversible, et la charte inapplicable. */
+    if (!authorId) applied = false;
+    else {
+      const rec = (await users.get(`u:${authorId}`, {
+        type: "json",
+      })) as Record<string, unknown> | null;
+      if (!rec) applied = false;
+      else {
+        const { banned, suspendedUntil, ...reste } = rec as Record<
+          string,
+          unknown
+        > & {
+          banned?: boolean;
+          suspendedUntil?: number;
+        };
+        void banned;
+        void suspendedUntil;
+        await users.setJSON(
+          `u:${authorId}`,
+          action === "unban" ? reste : { ...reste, banned: rec.banned },
+        );
+        /* Un compte banni est déconnecté : la notification n'arriverait
+           pas. Elle part pour une levée de suspension, où le membre est
+           encore là pour la lire. */
+        if (action === "unsuspend")
+          await pushNotif(authorId, {
+            type: "report",
+            text: "Ta suspension a été levée après réexamen.",
+            link: "/profil",
+          });
+      }
     }
   }
 

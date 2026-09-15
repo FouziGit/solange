@@ -77,7 +77,13 @@ export type ModAction =
   | "warn" // avertir l'auteur
   | "hide" // masquer le contenu
   | "suspend" // suspendre l'auteur
-  | "ban"; // bannir l'auteur
+  | "ban" // bannir l'auteur
+  /* Les trois levées. La charte de modération promet qu'une contestation
+     fondée « lève la mesure et efface ses effets » — sans ces actions, la
+     promesse n'avait aucun support et toute sanction était définitive. */
+  | "unhide" // rétablir le contenu
+  | "unsuspend" // lever la suspension
+  | "unban"; // rouvrir le compte
 
 export const MOD_ACTION_LABEL: Record<ModAction, string> = {
   dismiss: "Classer",
@@ -85,7 +91,18 @@ export const MOD_ACTION_LABEL: Record<ModAction, string> = {
   hide: "Masquer",
   suspend: "Suspendre",
   ban: "Bannir",
+  unhide: "Rétablir",
+  unsuspend: "Lever la suspension",
+  unban: "Rouvrir le compte",
 };
+
+/** Une action qui ANNULE une mesure. Elle ne se justifie pas de la même
+    façon qu'une sanction : c'est une réparation, pas une décision. */
+export const MOD_REVERSALS: ModAction[] = ["unhide", "unsuspend", "unban"];
+
+export function isReversal(a: ModAction): boolean {
+  return MOD_REVERSALS.includes(a);
+}
 
 export type ReportTargetType =
   "product" | "post" | "user" | "message" | "thread";

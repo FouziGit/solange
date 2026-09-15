@@ -7,7 +7,12 @@ import {
   type Block,
   type Inline,
 } from "@/lib/markdown";
-import { LEGAL_DOCS, legalDoc } from "@/lib/legal";
+import {
+  LEGAL_DOCS,
+  hasEffectiveDate,
+  hasPlaceholders,
+  legalDoc,
+} from "@/lib/legal";
 import { PageShell } from "@/components/ui/PageShell";
 
 /* ============================================================
@@ -171,13 +176,15 @@ export async function loadLegal(slug: string) {
     "utf8",
   );
   const { data, body } = splitFrontmatter(raw);
-  return { data, blocks: parseMarkdown(body) };
+  return { data, blocks: parseMarkdown(body), raw: body };
 }
 
 export async function LegalDocument({ slug }: { slug: string }) {
   const doc = legalDoc(slug);
   if (!doc) return null;
-  const { data, blocks } = await loadLegal(slug);
+  const { data, blocks, raw } = await loadLegal(slug);
+  const enVigueur = hasEffectiveDate(data.effectiveDate);
+  const brouillon = hasPlaceholders(raw) || !enVigueur;
 
   return (
     <PageShell marginWord="Légal">
@@ -196,9 +203,30 @@ export async function LegalDocument({ slug }: { slug: string }) {
         {data.version && (
           <p className="mt-2 text-[12px] text-ash">
             Version {data.version}
-            {data.effectiveDate
-              ? ` · en vigueur depuis le ${data.effectiveDate}`
-              : ""}
+            {enVigueur ? ` · en vigueur depuis le ${data.effectiveDate}` : ""}
+          </p>
+        )}
+
+        {brouillon && (
+          /* Mieux vaut dire « ce texte n'est pas finalisé » que laisser
+             quelqu'un lire « [À COMPLÉTER : raison sociale] » en croyant
+             que c'est le document. */
+          <p
+            role="note"
+            className="mt-5 border-l-2 border-bone/40 bg-bone/[0.04] py-3 pl-4 pr-3 text-[13px] leading-relaxed text-bone/85"
+          >
+            <strong className="font-semibold text-bone">
+              Ce document n&apos;est pas finalisé.
+            </strong>{" "}
+            Certaines mentions obligatoires ne sont pas encore renseignées et
+            apparaissent entre crochets. Il n&apos;est pas encore entré en
+            vigueur. Pour toute question&nbsp;:{" "}
+            <a
+              href="mailto:solange@nouhbenzidane.fr"
+              className="text-bone underline underline-offset-4"
+            >
+              solange@nouhbenzidane.fr
+            </a>
           </p>
         )}
 
