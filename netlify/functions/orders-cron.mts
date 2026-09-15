@@ -60,7 +60,32 @@ export default async () => {
     }
   }
 
-  return new Response(JSON.stringify({ ok: true, acted }), {
+  /* Purge des codes de connexion expirés. Un blob est écrit à CHAQUE
+     demande de code, mais il n'est effacé qu'en cas de vérification
+     réussie : toute demande abandonnée — faute de frappe, e-mail jamais
+     ouvert, tentative d'abus arrêtée par le plafond — laissait donc un
+     résidu définitif. Le code lui-même est haché et expire en dix minutes,
+     il n'y a pas de fuite ; c'est l'accumulation qu'on nettoie. */
+  let otpsPurges = 0;
+  try {
+    const otps = store("otps");
+    const maintenant = Date.now();
+    const { blobs } = await otps.list();
+    for (const b of blobs) {
+      const rec = (await otps.get(b.key, { type: "json" })) as {
+        exp?: number;
+      } | null;
+      if (rec && typeof rec.exp === "number" && maintenant > rec.exp) {
+        await otps.delete(b.key);
+        otpsPurges++;
+      }
+    }
+  } catch (e) {
+    // Le nettoyage ne doit jamais empêcher le traitement des commandes.
+    console.error("otp_purge_error", (e as Error).message);
+  }
+
+  return new Response(JSON.stringify({ ok: true, acted, otpsPurges }), {
     headers: { "content-type": "application/json" },
   });
 };
