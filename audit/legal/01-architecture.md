@@ -125,7 +125,7 @@ Vérifié document par document en Phase 4.
 
 - **Registre : « vous ».** Le produit tutoie (DA), mais les documents
   contractuels emploient le « vous », convention du domaine, plus lisible
-  en cas de litige. Tracé dans `DECISIONS.md` (D-032).
+  en cas de litige. Tracé dans `DECISIONS.md` (D-034).
 - **Versionnage.** Chaque document porte `version` et `date d'effet` en
   tête. La version est une constante partagée avec le code, pour que
   l'acceptation stockée serve de preuve.

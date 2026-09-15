@@ -14,7 +14,7 @@ import { PageShell } from "@/components/ui/PageShell";
    SOLANGE — affichage d'un document légal.
    Le texte est lu depuis legal/<slug>.md AU MOMENT DU RENDU côté
    serveur (composant serveur, page statique) : une seule source, pas
-   de copie qui divergerait (D-033). Les commentaires de réserve du
+   de copie qui divergerait (D-035). Les commentaires de réserve du
    fichier source sont retirés par l'analyseur — ils s'adressent au
    dépôt, jamais au lecteur.
    ============================================================ */

@@ -2,6 +2,7 @@
    AUTO-EXTRAIT de src/lib/mock.ts (catalog). Le serveur recalcule tous les
    montants à partir de CETTE table, jamais depuis le client. Si mock.ts
    change, régénérer (voir AUDIT.md §5.4). */
+import { feeRate } from "../../../src/lib/fees.ts";
 export type SeedItem = {
   brand: string;
   name: string;
@@ -151,9 +152,9 @@ export const SEED_CATALOG: Record<string, SeedItem> = {
 };
 
 /** Commission dégressive SOLANGE — miroir de src/lib/utils.ts (BP). */
+/* Le barème vit dans src/lib/fees.ts — source unique partagée client/serveur,
+   comme order-state.ts l'est pour les statuts. Cette fonction n'est qu'une
+   façade en euros conservée pour ne pas casser ses appelants. */
 export function commissionRate(price: number): number {
-  if (price < 200) return 0.04;
-  if (price < 500) return 0.035;
-  if (price < 1000) return 0.025;
-  return 0.02;
+  return feeRate(price);
 }

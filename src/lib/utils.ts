@@ -1,5 +1,6 @@
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
+import { feeRate, splitFee, toCents, toEur } from "./fees";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -75,15 +76,18 @@ export function gradientFor(seed: string): string {
 }
 
 /** SOLANGE degressive commission (from the business plan). */
+/* Le barème vit dans src/lib/fees.ts, en centimes entiers, et nulle part
+   ailleurs. Ces deux fonctions ne sont que la façade en euros pour
+   l'affichage — elles ne recalculent rien. */
 export function commissionRate(price: number): number {
-  if (price < 200) return 0.04;
-  if (price < 500) return 0.035;
-  if (price < 1000) return 0.025;
-  return 0.02;
+  return feeRate(price);
 }
 
 export function commission(price: number) {
-  const rate = commissionRate(price);
-  const fee = Math.round(price * rate * 100) / 100;
-  return { rate, fee, net: Math.round((price - fee) * 100) / 100 };
+  const { rateBps, feeCents, sellerCents } = splitFee(toCents(price));
+  return {
+    rate: rateBps / 10_000,
+    fee: toEur(feeCents),
+    net: toEur(sellerCents),
+  };
 }

@@ -1,5 +1,5 @@
 /* ============================================================
-   SOLANGE — registre des documents légaux (D-033).
+   SOLANGE — registre des documents légaux (D-035).
    Le TEXTE vit dans legal/*.md, jamais dans un composant : c'est ce
    qui a produit la politique de confidentialité aujourd'hui fausse,
    personne ne relisant du JSX. Ici on ne tient que la carte : quel

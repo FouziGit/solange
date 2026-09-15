@@ -78,7 +78,7 @@ Trois partis pris méritent d'être signalés :
   l'`AuthGate` laisse passer ces routes, sans quoi les liens de la case
   d'acceptation ne menaient nulle part. Ajoutées au sitemap.
 - Le texte est lu depuis `legal/*.md` au rendu : **une seule source**
-  (D-033). Un micro-analyseur Markdown maison (14 tests) plutôt qu'une
+  (D-035). Un micro-analyseur Markdown maison (14 tests) plutôt qu'une
   dépendance : l'entrée n'est jamais du contenu membre, et la sortie est
   un arbre que React rend en éléments — aucune injection possible par
   construction. Les commentaires de réserve du source sont retirés au
@@ -115,7 +115,7 @@ deux sont en priorité haute dans `99-a-completer.md`.
 | Vérification                                                 | Résultat                                                                              |
 | ------------------------------------------------------------ | ------------------------------------------------------------------------------------- |
 | Liens internes des sept documents                            | 7/7 pointent vers une route existante                                                 |
-| Registre « vous » dans les documents (D-032)                 | aucun tutoiement résiduel                                                             |
+| Registre « vous » dans les documents (D-034)                 | aucun tutoiement résiduel                                                             |
 | Fuite des commentaires de réserve vers le lecteur            | aucune, sur les 7 pages                                                               |
 | Case d'inscription : email valide seul                       | bouton **bloqué**                                                                     |
 | Case d'inscription : une seule case cochée                   | bouton **bloqué**                                                                     |

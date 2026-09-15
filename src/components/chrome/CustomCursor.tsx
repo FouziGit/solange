@@ -20,9 +20,12 @@ function useFinePointer() {
 }
 
 /**
- * Editorial custom cursor: a precise volt dot + a lagging bone ring that
- * inverts via mix-blend-difference. Grows over interactive targets and shows
- * a "VOIR" label over media. Desktop-only.
+ * Halo éditorial qui ACCOMPAGNE la souris : un anneau bone en retard, inversé
+ * par mix-blend-difference, qui grandit sur les cibles interactives et affiche
+ * « voir » sur les médias. Desktop uniquement.
+ *
+ * Le pointeur système reste visible : le point précis qui le remplaçait a été
+ * retiré (il faisait doublon) et la règle `cursor: none` de globals.css avec.
  */
 export function CustomCursor() {
   const enabled = useFinePointer();
@@ -38,7 +41,6 @@ export function CustomCursor() {
 
   useEffect(() => {
     if (!enabled) return;
-    document.documentElement.classList.add("cursor-ready");
 
     const move = (e: MouseEvent) => {
       x.set(e.clientX);
@@ -59,7 +61,6 @@ export function CustomCursor() {
       window.removeEventListener("mousemove", move);
       document.removeEventListener("mouseleave", leave);
       document.removeEventListener("mouseenter", enter);
-      document.documentElement.classList.remove("cursor-ready");
     };
   }, [enabled, x, y]);
 
@@ -93,14 +94,6 @@ export function CustomCursor() {
           )}
         </motion.div>
       </motion.div>
-
-      {/* precise dot */}
-      <motion.div
-        className="absolute top-0 left-0 size-1.5 rounded-full bg-bone"
-        style={{ x, y, translateX: "-50%", translateY: "-50%" }}
-        animate={{ scale: variant === "default" ? 1 : 0 }}
-        transition={{ type: "spring", stiffness: 500, damping: 30 }}
-      />
     </div>
   );
 }

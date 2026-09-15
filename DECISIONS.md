@@ -226,7 +226,7 @@ Chaque entrée : décision, alternative écartée, raison. Relire en début de p
   message échoué fait exception : rollback de l'optimiste + texte restitué
   dans le champ + feedback local existant de l'écran.
 
-- **D-032 — Les documents légaux s'écrivent au « vous », pas au « tu ».**
+- **D-034 — Les documents légaux s'écrivent au « vous », pas au « tu ».**
   Le produit tutoie partout (DA.md), et cette règle ne change pas dans
   l'interface. Mais les documents structurants (mentions légales, CGU,
   CGV, confidentialité, cookies, charte de modération, politique mineurs)
@@ -238,7 +238,7 @@ Chaque entrée : décision, alternative écartée, raison. Relire en début de p
   Alternative écartée : tout tutoyer par cohérence de marque — un contrat
   au tutoiement fragilise sa portée sans rien gagner.
 
-- **D-033 — Une seule source pour le texte légal :** `legal/*.md`. Les
+- **D-035 — Une seule source pour le texte légal :** `legal/*.md`. Les
   pages du produit affichent ce texte, elles n'en gardent pas de copie.
   Chaque document porte une `version` et une `date d'effet` ; la version
   est partagée avec le code (`src/lib/legal.ts`) pour que l'acceptation

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { LegalDocument } from "@/components/legal/LegalDocument";
 import { legalDoc } from "@/lib/legal";
 
-/* Le texte vit dans legal/mentions-legales.md — source unique (D-033). */
+/* Le texte vit dans legal/mentions-legales.md — source unique (D-035). */
 const doc = legalDoc("mentions-legales");
 
 export const metadata: Metadata = {
