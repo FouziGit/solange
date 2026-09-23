@@ -8,8 +8,19 @@
    src/lib/__tests__/order-state.test.ts.
    ============================================================ */
 
+/* `en_attente` : la commande existe, le paiement Stripe n'est pas encore
+   confirmé. Elle n'existait pas tant que le paiement était simulé — la
+   capture était instantanée. Avec un vrai paiement, il y a un temps entre
+   « l'acheteur clique » et « la banque confirme », et c'est le webhook
+   Stripe, pas le navigateur, qui fait passer à `payee`. */
 export type OrderStatus =
-  "payee" | "expediee" | "recue" | "terminee" | "annulee" | "litige";
+  | "en_attente"
+  | "payee"
+  | "expediee"
+  | "recue"
+  | "terminee"
+  | "annulee"
+  | "litige";
 
 export type OrderAction =
   | "ship" // vendeur : j'ai expédié
@@ -18,7 +29,9 @@ export type OrderAction =
   | "dispute" // acheteur : non reçue / non conforme
   | "close" // système : clôture (après réception, ou silence prolongé)
   | "resolve_cancel" // admin (lot 4) : litige tranché → annulée
-  | "resolve_close"; // admin (lot 4) : litige tranché → terminée
+  | "resolve_close" // admin (lot 4) : litige tranché → terminée
+  | "pay" // système (webhook Stripe) : paiement confirmé
+  | "expire"; // système (webhook Stripe) : paiement abandonné ou refusé
 
 export type OrderRole = "buyer" | "seller" | "system" | "admin";
 
@@ -49,6 +62,11 @@ const TRANSITIONS: Record<
   close: { from: ["recue", "expediee"], to: "terminee", roles: ["system"] },
   resolve_cancel: { from: ["litige"], to: "annulee", roles: ["admin"] },
   resolve_close: { from: ["litige"], to: "terminee", roles: ["admin"] },
+  /* Les deux seules sorties de `en_attente`, et elles sont réservées au
+     système : seul Stripe sait si l'argent est passé. Un client qui
+     affirmerait « j'ai payé » ne fait rien bouger. */
+  pay: { from: ["en_attente"], to: "payee", roles: ["system"] },
+  expire: { from: ["en_attente"], to: "annulee", roles: ["system"] },
 };
 
 /** Statut d'arrivée si la transition est permise, sinon null. */
@@ -110,6 +128,7 @@ export function dueActions(
 /* ---------- affichage (client + emails) ---------- */
 
 export const STATUS_LABEL: Record<OrderStatus, string> = {
+  en_attente: "Paiement en cours",
   payee: "Payée",
   expediee: "Expédiée",
   recue: "Reçue",

@@ -29,7 +29,9 @@ export type ApiProduct = {
   seller: string;
   likes: number;
   images: string[];
-  status: "available" | "sold";
+  /* `reserved` : quelqu'un est en train de payer la pièce (30 minutes au
+     plus). Elle n'est plus achetable, mais pas encore vendue. */
+  status: "available" | "sold" | "reserved" | "withdrawn";
   createdAt: number;
   mine?: boolean;
 };
@@ -304,16 +306,41 @@ export const api = {
     address?: { name: string; line: string; postal: string; city: string },
     acceptCgv = false,
   ) =>
-    request<{ ok: boolean; order: ApiOrder }>("/api/orders", {
+    request<{ ok: boolean; order: ApiOrder; checkoutUrl?: string | null }>(
+      "/api/orders",
+      {
+        method: "POST",
+        body: JSON.stringify({
+          productId,
+          shippingMethod,
+          relayLabel,
+          address,
+          acceptCgv,
+        }),
+      },
+    ),
+  /* ---- paiement réel (Stripe Connect) ---- */
+  /** Le paiement est-il réel ? Sans clé Stripe posée : non, et tout le
+      parcours reste en démonstration. */
+  paymentsConfig: () =>
+    request<{ live: boolean; test: boolean }>("/api/payments/config"),
+  /** État du compte de paiement du vendeur connecté. */
+  sellerPayments: () =>
+    request<{
+      enabled: boolean;
+      status?: "absent" | "incomplet" | "verification" | "actif";
+      payable?: boolean;
+    }>("/api/stripe/connect"),
+  /** Lien d'inscription Stripe (identité, IBAN) — à usage unique. */
+  startSellerPayments: () =>
+    request<{ enabled: boolean; url?: string }>("/api/stripe/connect", {
       method: "POST",
-      body: JSON.stringify({
-        productId,
-        shippingMethod,
-        relayLabel,
-        address,
-        acceptCgv,
-      }),
     }),
+  /** Une annonce membre, pour la page de paiement. */
+  product: (id: string) =>
+    request<{ product: ApiProduct }>(
+      `/api/products?id=${encodeURIComponent(id)}`,
+    ),
   orderById: (id: string) =>
     request<{ order: ApiOrder }>(`/api/orders?id=${encodeURIComponent(id)}`),
   orderTransition: (p: {

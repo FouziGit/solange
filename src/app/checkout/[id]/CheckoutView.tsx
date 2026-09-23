@@ -1,7 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/Button";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { AnimatePresence, motion } from "motion/react";
 import type { CatalogItem } from "@/lib/mock";
@@ -51,6 +51,15 @@ export function CheckoutView({ item }: { item: CatalogItem }) {
      par le serveur (netlify/functions/orders.mts) : la case seule ne
      prouverait rien, c'est l'horodatage sur la commande qui compte. */
   const [cgvAccepted, setCgvAccepted] = useState(false);
+  /* Paiement réel ou démonstration ? Tant qu'on ne sait pas, on ne montre
+     ni la fausse carte ni le bouton — afficher « simulé » à quelqu'un qui
+     va payer pour de vrai serait pire que d'attendre une demi-seconde. */
+  const [paiementReel, setPaiementReel] = useState<boolean | null>(null);
+  useEffect(() => {
+    void api
+      .paymentsConfig()
+      .then((r) => setPaiementReel(r.ok ? r.data.live : false));
+  }, []);
   const [soldOut, setSoldOut] = useState(false); // 409 pendant le paiement
 
   // livraison — choisie avant paiement (Vinted-like)
@@ -107,6 +116,14 @@ export function CheckoutView({ item }: { item: CatalogItem }) {
     setError(null);
     setStep("processing");
 
+    /* En paiement réel, un invité ne peut pas payer : il n'y aurait
+       personne à qui rattacher la commande, ni à qui rembourser. */
+    if (!user && paiementReel) {
+      setError("Connecte-toi pour acheter cette pièce.");
+      setStep("form");
+      return;
+    }
+
     /* ---- invité : démo locale, rien n'est sauvegardé ---- */
     if (!user) {
       const id = "SLG-" + Math.random().toString(36).slice(2, 8).toUpperCase();
@@ -142,6 +159,13 @@ export function CheckoutView({ item }: { item: CatalogItem }) {
           },
       cgvAccepted,
     );
+    if (res.ok && res.data.checkoutUrl) {
+      /* Paiement réel : la saisie de carte se fait chez Stripe, sur sa page
+         sécurisée. SOLANGE ne voit jamais le numéro. Le retour se fait sur
+         la page commande, qui attend la confirmation de la banque. */
+      window.location.assign(res.data.checkoutUrl);
+      return;
+    }
     if (res.ok) {
       const order = res.data.order;
       setServerOrder(order);
@@ -161,8 +185,9 @@ export function CheckoutView({ item }: { item: CatalogItem }) {
       return;
     }
     if (res.status === 409) {
-      setSoldOut(true);
-      setError("Cette pièce vient d'être vendue.");
+      // le serveur dit pourquoi : vendue, réservée, ou vendeur non activé
+      setSoldOut(!/paiements|réessaie/.test(res.error));
+      setError(res.error);
       void refreshProducts();
     } else if (res.status === 401) {
       setError("Session expirée — reconnecte-toi pour finaliser la commande.");
@@ -557,65 +582,86 @@ export function CheckoutView({ item }: { item: CatalogItem }) {
               </span>
             </div>
 
-            {/* Encart sécurité — AVANT les champs, très visible. */}
-            <div
-              role="note"
-              className="mb-4 rounded-xl border-2 border-bone/50 bg-bone/[0.08] px-3.5 py-3"
-            >
-              <p className="text-[12.5px] font-semibold leading-snug text-bone">
-                Paiement simulé — aucun débit.
-              </p>
-              <p className="mt-0.5 text-[11.5px] leading-snug text-ash">
-                N&apos;entre jamais une vraie carte : les champs ci-dessous sont
-                figés sur une carte de démonstration.
-              </p>
-            </div>
-
-            <Field label="Numéro de carte">
-              <div className="relative">
-                <input
-                  readOnly
-                  autoComplete="off"
-                  value={DEMO_CARD}
-                  className="field pr-14 text-bone/80"
-                  aria-label="Numéro de carte (démo, non modifiable)"
-                />
-                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] font-bold tracking-wide text-bone/70">
-                  VISA
-                </span>
+            {paiementReel ? (
+              /* Paiement réel : aucun champ de carte ici. La saisie se fait
+                 sur la page Stripe, à l'étape suivante — SOLANGE ne voit ni
+                 ne stocke jamais un numéro de carte. */
+              <div
+                role="note"
+                className="mb-1 rounded-xl border border-bone/25 bg-bone/[0.05] px-3.5 py-3"
+              >
+                <p className="text-[12.5px] font-semibold leading-snug text-bone">
+                  Paiement sécurisé par Stripe
+                </p>
+                <p className="mt-0.5 text-[11.5px] leading-snug text-ash">
+                  Tu saisiras ta carte sur la page Stripe à l&apos;étape
+                  suivante. Carte bancaire, Apple Pay et Google Pay acceptés.
+                  SOLANGE ne voit jamais ton numéro de carte.
+                </p>
               </div>
-            </Field>
+            ) : paiementReel === false ? (
+              <>
+                {/* Encart sécurité — AVANT les champs, très visible. */}
+                <div
+                  role="note"
+                  className="mb-4 rounded-xl border-2 border-bone/50 bg-bone/[0.08] px-3.5 py-3"
+                >
+                  <p className="text-[12.5px] font-semibold leading-snug text-bone">
+                    Paiement simulé — aucun débit.
+                  </p>
+                  <p className="mt-0.5 text-[11.5px] leading-snug text-ash">
+                    N&apos;entre jamais une vraie carte : les champs ci-dessous
+                    sont figés sur une carte de démonstration.
+                  </p>
+                </div>
 
-            <div className="mt-3 grid grid-cols-2 gap-3">
-              <Field label="Expiration">
-                <input
-                  readOnly
-                  autoComplete="off"
-                  value={DEMO_EXP}
-                  className="field text-bone/80"
-                  aria-label="Date d'expiration (démo, non modifiable)"
-                />
-              </Field>
-              <Field label="CVC">
-                <input
-                  readOnly
-                  autoComplete="off"
-                  value={DEMO_CVC}
-                  className="field text-bone/80"
-                  aria-label="Cryptogramme CVC (démo, non modifiable)"
-                />
-              </Field>
-            </div>
+                <Field label="Numéro de carte">
+                  <div className="relative">
+                    <input
+                      readOnly
+                      autoComplete="off"
+                      value={DEMO_CARD}
+                      className="field pr-14 text-bone/80"
+                      aria-label="Numéro de carte (démo, non modifiable)"
+                    />
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] font-bold tracking-wide text-bone/70">
+                      VISA
+                    </span>
+                  </div>
+                </Field>
 
-            <Field label="Nom sur la carte" className="mt-3">
-              <input
-                readOnly
-                autoComplete="off"
-                value={DEMO_NAME}
-                className="field text-bone/80"
-                aria-label="Nom sur la carte (démo, non modifiable)"
-              />
-            </Field>
+                <div className="mt-3 grid grid-cols-2 gap-3">
+                  <Field label="Expiration">
+                    <input
+                      readOnly
+                      autoComplete="off"
+                      value={DEMO_EXP}
+                      className="field text-bone/80"
+                      aria-label="Date d'expiration (démo, non modifiable)"
+                    />
+                  </Field>
+                  <Field label="CVC">
+                    <input
+                      readOnly
+                      autoComplete="off"
+                      value={DEMO_CVC}
+                      className="field text-bone/80"
+                      aria-label="Cryptogramme CVC (démo, non modifiable)"
+                    />
+                  </Field>
+                </div>
+
+                <Field label="Nom sur la carte" className="mt-3">
+                  <input
+                    readOnly
+                    autoComplete="off"
+                    value={DEMO_NAME}
+                    className="field text-bone/80"
+                    aria-label="Nom sur la carte (démo, non modifiable)"
+                  />
+                </Field>
+              </>
+            ) : null}
 
             {error && (
               <div
@@ -641,11 +687,21 @@ export function CheckoutView({ item }: { item: CatalogItem }) {
                 >
                   conditions de vente
                 </Link>
-                . La vente se conclut avec le vendeur, pas avec SOLANGE, et{" "}
-                <span className="font-semibold text-bone">
-                  ce paiement est simulé
-                </span>{" "}
-                : aucune somme n&apos;est débitée.
+                . La vente se conclut avec le vendeur, pas avec SOLANGE
+                {paiementReel ? (
+                  <>
+                    . Le paiement est encaissé par Stripe, et la part du vendeur
+                    lui est versée directement.
+                  </>
+                ) : (
+                  <>
+                    , et{" "}
+                    <span className="font-semibold text-bone">
+                      ce paiement est simulé
+                    </span>{" "}
+                    : aucune somme n&apos;est débitée.
+                  </>
+                )}
               </span>
             </label>
 
@@ -658,7 +714,8 @@ export function CheckoutView({ item }: { item: CatalogItem }) {
                 !authReady ||
                 needsRelay ||
                 needsAddress ||
-                !cgvAccepted
+                !cgvAccepted ||
+                paiementReel === null
               }
               className="mt-4"
             >
@@ -681,7 +738,9 @@ export function CheckoutView({ item }: { item: CatalogItem }) {
                     className="flex items-center gap-2"
                   >
                     <span className="size-4 animate-spin rounded-full border-2 border-ink/30 border-t-ink" />
-                    Enregistrement…
+                    {paiementReel
+                      ? "Ouverture du paiement…"
+                      : "Enregistrement…"}
                   </motion.span>
                 ) : (
                   <motion.span
@@ -691,7 +750,8 @@ export function CheckoutView({ item }: { item: CatalogItem }) {
                     exit={{ opacity: 0 }}
                     className="flex items-center gap-2"
                   >
-                    <Lock className="size-4" /> Payer {euro(total)} (simulé)
+                    <Lock className="size-4" /> Payer {euro(total)}
+                    {paiementReel ? "" : " (simulé)"}
                   </motion.span>
                 )}
               </AnimatePresence>

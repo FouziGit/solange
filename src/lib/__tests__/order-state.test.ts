@@ -6,6 +6,7 @@ import {
   normalizeStatus,
   type OrderRole,
   type OrderStatus,
+  STATUS_LABEL,
 } from "../order-state";
 
 describe("normalizeStatus (migration en lecture)", () => {
@@ -121,5 +122,38 @@ describe("annulation par l'acheteur — avant expédition seulement", () => {
 
   it("un tiers ne peut pas annuler la commande d'autrui", () => {
     expect(nextStatus("payee", "cancel", "admin")).toBeNull();
+  });
+});
+
+describe("paiement réel — en_attente ne se quitte que par Stripe", () => {
+  it("le webhook confirme : en_attente → payée", () => {
+    expect(nextStatus("en_attente", "pay", "system")).toBe("payee");
+  });
+
+  it("le webhook abandonne : en_attente → annulée", () => {
+    expect(nextStatus("en_attente", "expire", "system")).toBe("annulee");
+  });
+
+  it("personne d'autre ne peut déclarer une commande payée", () => {
+    for (const role of ["buyer", "seller", "admin"] as const) {
+      expect(nextStatus("en_attente", "pay", role)).toBeNull();
+    }
+  });
+
+  it("on n'expédie pas une commande non payée", () => {
+    expect(nextStatus("en_attente", "ship", "seller")).toBeNull();
+  });
+
+  it("une commande déjà payée ne repasse jamais par `pay` — rejouer un webhook ne fait rien", () => {
+    expect(nextStatus("payee", "pay", "system")).toBeNull();
+    expect(nextStatus("annulee", "pay", "system")).toBeNull();
+  });
+
+  it("une commande payée n'expire pas", () => {
+    expect(nextStatus("payee", "expire", "system")).toBeNull();
+  });
+
+  it("le libellé est défini pour l'affichage", () => {
+    expect(STATUS_LABEL.en_attente).toBe("Paiement en cours");
   });
 });

@@ -60,10 +60,12 @@ biographie n'est demandée ni stockée à ce jour.
 
 Ces affirmations sont vérifiables dans le fonctionnement du service :
 
-- **aucune donnée bancaire.** Les paiements sont simulés ; les champs de
-  carte affichés au moment de la commande sont figés sur une carte de
-  démonstration et ne peuvent pas être modifiés. Aucun numéro de carte
-  n'est saisi, transmis ni conservé ;
+- **aucune donnée de carte, jamais.** Tant que les paiements sont simulés,
+  aucune carte n'est saisie. Lorsque le paiement réel est activé, la carte
+  est saisie sur la page de Stripe et lui est transmise directement :
+  SOLANGE ne voit, ne transmet ni ne conserve aucun numéro de carte. De
+  même, l'identité et l'IBAN d'un vendeur sont recueillis par Stripe, pas
+  par SOLANGE ;
 - **aucune géolocalisation.** Le service ne demande jamais votre position ;
 - **aucun cookie publicitaire, aucun outil de mesure d'audience, aucun
   traceur tiers.** Voir la [politique cookies](/cookies) ;
@@ -98,11 +100,12 @@ la pièce que vous achetez, et uniquement en livraison à domicile.
 
 **Nos sous-traitants :**
 
-| Sous-traitant                                                                          | Rôle                                                                    | Données concernées                                                                                                                                                                   | Localisation                                             |
-| -------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------- |
-| Netlify, Inc.                                                                          | hébergement du service et stockage des données                          | l'ensemble des données                                                                                                                                                               | États-Unis. [À COMPLÉTER : région de stockage effective] |
-| Resend                                                                                 | envoi des courriels transactionnels (codes de connexion, notifications) | adresse électronique du destinataire et contenu du message envoyé                                                                                                                    | [À COMPLÉTER : entité contractuelle et localisation]     |
-| Services de notification des navigateurs (Google, Mozilla, Apple selon votre appareil) | acheminement des notifications, si vous les avez activées               | l'adresse technique de votre appareil. **Le contenu de la notification leur est illisible** : il est chiffré de bout en bout entre nos serveurs et votre navigateur (norme RFC 8291) | hors Union européenne pour Google et Apple               |
+| Sous-traitant                                                                          | Rôle                                                                                                      | Données concernées                                                                                                                                                                   | Localisation                                                                                                                   |
+| -------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------ |
+| Netlify, Inc.                                                                          | hébergement du service et stockage des données                                                            | l'ensemble des données                                                                                                                                                               | États-Unis. [À COMPLÉTER : région de stockage effective]                                                                       |
+| Resend                                                                                 | envoi des courriels transactionnels (codes de connexion, notifications)                                   | adresse électronique du destinataire et contenu du message envoyé                                                                                                                    | [À COMPLÉTER : entité contractuelle et localisation]                                                                           |
+| Services de notification des navigateurs (Google, Mozilla, Apple selon votre appareil) | acheminement des notifications, si vous les avez activées                                                 | l'adresse technique de votre appareil. **Le contenu de la notification leur est illisible** : il est chiffré de bout en bout entre nos serveurs et votre navigateur (norme RFC 8291) | hors Union européenne pour Google et Apple                                                                                     |
+| Stripe                                                                                 | traitement des paiements et vérification d'identité des vendeurs, **lorsque le paiement réel est activé** | pour l'acheteur : carte bancaire, saisie directement chez Stripe et **jamais transmise à SOLANGE** ; pour le vendeur : identité et coordonnées bancaires, collectées par Stripe      | Union européenne et États-Unis selon le traitement — [À COMPLÉTER : encadrement du transfert, cf. accord de traitement Stripe] |
 
 **Les autorités judiciaires ou administratives**, sur réquisition
 régulière et dans les limites de celle-ci.

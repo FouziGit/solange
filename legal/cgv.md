@@ -122,8 +122,13 @@ dégressif suivant :
 
 Le montant exact est affiché au vendeur avant la mise en ligne.
 
-**Cette commission n'est pas prélevée tant que les paiements sont
-simulés** (article 2). Toute modification du barème sera notifiée dans les
+L'acheteur paie en outre des **frais de service égaux à 5 % du prix de la
+Pièce**, hors frais de livraison. Ils rémunèrent le service de paiement et
+de suivi de la commande, sont affichés séparément avant la validation, et
+sont remboursés avec le prix en cas d'annulation.
+
+**Cette commission et ces frais ne sont pas prélevés tant que les
+paiements sont simulés** (article 2). Toute modification du barème sera notifiée dans les
 conditions de l'article 3 des [CGU](/cgu) et ne s'appliquera qu'aux
 annonces publiées après son entrée en vigueur.
 
@@ -230,40 +235,49 @@ modération.
 
 ## 12. Régime applicable à compter de l'activation des paiements réels
 
-> **Cet article n'est pas applicable.** Il le deviendra à la date que
-> l'exploitant y inscrira, et après information préalable des Membres dans
-> les conditions de l'article 3 des [CGU](/cgu). Tant qu'aucune date n'y
-> figure, l'article 2 s'applique seul.
+> **Cet article s'applique dès que les paiements réels sont activés sur le
+> service, ce qui est signalé sur la page de paiement : la mention « simulé »
+> disparaît et la carte est saisie sur la page de Stripe.** Tant que ce
+> n'est pas le cas, l'article 2 s'applique seul. Les deux ne s'appliquent
+> jamais ensemble.
 >
-> **Date d'entrée en vigueur : [À COMPLÉTER — non activé]**
+> **Date d'activation : [À COMPLÉTER — à renseigner le jour de l'activation]**
 
-Lorsque les paiements réels seront activés :
-
-1. **Encaissement.** Les paiements seront traités par un prestataire de
-   services de paiement agréé, [À COMPLÉTER : identité du prestataire
-   retenu], auquel les données bancaires seront transmises directement.
-   **La Plateforme n'aura jamais accès au numéro de carte.**
-2. **Formation du contrat.** La vente sera conclue au moment de la
-   confirmation de la commande par le service, après autorisation du
-   paiement.
-3. **Conservation du prix.** [À COMPLÉTER : le prix sera-t-il conservé
-   jusqu'à confirmation de réception ? Ce mécanisme et le statut de la
-   Plateforme au regard de la directive sur les services de paiement
-   dépendent du prestataire retenu et doivent être arrêtés avec lui et
-   avec un professionnel du droit avant activation.]
-4. **Commission.** La commission de l'article 5 sera prélevée sur le
-   versement dû au vendeur, avec un justificatif détaillé.
-5. **Remboursements.** En cas d'annulation ou de litige tranché en faveur
-   de l'acheteur, le remboursement interviendra sur le moyen de paiement
-   utilisé, dans un délai de [À COMPLÉTER] jours ouvrés à compter de la
-   décision.
-6. **Facturation.** Le vendeur particulier n'émet pas de facture. La
-   Plateforme délivrera au vendeur un relevé de la commission perçue.
-7. **Information des Membres.** L'activation sera notifiée au moins trente
-   jours à l'avance. Les commandes engagées avant cette date resteront
-   régies par le régime de l'article 2.
-
-Les articles 2 et 12 ne peuvent jamais s'appliquer simultanément.
+1. **Prestataire de paiement.** Les paiements sont traités par **Stripe**,
+   établissement de paiement agréé. Les données de carte sont saisies sur
+   la page de Stripe et lui sont transmises directement : **la Plateforme
+   n'a jamais accès au numéro de carte.**
+2. **Compte de paiement du vendeur.** Pour vendre, le vendeur ouvre un
+   compte de paiement auprès de Stripe, qui vérifie son identité et
+   recueille ses coordonnées bancaires. Tant que ce compte n'est pas actif,
+   ses Pièces ne peuvent pas être achetées.
+3. **Formation du contrat.** La vente est conclue lorsque Stripe confirme
+   le paiement. Entre la validation par l'acheteur et cette confirmation,
+   la Pièce est réservée pour lui pendant trente minutes au plus ; passé ce
+   délai sans paiement, elle redevient disponible et rien n'est débité.
+4. **Circulation des fonds.** Au paiement, la part revenant au vendeur —
+   le prix, diminué de la commission de l'article 5, augmenté des frais de
+   livraison — est portée **directement sur son compte de paiement Stripe**.
+   La Plateforme ne détient pas les fonds du vendeur. La commission et les
+   frais de service acheteur sont perçus par la Plateforme au même moment.
+5. **Versement au vendeur.** Stripe verse le solde du vendeur sur son
+   compte bancaire **une fois par semaine, le vendredi**, sous réserve de
+   ses délais de disponibilité.
+6. **Remboursements.** En cas d'annulation avant expédition — par
+   l'acheteur, par le vendeur, ou d'office faute d'expédition sous sept
+   jours — ou de litige tranché en faveur de l'acheteur, l'acheteur est
+   **intégralement remboursé** sur le moyen de paiement utilisé : prix,
+   frais de service et frais de livraison. La part du vendeur est reprise
+   sur son compte de paiement, et la commission n'est pas conservée par la
+   Plateforme. Le délai d'apparition du remboursement sur le relevé dépend
+   de la banque de l'acheteur.
+7. **Contestation bancaire.** Si l'acheteur conteste un paiement auprès de
+   sa banque, la Plateforme en est informée par Stripe et peut reprendre
+   la somme correspondante sur le compte de paiement du vendeur, dans
+   l'attente de l'issue de la contestation.
+8. **Facturation.** Le vendeur particulier n'émet pas de facture. La
+   Plateforme met à disposition du vendeur le détail de chaque vente et de
+   la commission perçue.
 
 ## 13. Droit applicable et litiges
 

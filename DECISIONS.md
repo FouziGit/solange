@@ -246,3 +246,25 @@ Chaque entrée : décision, alternative écartée, raison. Relire en début de p
   Alternative écartée : rédiger directement dans les composants React —
   c'est ce qui a produit la politique de confidentialité aujourd'hui
   fausse (« email de connexion uniquement »), personne ne relisant du JSX.
+
+- **D-036 — Paiement réel en destination charges, pas en rétention.** Le
+  plan du 1er septembre (audit/lots/08-paiement-reel.md) retenait les
+  « separate charges and transfers » pour garder l'argent sur le solde de
+  la plateforme jusqu'à la réception. Il signalait lui-même le problème :
+  détenir les fonds d'autrui, et en décider l'issue en arbitrant les
+  litiges, peut faire de SOLANGE un intermédiaire qui encaisse pour compte
+  de tiers — une question d'agrément que personne n'a tranchée.
+  Les destination charges suppriment la question à la source : la part du
+  vendeur part DIRECTEMENT sur son compte connecté Stripe au paiement ; la
+  plateforme ne garde que sa commission et ses frais. C'est le montage que
+  la doc Stripe recommande pour une place de marché où chaque achat
+  concerne un vendeur et un acheteur.
+  Ce qu'on perd : la retenue jusqu'à réception. Ce qu'on met à la place :
+  versements HEBDOMADAIRES du vendeur vers sa banque (l'argent reste
+  quelques jours chez Stripe) et remboursement avec `reverse_transfer`, qui
+  reprend la part du vendeur. Si elle est déjà partie vers sa banque,
+  Stripe refuse : la commande ne change pas d'état et un administrateur
+  tranche — rembourser depuis le solde SOLANGE est une décision d'argent,
+  pas un automatisme.
+  Le drapeau est la présence de STRIPE_SECRET_KEY (même règle que D-023) :
+  sans clé, tout reste simulé.

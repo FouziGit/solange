@@ -4,6 +4,8 @@
    avant d'écrire (idempotence best-effort, même approche que l'anti
    double-vente) ; toute la validation vient de src/lib/order-state. */
 import { store } from "./core.mts";
+import { rembourser } from "./stripe.mts";
+import { libererReservation } from "./order-paid.mts";
 import { emitOrderEvent, type OrderEventKind } from "./order-events.mts";
 import {
   nextStatus,
@@ -111,6 +113,29 @@ export async function applyTransition(
       code: 409,
     };
 
+  /* Annuler une commande RÉELLEMENT payée, c'est d'abord rembourser.
+     L'argent bouge avant l'état : si le remboursement échoue, la commande
+     reste où elle est et l'erreur remonte — on n'affiche jamais
+     « annulée » sur une commande dont l'acheteur n'a pas été remboursé.
+     `expire` ne rembourse pas : il ne s'applique qu'à `en_attente`, où
+     rien n'a été encaissé. */
+  const rembourse =
+    to === "annulee" &&
+    from !== "en_attente" &&
+    !order.simulated &&
+    typeof order.paymentIntentId === "string";
+  let refundId: string | undefined;
+  if (rembourse) {
+    const r = await rembourser(order);
+    if (!r.ok)
+      return {
+        ok: false,
+        error: `Remboursement impossible — ${r.error}`,
+        code: 502,
+      };
+    refundId = r.refundId;
+  }
+
   const now = Date.now();
   const history: OrderHistoryEntry[] = order.history ?? [
     // commandes d'avant le lot 1 : on reconstitue l'entrée de création
@@ -118,7 +143,12 @@ export async function applyTransition(
   ];
   history.push({ at: now, by: input.by, from, to, note: input.note });
 
-  const next: OrderRecord = { ...order, status: to, history };
+  const next: OrderRecord = {
+    ...order,
+    status: to,
+    history,
+    ...(refundId ? { refundId, refundedAt: now } : {}),
+  };
   const events: OrderEventKind[] = [];
 
   switch (input.action) {
@@ -161,6 +191,17 @@ export async function applyTransition(
       break;
     case "resolve_close":
       events.push("terminee");
+      break;
+    case "pay":
+      // Confirmé par Stripe. Les effets de vente (notif « Vendu », e-mail,
+      // index) partent de order-paid.mts, appelé par le webhook.
+      next.paidAt = now;
+      break;
+    case "expire":
+      // Paiement abandonné ou refusé : rien n'a été encaissé, on rend la
+      // pièce — mais seulement si c'est bien CETTE commande qui la tenait.
+      next.cancelReason = input.note?.slice(0, 200) ?? "Paiement non abouti";
+      await libererReservation(order.productId, order.id);
       break;
   }
 

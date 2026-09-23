@@ -13,13 +13,23 @@ import {
   currentUser,
   sameOrigin,
   readJson,
-  sendEmail,
-  userEmail,
   APP_URL,
-  pushNotif,
 } from "./_shared/core.mts";
-import { SEED_CATALOG, commissionRate } from "./_shared/seed-catalog.mts";
+import { SEED_CATALOG } from "./_shared/seed-catalog.mts";
 import { capturePayment } from "./_shared/payment.mts";
+import { paymentsLive, stripe } from "./_shared/stripe.mts";
+import {
+  libererReservation,
+  onOrderPaid,
+  type OrderPaye,
+} from "./_shared/order-paid.mts";
+import { montants, sellerPayable } from "../../src/lib/payments.ts";
+import { toCents, toEur } from "../../src/lib/fees.ts";
+
+/** Durée pendant laquelle une pièce reste réservée à un acheteur qui paie.
+    C'est aussi la durée de vie de la session Stripe (minimum imposé :
+    30 minutes). Passé ce délai, la pièce redevient disponible. */
+const RESERVATION_MS = 30 * 60_000;
 import type { OrderRecord } from "./_shared/order-core.mts";
 import { normalizeStatus } from "../../src/lib/order-state.ts";
 import { isPayableAmount, isValidId, lookupOwn } from "../../src/lib/guards.ts";
@@ -35,9 +45,6 @@ const SHIP: Record<string, { price: number; carrier: string }> = {
   point_relais: { price: 4.5, carrier: "Point Relais" },
   chronopost: { price: 6.9, carrier: "Chronopost" },
 };
-const cents = (n: number) => Math.round(n * 100) / 100;
-const eur = (n: number) =>
-  n.toLocaleString("fr-FR", { minimumFractionDigits: 2 }) + " €";
 
 export default async (req: Request) => {
   const user = await currentUser(req);
@@ -154,39 +161,79 @@ export default async (req: Request) => {
   if (record && record.sellerId === user.id)
     return bad("Tu ne peux pas acheter ta propre annonce", 403);
 
-  // Verrou best-effort : re-lecture juste avant écriture (beta — voir AUDIT.md)
-  const fresh = (await products.get(`p:${pid}`, { type: "json" })) as {
-    status?: string;
-  } | null;
-  if (fresh?.status === "sold")
-    return bad("Cette pièce vient d'être vendue", 409);
+  const live = paymentsLive();
 
-  const price = cents(item.priceEUR);
-  const protection = cents(price * 0.05); // au centime — fix audit
-  const shipping = shipSel.price;
-  const total = cents(price + protection + shipping);
+  /* Paiement réel : seule une annonce MEMBRE s'achète. Une pièce du
+     catalogue de démonstration n'a pas de vendeur à payer — l'accepter
+     produisait jusqu'ici une commande gelée à vie (blocage 1 de l'audit). */
+  if (live && !record?.sellerId)
+    return bad("Cette pièce n'est pas en vente", 409);
+
+  let sellerAccount: string | null = null;
+  if (live && record?.sellerId) {
+    const seller = (await store("users").get(`u:${record.sellerId}`, {
+      type: "json",
+    })) as { stripeAccountId?: string } | null;
+    sellerAccount = seller?.stripeAccountId ?? null;
+    // état vérifié CHEZ STRIPE au moment de l'achat, pas depuis un cache
+    const acct = sellerAccount
+      ? await stripe()!
+          .accounts.retrieve(sellerAccount)
+          .catch(() => null)
+      : null;
+    if (!sellerPayable(acct))
+      return bad(
+        "Le vendeur n'a pas encore activé ses paiements — la pièce n'est pas achetable pour l'instant",
+        409,
+      );
+  }
+
+  /* Tous les montants en centimes entiers, calculés à UN endroit
+     (src/lib/payments.ts). Le taux de commission est gelé sur la commande. */
+  const priceCents = toCents(item.priceEUR);
+  const shippingCents = toCents(shipSel.price);
+  const m = montants(priceCents, shippingCents);
+  const total = toEur(m.totalCents);
+  if (!isPayableAmount(total)) return bad("Montant de commande invalide", 400);
+
   const shippingLabel = relayLabel
     ? `${shipSel.carrier} · ${relayLabel}`
     : shipSel.carrier;
-  const rate = commissionRate(price);
-  const fee = cents(price * rate);
-  const net = cents(price - fee);
-
   const orderId = newId("o");
   const now = Date.now();
-  // Paiement : UN point d'entrée (module payment.mts, simulé en beta).
-  /* Dernier filet avant le paiement. Aujourd'hui le paiement est simulé et
-     un NaN ne coûte rien ; le jour où capturePayment parle à un vrai
-     prestataire, un montant non fini part en production. Ce contrôle doit
-     exister AVANT cette bascule, pas après. */
-  if (!isPayableAmount(total)) return bad("Montant de commande invalide", 400);
 
-  const pay = await capturePayment({
-    id: orderId,
-    totalEUR: total,
-    buyerId: user.id,
-  });
-  if (!pay.ok) return bad(pay.error, 402);
+  /* Réservation ATOMIQUE de la pièce (écriture conditionnelle sur l'etag).
+     Deux acheteurs qui cliquent en même temps : un seul réserve, l'autre
+     reçoit un 409. L'ancien verrou « relire puis écrire » laissait passer
+     les deux, ce qui ne coûtait rien en simulé et coûterait un
+     remboursement en réel. */
+  if (record) {
+    const cur = await products.getWithMetadata(`p:${pid}`, { type: "json" });
+    const d = (cur?.data ?? null) as Record<string, unknown> | null;
+    const reservationPerimee =
+      d?.status === "reserved" &&
+      typeof d.reservedUntil === "number" &&
+      d.reservedUntil < now;
+    if (!d || (d.status !== "available" && !reservationPerimee))
+      return bad(
+        d?.status === "reserved"
+          ? "Quelqu'un est en train de payer cette pièce — réessaie dans quelques minutes"
+          : "Cette pièce vient d'être vendue",
+        409,
+      );
+    const res = await products.setJSON(
+      `p:${pid}`,
+      {
+        ...d,
+        status: "reserved",
+        reservedBy: orderId,
+        reservedUntil: now + RESERVATION_MS,
+      },
+      { onlyIfMatch: cur!.etag },
+    );
+    if (!res.modified)
+      return bad("Cette pièce vient d'être prise — réessaie", 409);
+  }
 
   const order = {
     id: orderId,
@@ -197,34 +244,136 @@ export default async (req: Request) => {
     name: item.name,
     sellerHandle: item.seller,
     sellerId: record?.sellerId ?? null,
-    priceEUR: price,
-    protectionEUR: protection,
-    shippingEUR: shipping,
+    priceEUR: toEur(m.priceCents),
+    protectionEUR: toEur(m.serviceCents),
+    shippingEUR: toEur(m.shippingCents),
     totalEUR: total,
+    totalCents: m.totalCents,
+    applicationFeeCents: m.applicationFeeCents,
+    sellerCents: m.sellerCents,
     shippingMethod: shipSel.carrier,
     shippingLabel,
     address, // domicile uniquement, sinon undefined
-    commissionRate: rate,
-    commissionEUR: fee,
-    netSellerEUR: net,
-    status: "payee",
-    /* preuve d'acceptation des CGV, propre à cette vente : elle reste
-       valable même si les CGV changent ensuite */
+    commissionRate: m.rateBps / 10_000,
+    commissionRateBps: m.rateBps,
+    commissionEUR: toEur(m.commissionCents),
+    netSellerEUR: toEur(m.sellerCents),
+    status: live ? "en_attente" : "payee",
+    /* preuve d'acceptation des CGV, propre à cette vente */
     cgv: buildSaleConsent(now),
-    paymentRef: pay.reference,
-    history: [{ at: now, by: user.id, from: "creee", to: "payee" }],
-    simulated: true, // AUCUN paiement réel — beta
+    history: [
+      {
+        at: now,
+        by: user.id,
+        from: "creee",
+        to: live ? "en_attente" : "payee",
+      },
+    ],
+    simulated: !live,
     createdAt: now,
-  };
+  } as Record<string, unknown> & { id: string };
 
-  // marque vendu (annonce membre : update ; pièce seed : shadow record + index)
+  const orders = store("orders");
+  await orders.setJSON(`o:${orderId}`, order);
+  const mine =
+    ((await orders.get(`u:${user.id}`, { type: "json" })) as string[]) ?? [];
+  mine.push(orderId);
+  await orders.setJSON(`u:${user.id}`, mine);
+
+  /* ---------- paiement réel : session Stripe Checkout ---------- */
+  if (live && sellerAccount) {
+    try {
+      const session = await stripe()!.checkout.sessions.create(
+        {
+          mode: "payment",
+          customer_email: user.email,
+          locale: "fr",
+          line_items: [
+            {
+              quantity: 1,
+              price_data: {
+                currency: "eur",
+                unit_amount: m.priceCents,
+                product_data: {
+                  name: `${item.brand} — ${item.name}`.slice(0, 250),
+                },
+              },
+            },
+            {
+              quantity: 1,
+              price_data: {
+                currency: "eur",
+                unit_amount: m.serviceCents,
+                product_data: { name: "Frais de service acheteur" },
+              },
+            },
+            ...(m.shippingCents > 0
+              ? [
+                  {
+                    quantity: 1,
+                    price_data: {
+                      currency: "eur",
+                      unit_amount: m.shippingCents,
+                      product_data: { name: `Livraison — ${shipSel.carrier}` },
+                    },
+                  },
+                ]
+              : []),
+          ],
+          payment_intent_data: {
+            // destination charge : la part du vendeur part sur SON compte
+            transfer_data: { destination: sellerAccount },
+            application_fee_amount: m.applicationFeeCents,
+            description:
+              `SOLANGE ${orderId} — ${item.brand} ${item.name}`.slice(0, 350),
+            statement_descriptor_suffix: "SOLANGE",
+            metadata: { orderId },
+          },
+          metadata: { orderId },
+          client_reference_id: orderId,
+          // la pièce ne reste pas bloquée si l'acheteur abandonne
+          expires_at: Math.floor((now + RESERVATION_MS) / 1000),
+          success_url: `${APP_URL}/commande/${orderId}?paiement=ok`,
+          cancel_url: `${APP_URL}/checkout/${pid}?paiement=annule`,
+        },
+        { idempotencyKey: `checkout-${orderId}` },
+      );
+      await orders.setJSON(`o:${orderId}`, {
+        ...order,
+        checkoutSessionId: session.id,
+      });
+      return json({ ok: true, order, checkoutUrl: session.url });
+    } catch (e) {
+      /* Stripe a refusé de créer la session : on défait la réservation et
+         la commande, plutôt que de laisser une pièce bloquée 30 minutes
+         par une commande qui n'aboutira jamais. */
+      console.error("checkout_session_error", (e as Error).message);
+      await libererReservation(pid, orderId);
+      await orders.setJSON(`o:${orderId}`, {
+        ...order,
+        status: "annulee",
+        cancelReason: "Session de paiement impossible à créer",
+      });
+      return bad("Le paiement n'a pas pu être initié — réessaie", 502);
+    }
+  }
+
+  /* ---------- paiement simulé : capture instantanée ---------- */
+  const pay = await capturePayment({
+    id: orderId,
+    totalEUR: total,
+    buyerId: user.id,
+  });
+  if (!pay.ok) {
+    if (record) await libererReservation(pid, orderId);
+    return bad(pay.error, 402);
+  }
+  await orders.setJSON(`o:${orderId}`, { ...order, paymentRef: pay.reference });
+
   if (record) {
-    await products.setJSON(`p:${pid}`, {
-      ...record,
-      status: "sold",
-      soldAt: Date.now(),
-    });
+    await onOrderPaid(order as unknown as OrderPaye);
   } else {
+    // pièce seed (simulé uniquement) : shadow record, comme avant
     await products.setJSON(`p:${pid}`, {
       ...seedItem!,
       id: pid,
@@ -237,60 +386,6 @@ export default async (req: Request) => {
     if (!sold.includes(pid)) {
       sold.push(pid);
       await products.setJSON("sold-seeds", sold);
-    }
-  }
-
-  const orders = store("orders");
-  await orders.setJSON(`o:${orderId}`, order);
-  const mine =
-    ((await orders.get(`u:${user.id}`, { type: "json" })) as string[]) ?? [];
-  mine.push(orderId);
-  await orders.setJSON(`u:${user.id}`, mine);
-
-  // Vente d'une annonce membre : index vendeur + notification email.
-  if (record?.sellerId) {
-    const sales =
-      ((await orders.get(`sales:${record.sellerId}`, {
-        type: "json",
-      })) as string[]) ?? [];
-    sales.push(orderId);
-    await orders.setJSON(`sales:${record.sellerId}`, sales);
-
-    await pushNotif(record.sellerId, {
-      type: "sale",
-      text: `Vendu : ${item.brand} ${item.name} — net ${eur(net)} · @${user.handle}`,
-      link: "/profil",
-    });
-    // Référence la commande dans le fil de messages existant sur cette
-    // pièce (aucun message fabriqué — l'en-tête du fil l'affichera).
-    const msgs = store("msgs");
-    const convIds =
-      ((await msgs.get(`u:${user.id}`, { type: "json" })) as string[]) ?? [];
-    for (const cid of convIds.slice(-30)) {
-      const c = (await msgs.get(`c:${cid}`, { type: "json" })) as {
-        productId?: string;
-        sellerId?: string | null;
-        orderId?: string;
-      } | null;
-      if (c && c.productId === pid && c.sellerId === record.sellerId) {
-        await msgs.setJSON(`c:${cid}`, { ...c, orderId });
-        break;
-      }
-    }
-
-    const to = await userEmail(record.sellerId);
-    if (to) {
-      await sendEmail(
-        to,
-        `Vendu — ${item.brand} ${item.name}`,
-        `<p style="font-size:15px;margin:0 0 16px">Ta pièce vient d'être vendue 🎉</p>
-         <p style="font-size:14px;color:#b8b3a8;margin:0 0 20px">
-           <strong style="color:#f4f1ea">${item.brand} — ${item.name}</strong><br/>
-           Prix : ${eur(price)} · Commission (${(rate * 100).toLocaleString("fr-FR")} %) : −${eur(fee)}<br/>
-           <strong style="color:#f4f1ea">Net vendeur : ${eur(net)}</strong> · Acheteur : @${user.handle}
-         </p>
-         <p style="margin:0"><a href="${APP_URL}/profil" style="color:#f4f1ea">Voir mes ventes →</a></p>`,
-      );
     }
   }
 

@@ -15,6 +15,7 @@ import {
   rateLimit,
 } from "./_shared/core.mts";
 import { normaliserMarque } from "../../src/lib/brands.ts";
+import { isValidId } from "../../src/lib/guards.ts";
 
 const CATEGORIES = [
   "Femme",
@@ -52,6 +53,21 @@ export default async (req: Request) => {
     const idx =
       ((await products.get("idx", { type: "json" })) as string[]) ?? [];
     const me = await currentUser(req);
+    /* Une annonce précise, pour la page de paiement. Seulement si elle est
+       visible au public : ni masquée, ni retirée, ni fantôme. */
+    const seul = new URL(req.url).searchParams.get("id");
+    if (seul !== null) {
+      if (!isValidId(seul)) return bad("Annonce inconnue", 404);
+      const p = (await products.get(`p:${seul}`, { type: "json" })) as Record<
+        string,
+        unknown
+      > | null;
+      if (!p || p.shadow || p.hidden || p.status === "withdrawn")
+        return bad("Annonce inconnue", 404);
+      return json({
+        product: { ...p, mine: me ? p.sellerId === me.id : false },
+      });
+    }
     const mineOnly = new URL(req.url).searchParams.get("mine") === "1";
     if (mineOnly && !me) return json({ products: [], soldSeeds: [] });
     /* La troncature s'appliquait AVANT le filtre `mine` : passé la 61ᵉ

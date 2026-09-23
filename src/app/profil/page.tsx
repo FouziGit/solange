@@ -8,6 +8,7 @@ import { PageShell } from "@/components/ui/PageShell";
 import { ProductCard } from "@/components/ui/ProductCard";
 import { SkeletonRow } from "@/components/ui/Skeleton";
 import { PushSettings } from "@/components/chrome/PushSettings";
+import { SellerPayments } from "@/components/chrome/SellerPayments";
 import { Avatar } from "@/components/chrome/Avatar";
 import { AnimatePresence } from "motion/react";
 import { invite, looks, me } from "@/lib/mock";
@@ -678,6 +679,8 @@ export default function ProfilPage() {
       )}
 
       {/* réglages — notifications push (lot 3 ; masqué si non configuré) */}
+      {/* paiements AVANT les notifications : sans eux, rien ne se vend */}
+      {user && <SellerPayments />}
       {user && <PushSettings />}
 
       {/* réglages — messages directs */}

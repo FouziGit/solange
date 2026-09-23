@@ -112,6 +112,25 @@ export default function CommandePage() {
     else setState({ kind: "error", message: res.error });
   }, [id]);
 
+  /* Retour de Stripe : l'acheteur arrive ici avant que la banque ait
+     confirmé — c'est le webhook qui fait passer la commande à « payée »,
+     pas la redirection. On relit donc la commande en silence toutes les
+     3 secondes tant qu'elle est en attente, deux minutes au plus. */
+  const enAttente =
+    state.kind === "ready" && state.order.status === "en_attente";
+  useEffect(() => {
+    if (!enAttente) return;
+    let essais = 0;
+    const t = setInterval(async () => {
+      essais++;
+      const res = await api.orderById(id);
+      if (res.ok) setState({ kind: "ready", order: res.data.order });
+      if (essais >= 40 || (res.ok && res.data.order.status !== "en_attente"))
+        clearInterval(t);
+    }, 3000);
+    return () => clearInterval(t);
+  }, [enAttente, id]);
+
   useEffect(() => {
     queueMicrotask(() => {
       if (!id) setState({ kind: "notfound" });
@@ -230,6 +249,28 @@ export default function CommandePage() {
                   </p>
                 </div>
               </div>
+
+              {status === "en_attente" && (
+                <div
+                  role="status"
+                  className="mt-5 flex items-start gap-3 border border-bone/25 bg-bone/[0.05] px-3.5 py-3"
+                >
+                  <span className="mt-0.5 size-4 shrink-0 animate-spin rounded-full border-2 border-bone/30 border-t-bone" />
+                  <p className="text-[12.5px] leading-relaxed text-bone/85">
+                    Ta banque confirme le paiement. Cela prend en général
+                    quelques secondes — cette page se met à jour toute seule.
+                  </p>
+                </div>
+              )}
+              {status === "annulee" &&
+                (o as { cancelReason?: string }).cancelReason?.startsWith(
+                  "Paiement",
+                ) && (
+                  <p className="mt-5 border border-bone/15 px-3.5 py-3 text-[12.5px] leading-relaxed text-ash">
+                    Le paiement n&apos;a pas abouti : aucune somme n&apos;a été
+                    débitée, et la pièce est de nouveau disponible.
+                  </p>
+                )}
 
               {/* statut — annoncé aux lecteurs d'écran à chaque changement */}
               <p aria-live="polite" className="mt-5 text-[13px] text-bone">

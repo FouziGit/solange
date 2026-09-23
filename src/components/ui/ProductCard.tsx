@@ -23,6 +23,10 @@ export type DisplayItem = CatalogItem & {
   /** Vendu d'après la donnée SOURCE (ex. profil public d'un membre) —
       complété par isSold() du store, qui ne voit que le flux global. */
   soldBase?: boolean;
+  /** Quelqu'un est en train de payer la pièce (30 min au plus). */
+  reserved?: boolean;
+  /** Annonce du membre connecté : on ne s'achète pas soi-même. */
+  mine?: boolean;
 };
 
 /** Mappe une annonce membre (ApiProduct) vers l'affichage catalogue existant. */
@@ -41,6 +45,8 @@ export function toDisplayItem(p: ApiProduct): DisplayItem {
     image: p.images[0],
     member: true,
     soldBase: p.status === "sold",
+    reserved: p.status === "reserved",
+    mine: p.mine === true,
   };
 }
 
@@ -180,15 +186,39 @@ export function ProductCard({
             >
               Vendu
             </span>
-          ) : (
-            <Link
-              href={`/messages?item=${item.id}`}
-              data-cursor="link"
-              aria-label={`Contacter le vendeur — ${item.brand} ${item.name}`}
-              className="mt-2 flex min-h-11 items-center justify-center border border-bone/30 text-[12px] font-semibold text-bone transition-colors hover:bg-bone/10 active:scale-[0.98]"
+          ) : item.reserved ? (
+            <span
+              aria-disabled="true"
+              className="mt-2 flex min-h-11 items-center justify-center border border-bone/15 text-[12px] font-semibold text-bone/50"
             >
-              Contacter
-            </Link>
+              Paiement en cours
+            </span>
+          ) : item.mine ? (
+            <span className="mt-2 flex min-h-11 items-center justify-center border border-bone/15 text-[12px] text-ash">
+              Ton annonce
+            </span>
+          ) : (
+            /* Une annonce membre n'avait qu'un bouton « Contacter » : il n'y
+               avait AUCUN moyen de l'acheter. C'était le premier blocage de
+               l'audit. Acheter passe devant, parler reste possible. */
+            <div className="mt-2 grid grid-cols-[1fr_auto] gap-1.5">
+              <Link
+                href={`/checkout/${item.id}`}
+                data-cursor="link"
+                aria-label={`Acheter — ${item.brand} ${item.name}`}
+                className="flex min-h-11 items-center justify-center bg-bone text-[12px] font-semibold text-ink transition-opacity hover:opacity-90 active:scale-[0.98]"
+              >
+                Acheter
+              </Link>
+              <Link
+                href={`/messages?item=${item.id}`}
+                data-cursor="link"
+                aria-label={`Contacter le vendeur — ${item.brand} ${item.name}`}
+                className="flex min-h-11 items-center justify-center border border-bone/30 px-3 text-[12px] font-semibold text-bone transition-colors hover:bg-bone/10 active:scale-[0.98]"
+              >
+                Contacter
+              </Link>
+            </div>
           )}
         </div>
       ) : (

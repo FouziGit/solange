@@ -7,6 +7,8 @@
    commandes seed (sellerId null) sont ignorées. */
 import type { Config } from "@netlify/functions";
 import { store, pushNotif } from "./_shared/core.mts";
+import { stripe } from "./_shared/stripe.mts";
+import { onOrderPaid, type OrderPaye } from "./_shared/order-paid.mts";
 import { emitOrderEvent } from "./_shared/order-events.mts";
 import { applyTransition, type OrderRecord } from "./_shared/order-core.mts";
 import { dueActions, normalizeStatus } from "../../src/lib/order-state.ts";
@@ -27,6 +29,55 @@ export default async () => {
     const o = (await orders.get(b.key, { type: "json" })) as OrderRecord | null;
     if (!o || !o.sellerId) continue; // seed/démo : hors cycle
     const status = normalizeStatus(o.status);
+
+    /* Commande restée « en attente » : le webhook Stripe s'est perdu, ou
+       n'est jamais arrivé. On va chercher la vérité chez Stripe plutôt que
+       de laisser une pièce bloquée et un acheteur sans réponse. La session
+       expire au bout de 30 minutes ; au-delà de 45, son état est définitif. */
+    if (status === "en_attente") {
+      const sid =
+        typeof o.checkoutSessionId === "string" ? o.checkoutSessionId : "";
+      const s = stripe();
+      if (s && sid && now - o.createdAt > 45 * 60_000) {
+        try {
+          const session = await s.checkout.sessions.retrieve(sid);
+          if (
+            session.status === "complete" &&
+            session.payment_status === "paid"
+          ) {
+            const pi =
+              typeof session.payment_intent === "string"
+                ? session.payment_intent
+                : (session.payment_intent?.id ?? null);
+            if (pi) await orders.setJSON(b.key, { ...o, paymentIntentId: pi });
+            const r = await applyTransition({
+              orderId: o.id,
+              action: "pay",
+              role: "system",
+              by: "system",
+              note: "Paiement confirmé par vérification (webhook non reçu)",
+            });
+            if (r.ok) await onOrderPaid(r.order as unknown as OrderPaye);
+            acted++;
+          } else if (
+            session.status === "expired" ||
+            session.status === "open"
+          ) {
+            await applyTransition({
+              orderId: o.id,
+              action: "expire",
+              role: "system",
+              by: "system",
+              note: "Paiement non finalisé dans le délai",
+            });
+            acted++;
+          }
+        } catch (e) {
+          console.error("cron_session_error", o.id, (e as Error).message);
+        }
+      }
+      continue;
+    }
     const due = dueActions(
       {
         status,
