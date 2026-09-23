@@ -14,6 +14,7 @@ import {
   readJson,
   rateLimit,
 } from "./_shared/core.mts";
+import { normaliserMarque } from "../../src/lib/brands.ts";
 
 const CATEGORIES = [
   "Femme",
@@ -129,7 +130,10 @@ export default async (req: Request) => {
   const b = await readJson<CreateBody>(req);
   if (!b) return bad("Corps invalide");
   const name = (b.name ?? "").trim().slice(0, 80);
-  const brand = (b.brand ?? "").trim().slice(0, 40);
+  /* Normalisation côté serveur aussi : le client suggère, le serveur
+     tranche. Sans ça, une annonce déposée hors de l'interface (ou avec
+     une casse exotique) ouvrirait une marque en double dans les filtres. */
+  const brand = normaliserMarque((b.brand ?? "").trim()).slice(0, 40);
   const size = (b.size ?? "").trim().slice(0, 12);
   const description = (b.description ?? "").trim().slice(0, 600);
   const priceEUR = Math.round(Number(b.priceEUR));

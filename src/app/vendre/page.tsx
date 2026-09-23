@@ -9,7 +9,8 @@ import { Stamp } from "@/components/ui/Stamp";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Chip } from "@/components/ui/Chip";
 import { GlassInput } from "@/components/ui/GlassInput";
-import { categories, conditions } from "@/lib/mock";
+import { categories, conditions, universDe } from "@/lib/taxonomie";
+import { normaliserMarque, suggestions } from "@/lib/brands";
 import { commission, euro, gradientFor } from "@/lib/utils";
 import { api, resizeImage } from "@/lib/api";
 import { useStore } from "@/lib/store";
@@ -286,12 +287,24 @@ export default function VendrePage() {
             </div>
             <div>
               <FieldLabel>Marque</FieldLabel>
+              {/* Liste OUVERTE : on suggère 400 maisons, on n'en impose
+                  aucune. Personne ne connaît toutes les marques, et une
+                  liste fermée transformerait un dépôt en devinette. La
+                  normalisation au départ regroupe « nike », « NIKE » et
+                  « Nike » sous un seul libellé dans les filtres. */}
               <GlassInput
                 aria-label="Marque"
+                list="marques-solange"
                 value={brand}
                 onChange={(e) => setBrand(e.target.value)}
+                onBlur={() => setBrand((v) => normaliserMarque(v))}
                 placeholder="Acne Studios"
               />
+              <datalist id="marques-solange">
+                {suggestions(universDe(cat)).map((m) => (
+                  <option key={m} value={m} />
+                ))}
+              </datalist>
             </div>
           </div>
 

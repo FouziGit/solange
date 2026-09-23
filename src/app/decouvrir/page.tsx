@@ -14,13 +14,9 @@ import { Chip } from "@/components/ui/Chip";
 import { TogglePill } from "@/components/ui/TogglePill";
 import { FilterDrawer, type Filters } from "@/components/ui/FilterDrawer";
 import { Avatar } from "@/components/chrome/Avatar";
-import { categories, conditions, trendingTags } from "@/lib/mock";
-import {
-  catalogBrands,
-  catalogSizes,
-  filterCatalog,
-  searchAll,
-} from "@/lib/data";
+import { trendingTags } from "@/lib/mock";
+import { categories, conditions } from "@/lib/taxonomie";
+import { catalogSizes, filterCatalog, searchAll } from "@/lib/data";
 import { useStore } from "@/lib/store";
 import { cn, compact, euro, gradientFor } from "@/lib/utils";
 import { imgLook } from "@/lib/img";
@@ -62,7 +58,16 @@ function DecouvrirInner() {
   } = useStore();
 
   const sizes = useMemo(() => catalogSizes(), []);
-  const brands = useMemo(() => catalogBrands(), []);
+  /* Les marques proposées en filtre sont celles RÉELLEMENT en vente.
+     Elles venaient du catalogue de démonstration : filtrer sur une marque
+     dont aucune pièce n'existe ne rend jamais rien. */
+  const brands = useMemo(
+    () =>
+      [...new Set(serverProducts.map((p) => p.brand).filter(Boolean))].sort(
+        (a, b) => a.localeCompare(b, "fr"),
+      ),
+    [serverProducts],
+  );
 
   const items = useMemo(() => {
     const priceMax = filters.priceMax ? Number(filters.priceMax) : undefined;

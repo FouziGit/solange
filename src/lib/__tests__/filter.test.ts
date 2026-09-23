@@ -1,6 +1,43 @@
 import { describe, expect, it } from "vitest";
-import { filterCatalog, similarTo } from "@/lib/data";
-import { catalog, catalogItem } from "@/lib/mock";
+import { filterItems, similarIn } from "@/lib/data";
+import type { CatalogItem } from "@/lib/mock";
+
+/* Jeu d'essai PROPRE AU TEST. Ces cas s'appuyaient sur le catalogue de
+   démonstration ; il est vide depuis la V1, et de toute façon un test qui
+   dépend du contenu de la vitrine casse à chaque changement de vitrine. */
+const item = (
+  id: string,
+  brand: string,
+  category: CatalogItem["category"],
+  priceEUR: number,
+  size: string,
+  condition: string,
+): CatalogItem =>
+  ({
+    id,
+    brand,
+    name: `${brand} ${id}`,
+    category,
+    priceEUR,
+    size,
+    condition,
+    seed: id,
+    seller: "essai",
+    likes: 0,
+  }) as CatalogItem;
+
+const catalog: CatalogItem[] = [
+  item("k1", "Yohji Yamamoto", "Archive", 540, "M", "Bon état"),
+  item("k2", "Maison Margiela", "Luxe", 420, "M", "Excellent état"),
+  item("k3", "Carhartt WIP", "Streetwear", 95, "L", "Bon état"),
+  item("k7", "Salomon", "Sneakers", 110, "42", "Bon état"),
+  item("k9", "Prada", "Luxe", 680, "S", "Très bon état"),
+  item("k11", "Nike", "Sneakers", 120, "43", "Excellent état"),
+];
+const catalogItem = (id: string) => catalog.find((c) => c.id === id);
+const filterCatalog = (o?: Parameters<typeof filterItems>[1]) =>
+  filterItems(catalog, o);
+const similarTo = (i: CatalogItem) => similarIn(catalog, i);
 
 describe("filterCatalog", () => {
   it("returns the full catalog for an empty filter", () => {

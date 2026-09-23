@@ -34,7 +34,35 @@ export type CatalogFilter = {
  * Filter + sort the catalog. Every field is optional; an empty filter
  * returns the full catalog in source order ("recent").
  */
+/* Ces deux fonctions lisaient directement le catalogue de démonstration.
+   Elles prennent désormais la liste en paramètre : c'est ce qui leur permet
+   de servir aux VRAIES annonces, et de se tester sans dépendre d'une
+   vitrine qui n'existe plus. Les variantes sans liste restent pour les
+   appelants d'origine. */
+export function filterItems(
+  items: CatalogItem[],
+  opts: CatalogFilter = {},
+): CatalogItem[] {
+  return filtrer(items, opts);
+}
+
+export function similarIn(
+  items: CatalogItem[],
+  item: CatalogItem,
+): CatalogItem[] {
+  return items.filter(
+    (it) => it.category === item.category && it.id !== item.id,
+  );
+}
+
 export function filterCatalog(opts: CatalogFilter = {}): CatalogItem[] {
+  return filtrer(catalog, opts);
+}
+
+function filtrer(
+  catalog: CatalogItem[],
+  opts: CatalogFilter = {},
+): CatalogItem[] {
   const { category, query, sizes, conds, priceMax, brands, sort } = opts;
   const q = query?.trim().toLowerCase() ?? "";
 
