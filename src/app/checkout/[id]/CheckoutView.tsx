@@ -11,7 +11,9 @@ import { PageShell } from "@/components/ui/PageShell";
 import { Stamp } from "@/components/ui/Stamp";
 import { FieldLabel } from "@/components/ui/FieldLabel";
 import { imgItem } from "@/lib/img";
-import { commission, commissionRate, euro, gradientFor } from "@/lib/utils";
+import { euro, gradientFor } from "@/lib/utils";
+import { montants } from "@/lib/payments";
+import { toCents, toEur } from "@/lib/fees";
 import {
   SHIP_OPTIONS,
   shipOption,
@@ -35,6 +37,13 @@ type Step = "form" | "processing" | "done";
 /* Valeurs de démo figées — le formulaire ne peut JAMAIS recevoir
    une vraie carte : tous les champs sont readOnly. */
 const DEMO_CARD = "4242 4242 4242 4242";
+
+/** Référence d'une commande de démonstration (invité, rien n'est
+    sauvegardé). Hors du composant : le compilateur React refuse un appel
+    impur dans le corps d'un composant, même dans un gestionnaire. */
+function identifiantDemo(): string {
+  return "SLG-" + Math.random().toString(36).slice(2, 8).toUpperCase();
+}
 const DEMO_EXP = "12 / 34";
 const DEMO_CVC = "123";
 const DEMO_NAME = "Démo SOLANGE";
@@ -86,12 +95,19 @@ export function CheckoutView({ item }: { item: CatalogItem }) {
 
   const alreadySold = isSold(item.id);
 
-  const price = item.priceEUR;
-  const protection = Math.round(price * 0.05) + 0.7; // protection acheteur (démo locale)
-  const shipping = ship.priceEUR;
-  const total = Math.round((price + protection + shipping) * 100) / 100;
-  const { net } = commission(price);
-  const ratePct = (commissionRate(price) * 100).toLocaleString("fr-FR");
+  /* Montants calculés par la MÊME fonction que le serveur
+     (src/lib/payments.ts). Le client faisait son propre calcul —
+     arrondi(5 %) + 0,70 € — quand le serveur prenait 5 % pile : sur une
+     pièce à 250 €, la page affichait 267,60 € et le paiement aurait débité
+     266,40 €. Un prix affiché doit être le prix payé, au centime. */
+  const m = montants(toCents(item.priceEUR), toCents(ship.priceEUR));
+  const price = toEur(m.priceCents);
+  const protection = toEur(m.serviceCents);
+  const shipping = toEur(m.shippingCents);
+  const total = toEur(m.totalCents);
+  // ce que le vendeur touche SUR LE PRIX (hors port, qu'il reverse au transporteur)
+  const net = toEur(m.priceCents - m.commissionCents);
+  const ratePct = (m.rateBps / 100).toLocaleString("fr-FR");
 
   const signIn = () => {
     try {
@@ -126,7 +142,7 @@ export function CheckoutView({ item }: { item: CatalogItem }) {
 
     /* ---- invité : démo locale, rien n'est sauvegardé ---- */
     if (!user) {
-      const id = "SLG-" + Math.random().toString(36).slice(2, 8).toUpperCase();
+      const id = identifiantDemo();
       setTimeout(() => {
         setOrderId(id);
         addOrder({
