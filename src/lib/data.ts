@@ -6,8 +6,8 @@
    with the SAME signature, so callers don't change.
    ============================================================ */
 
+import { articles } from "./journal";
 import {
-  articles,
   catalog,
   catalogItem,
   looks,

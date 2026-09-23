@@ -1,13 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import {
-  articles,
-  catalogItem,
-  looks,
-  type Article,
-  type CatalogItem,
-} from "@/lib/mock";
+import { catalogItem, looks, type Article, type CatalogItem } from "@/lib/mock";
+import { articles } from "@/lib/journal";
 import { imgItem } from "@/lib/img";
 import { PageShell } from "@/components/ui/PageShell";
 import { LuxeMedia } from "@/components/ui/LuxeMedia";

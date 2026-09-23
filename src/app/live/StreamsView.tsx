@@ -502,8 +502,24 @@ export function StreamsView({ streams }: { streams: Stream[] }) {
       <PageHeader
         eyebrow="Live shopping"
         title="En direct"
-        subtitle="Les vendeurs présentent leurs pièces en live. Commente, pose tes questions, achète avant que ça parte."
+        subtitle={
+          streams.length
+            ? "Les vendeurs présentent leurs pièces en live. Commente, pose tes questions, achète avant que ça parte."
+            : "Les directs arrivent."
+        }
       />
+
+      {/* Rien en cours : on le dit, plutôt que de laisser une page qui
+          promet des directs sous un titre et n'en montre aucun. */}
+      {streams.length === 0 && (
+        <div className="py-16 text-center">
+          <p className="text-[14px] text-bone">Aucun direct pour le moment.</p>
+          <p className="mx-auto mt-1.5 max-w-[36ch] text-[12.5px] leading-relaxed text-ash">
+            Les vendeurs présenteront leurs pièces ici, en vidéo, avec les
+            pièces achetables pendant le direct.
+          </p>
+        </div>
+      )}
 
       {/* EN DIRECT grid */}
       {live.length > 0 && (

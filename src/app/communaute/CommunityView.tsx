@@ -59,9 +59,25 @@ export function CommunityView() {
 
       <div className="mt-6 flex flex-col gap-2.5">
         {results.length === 0 ? (
-          <p className="mt-10 text-center text-sm text-ash">
-            Aucun cercle ne correspond à «&nbsp;{q}&nbsp;».
-          </p>
+          /* Deux vides très différents : chercher sans trouver, et n'avoir
+             rien à chercher. Le message « aucun cercle ne correspond à
+             "" » sortait quand la recherche était vide, ce qui n'a aucun
+             sens pour quelqu'un qui arrive. */
+          q.trim() ? (
+            <p className="mt-10 text-center text-sm text-ash">
+              Aucun cercle ne correspond à «&nbsp;{q}&nbsp;».
+            </p>
+          ) : (
+            <div className="mt-10 text-center">
+              <p className="text-[14px] text-bone">
+                Les Cercles ouvrent bientôt.
+              </p>
+              <p className="mx-auto mt-1.5 max-w-[34ch] text-[12.5px] leading-relaxed text-ash">
+                Ce sont les espaces où l&apos;on parle chine, pièces et maisons.
+                Les premiers arrivent avec les premiers membres.
+              </p>
+            </div>
+          )
         ) : (
           results.map((c, i) => (
             <CommunityRow key={c.id} community={c} index={i} />
