@@ -5,6 +5,7 @@
    ============================================================ */
 import { getStore } from "@netlify/blobs";
 import type { LegalConsent } from "../../../src/lib/legal-consent.ts";
+import type { PushType } from "../../../src/lib/push-rules.ts";
 import { SignJWT, jwtVerify } from "jose";
 import { createHash, randomInt, randomUUID } from "node:crypto";
 import {
@@ -196,8 +197,10 @@ export async function rateLimit(
 export async function pushNotif(
   userId: string,
   notif: {
-    type:
-      "sale" | "message" | "follow" | "report" | "order" | "circle" | "like";
+    /* La liste des types vivait ici en double, recopiée de push-rules.
+       Ajouter un type obligeait donc à modifier deux endroits, et en
+       oublier un se voyait à la compilation — dans le meilleur des cas. */
+    type: PushType;
     text: string;
     link: string;
   },

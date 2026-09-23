@@ -6,7 +6,14 @@
 
 /** Types d'événements poussables — miroir des types de la cloche. */
 export type PushType =
-  "sale" | "order" | "message" | "circle" | "follow" | "like" | "report";
+  | "sale"
+  | "order"
+  | "message"
+  | "circle"
+  | "follow"
+  | "like"
+  | "gardee"
+  | "report";
 
 export const PUSH_TYPES: PushType[] = [
   "sale",
@@ -15,6 +22,10 @@ export const PUSH_TYPES: PushType[] = [
   "circle",
   "follow",
   "like",
+  /* Relance sur une pièce gardée dont l'intérêt monte. C'est un type À
+     PART, donc coupable séparément : quelqu'un peut vouloir les messages
+     sans vouloir qu'on lui rappelle ce qu'il convoite. */
+  "gardee",
   "report",
 ];
 
@@ -26,6 +37,7 @@ export const PUSH_LABELS: Record<PushType, string> = {
   circle: "Réponses dans les Cercles",
   follow: "Nouveaux abonnés",
   like: "J'aime sur mes pièces",
+  gardee: "Mes pièces gardées",
   report: "Modération",
 };
 
@@ -46,6 +58,7 @@ export const DEFAULT_PREFS: PushPrefs = {
     message: true,
     circle: true,
     follow: true,
+    gardee: true,
     like: true,
     report: true,
   },
@@ -178,6 +191,8 @@ export function groupedText(type: PushType, count: number): string {
       return `${n} ventes`;
     case "order":
       return `${n} mises à jour de commande`;
+    case "gardee":
+      return `${n} pièces gardées ont la cote`;
     case "report":
       return `${n} signalements à traiter`;
   }
