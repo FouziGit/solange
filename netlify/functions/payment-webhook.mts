@@ -26,7 +26,16 @@ import { onOrderPaid, type OrderPaye } from "./_shared/order-paid.mts";
 const orderIdOf = (session: Stripe.Checkout.Session): string =>
   session.metadata?.orderId ?? session.client_reference_id ?? "";
 
-async function payer(session: Stripe.Checkout.Session) {
+async function payer(recu: Stripe.Checkout.Session) {
+  /* DÉFENSE EN PROFONDEUR : on ne croit pas le contenu du message, même
+     signé. On relit la session DIRECTEMENT chez Stripe, avec la clé d'API.
+     Si le secret de signature fuitait un jour (il est lisible dans
+     l'interface Netlify du projet), un faux « paiement réussi » ne
+     suffirait donc pas à faire expédier une pièce : il faudrait que Stripe
+     lui-même confirme que l'argent est passé, et que le montant soit bien
+     celui de la commande. */
+  const session = await stripe()!.checkout.sessions.retrieve(recu.id);
+  if (session.payment_status !== "paid") return;
   const orderId = orderIdOf(session);
   if (!orderId) return;
   const orders = store("orders");
@@ -35,6 +44,18 @@ async function payer(session: Stripe.Checkout.Session) {
     unknown
   > | null;
   if (!avant) return;
+  if (
+    typeof avant.totalCents === "number" &&
+    session.amount_total !== avant.totalCents
+  ) {
+    console.error(
+      "webhook_montant_incoherent",
+      orderId,
+      session.amount_total,
+      avant.totalCents,
+    );
+    return;
+  }
 
   // rattache le paiement AVANT la transition : c'est lui qui permettra de
   // rembourser plus tard
@@ -62,7 +83,13 @@ async function payer(session: Stripe.Checkout.Session) {
   });
 }
 
-async function expirer(session: Stripe.Checkout.Session, motif: string) {
+async function expirer(recu: Stripe.Checkout.Session, motif: string) {
+  // même règle : un faux « expiré » ne doit pas annuler un achat en cours
+  const session = await stripe()!.checkout.sessions.retrieve(recu.id);
+  const vraimentPerdu =
+    session.status === "expired" ||
+    (session.status === "complete" && session.payment_status === "unpaid");
+  if (!vraimentPerdu) return;
   const orderId = orderIdOf(session);
   if (!orderId) return;
   await applyTransition({
@@ -78,7 +105,8 @@ async function expirer(session: Stripe.Checkout.Session, motif: string) {
    (destination charge). On ne change pas l'état de la commande — c'est
    une procédure bancaire, pas un litige SOLANGE — mais on la marque et on
    prévient les administrateurs, qui ont un délai court pour répondre. */
-async function contestation(dispute: Stripe.Dispute) {
+async function contestation(recu: Stripe.Dispute) {
+  const dispute = await stripe()!.disputes.retrieve(recu.id);
   const pi =
     typeof dispute.payment_intent === "string"
       ? dispute.payment_intent
