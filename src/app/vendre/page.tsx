@@ -11,6 +11,7 @@ import { Chip } from "@/components/ui/Chip";
 import { GlassInput } from "@/components/ui/GlassInput";
 import { categories, conditions, universDe } from "@/lib/taxonomie";
 import { normaliserMarque, suggestions } from "@/lib/brands";
+import { PRIX_MAX_EUR } from "@/lib/payments";
 import { commission, euro, gradientFor } from "@/lib/utils";
 import { api, resizeImage } from "@/lib/api";
 import { useStore } from "@/lib/store";
@@ -89,7 +90,8 @@ export default function VendrePage() {
   const p = Number(price) || 0;
   const { rate, fee, net } = commission(p);
 
-  const ready = Boolean(title.trim() && p > 0 && cond);
+  const tropCher = p > PRIX_MAX_EUR;
+  const ready = Boolean(title.trim() && p > 0 && !tropCher && cond);
   const missing = [
     !title.trim() && "un titre",
     !(p > 0) && "un prix",
@@ -337,7 +339,13 @@ export default function VendrePage() {
                 onChange={(e) => setPrice(e.target.value.replace(/[^\d]/g, ""))}
                 inputMode="numeric"
                 placeholder="245"
+                aria-invalid={tropCher || undefined}
               />
+              {tropCher && (
+                <p role="alert" className="mt-1.5 text-[12px] text-bone">
+                  Prix maximum : {PRIX_MAX_EUR.toLocaleString("fr-FR")} €.
+                </p>
+              )}
             </div>
           </div>
 

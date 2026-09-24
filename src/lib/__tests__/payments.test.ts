@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { montants, sellerPayable } from "../payments";
+import { montants, sellerPayable, PRIX_MAX_EUR } from "../payments";
 
 describe("montants — qui reçoit quoi", () => {
   it("commission + part vendeur = total, au centime, sur toute la plage", () => {
@@ -56,5 +56,12 @@ describe("sellerPayable", () => {
     }
     expect(sellerPayable(null)).toBe(false);
     expect(sellerPayable({})).toBe(false);
+  });
+});
+
+describe("PRIX_MAX_EUR — ce qui a été déclaré à Stripe", () => {
+  it("reste sous 10 000 $ même avec un euro fort", () => {
+    // 1,20 $ pour 1 € : un cours plus haut que tout ce qu'on a vu depuis 2008
+    expect(PRIX_MAX_EUR * 1.2).toBeLessThan(10_000);
   });
 });

@@ -23,7 +23,11 @@ import {
   onOrderPaid,
   type OrderPaye,
 } from "./_shared/order-paid.mts";
-import { montants, sellerPayable } from "../../src/lib/payments.ts";
+import {
+  montants,
+  sellerPayable,
+  PRIX_MAX_EUR,
+} from "../../src/lib/payments.ts";
 import { toCents, toEur } from "../../src/lib/fees.ts";
 
 /** Durée pendant laquelle une pièce reste réservée à un acheteur qui paie.
@@ -187,6 +191,11 @@ export default async (req: Request) => {
         409,
       );
   }
+
+  /* Plafond déclaré à Stripe : une annonce déposée avant qu'il existe, ou
+     modifiée à la main, ne doit pas pouvoir se payer au-dessus. */
+  if (live && item.priceEUR > PRIX_MAX_EUR)
+    return bad("Cette pièce dépasse le prix maximum accepté au paiement", 409);
 
   /* Tous les montants en centimes entiers, calculés à UN endroit
      (src/lib/payments.ts). Le taux de commission est gelé sur la commande. */

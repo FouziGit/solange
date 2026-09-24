@@ -58,6 +58,21 @@ export function montants(
     paiement. On ne regarde pas `payouts_enabled` : un vendeur peut
     recevoir l'argent sur son solde Stripe avant d'avoir branché sa banque,
     il le récupérera ensuite. */
+/** Prix maximum d'une annonce, en euros.
+
+    Déclaré à Stripe lors de l'activation de Connect : « le produit le plus
+    cher vendu sur la plateforme coûte moins de 10 000 $ ». La déclaration
+    engage : une vente au-dessus peut faire suspendre le compte en pleine
+    transaction. 8 000 € et non 9 000 € : au taux de change de 2026, 9 000 €
+    peuvent dépasser 10 000 $. 8 000 € restent en dessous quel que soit le
+    cours.
+
+    C'est aussi une protection : la plateforme répond des fraudes
+    (losses.payments = application). Un plafond borne ce qu'une carte volée
+    peut coûter d'un coup. À relever — ET À REDÉCLARER À STRIPE — quand
+    l'historique le permettra. */
+export const PRIX_MAX_EUR = 8_000;
+
 export function sellerPayable(
   acct: {
     capabilities?: { transfers?: string | null } | null;

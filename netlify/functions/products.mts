@@ -16,6 +16,7 @@ import {
 } from "./_shared/core.mts";
 import { normaliserMarque } from "../../src/lib/brands.ts";
 import { isValidId } from "../../src/lib/guards.ts";
+import { PRIX_MAX_EUR } from "../../src/lib/payments.ts";
 
 const CATEGORIES = [
   "Femme",
@@ -155,8 +156,8 @@ export default async (req: Request) => {
   const priceEUR = Math.round(Number(b.priceEUR));
   if (!name || !brand || !size)
     return bad("Titre, marque et taille sont requis");
-  if (!Number.isFinite(priceEUR) || priceEUR < 1 || priceEUR > 20000)
-    return bad("Prix invalide (1 à 20 000 €)");
+  if (!Number.isFinite(priceEUR) || priceEUR < 1 || priceEUR > PRIX_MAX_EUR)
+    return bad(`Prix invalide (1 à ${PRIX_MAX_EUR.toLocaleString("fr-FR")} €)`);
   if (!CATEGORIES.includes(b.category ?? "")) return bad("Catégorie invalide");
   if (!CONDITIONS.includes(b.condition ?? "")) return bad("État invalide");
 
