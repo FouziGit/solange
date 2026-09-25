@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { LEGAL_DOCS } from "@/lib/legal";
 import { PageShell } from "@/components/ui/PageShell";
+import { PaymentsNote } from "./PaymentsNote";
 
 export const metadata: Metadata = {
   title: "Informations légales",
@@ -23,9 +24,7 @@ export default function InformationsLegalesPage() {
           Informations légales
         </h1>
         <p className="mt-4 max-w-prose text-[14px] leading-relaxed text-bone/75">
-          Les documents qui encadrent le service. Le service fonctionne en
-          version d&apos;essai : les paiements y sont simulés, aucune somme
-          n&apos;est débitée et aucune vente n&apos;est réellement conclue.
+          Les documents qui encadrent le service. <PaymentsNote />
         </p>
 
         <ul className="mt-8 flex flex-col gap-px overflow-hidden rounded-2xl border border-bone/10 bg-bone/10">

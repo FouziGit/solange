@@ -138,7 +138,8 @@ function PostThumb({ post, index }: { post: PostTile; index: number }) {
       style={{ background: gradientFor(post.seed) }}
     >
       {post.image && <Photo src={post.image} alt="" />}
-      <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/75 to-transparent p-3 pt-8">
+      {/* theme-dark : légende claire sur le voile noir, dans tous les thèmes */}
+      <div className="theme-dark absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/75 to-transparent p-3 pt-8">
         <p className="line-clamp-2 text-[11px] leading-snug text-bone/85">
           {post.caption}
         </p>
@@ -281,7 +282,8 @@ export default function MembrePage() {
                 className="relative grid size-24 place-items-center rounded-full ring-2 ring-ink md:size-28"
                 style={{ background: gradientFor(state.profile.seed) }}
               >
-                <span className="font-display text-3xl font-bold tracking-wide text-bone/85 md:text-4xl">
+                {/* gradientFor est toujours sombre : initiales en theme-dark */}
+                <span className="theme-dark font-display text-3xl font-bold tracking-wide text-bone/85 md:text-4xl">
                   {initials(state.profile.name || state.profile.handle)}
                 </span>
               </span>

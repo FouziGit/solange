@@ -109,6 +109,8 @@ export type ApiPost = {
   /** Lot 5 : vidéo membre (+ son image d'attente) et pièces taguées. */
   video?: string;
   poster?: string;
+  /** Transcription de la vidéo : ce qui s'y dit, en texte (WCAG 1.2). */
+  transcript?: string;
   productIds?: string[];
   createdAt: number;
 };
@@ -389,6 +391,7 @@ export const api = {
     images: string[];
     video?: string;
     poster?: string;
+    transcript?: string;
     productIds?: string[];
   }) =>
     request<{ ok: boolean; post: ApiPost }>("/api/posts", {

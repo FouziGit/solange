@@ -131,13 +131,26 @@ export const APP_URL =
   process.env.APP_URL ?? "https://solange-beta.netlify.app";
 
 /** Email transactionnel via Resend. Silent-fail : une notification qui
-    échoue ne doit JAMAIS faire échouer la commande/le message. */
+    échoue ne doit JAMAIS faire échouer la commande/le message.
+
+    Le pied suit la même source que /api/payments/config : la clé Stripe
+    posée. « paiements simulés » partait en dur sous TOUS les e-mails, y
+    compris le « Vendu » envoyé au vendeur après un vrai paiement — de quoi
+    lui faire croire qu'il n'avait rien à expédier. Une clé de test compte
+    comme Stripe, comme à l'écran (paymentsClaim, src/lib/legal.ts). */
 export async function sendEmail(
   to: string,
   subject: string,
   bodyHtml: string,
 ): Promise<void> {
   try {
+    // import différé : le SDK Stripe (importé par stripe.mts) n'est chargé
+    // qu'au premier e-mail, pas au démarrage de chaque fonction
+    const { stripeMode } = await import("./stripe.mts");
+    const footer =
+      stripeMode() === "off"
+        ? "Beta · démonstration — paiements simulés"
+        : "Paiement par carte, via Stripe";
     const res = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: {
@@ -151,7 +164,7 @@ export async function sendEmail(
         html: `<div style="background:#0d0d0e;color:#f4f1ea;font-family:Helvetica,Arial,sans-serif;padding:40px 24px">
           <p style="letter-spacing:.35em;font-size:12px;margin:0 0 28px;text-align:center">S O L A N G E</p>
           ${bodyHtml}
-          <p style="font-size:11px;color:#8a857b;margin:28px 0 0;text-align:center">Beta · démonstration — paiements simulés</p>
+          <p style="font-size:11px;color:#8a857b;margin:28px 0 0;text-align:center">${footer}</p>
         </div>`,
       }),
     });

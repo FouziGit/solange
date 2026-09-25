@@ -1,7 +1,8 @@
 "use client";
 
 import { Button } from "@/components/ui/Button";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
+import { flushSync } from "react-dom";
 import Link from "next/link";
 import { motion } from "motion/react";
 import { PageShell } from "@/components/ui/PageShell";
@@ -16,11 +17,14 @@ import { forSale, liked } from "@/lib/data";
 import { EASE, compact, euro, gradientFor, initials } from "@/lib/utils";
 import { useStore } from "@/lib/store";
 import { api, type ApiOrder, type ApiProduct } from "@/lib/api";
+import { announce } from "@/lib/announce";
+import { usePaymentsMode } from "@/lib/use-payments-mode";
 import {
   STATUS_LABEL,
   normalizeStatus,
   type OrderStatus,
 } from "@/lib/order-state";
+import { paymentNote } from "@/lib/order-display";
 import { imgItem } from "@/lib/img";
 import {
   Verified,
@@ -87,6 +91,8 @@ function ReferralCard() {
     try {
       await navigator.clipboard.writeText(invite.code);
       setCopied(true);
+      // l'aria-label fixe masque « Copié » : on le dit à voix haute
+      announce("Code de parrainage copié");
       window.setTimeout(() => setCopied(false), 1800);
     } catch {
       // Clipboard unavailable (insecure context / denied) — stay silent,
@@ -184,11 +190,28 @@ export default function ProfilPage() {
   const [sales, setSales] = useState<ApiOrder[]>([]);
   const [mineLoading, setMineLoading] = useState(false);
   const [withdrawing, setWithdrawing] = useState<string | null>(null);
+  // retrait d'une annonce — définitif (il faut la redéposer) : 2 temps
+  const [withdrawArmed, setWithdrawArmed] = useState<string | null>(null);
+  const [withdrawError, setWithdrawError] = useState<string | null>(null);
+  // annonce retirée : son badge « Retirée » prend le focus au rechargement
+  const focusAfterReload = useRef<string | null>(null);
 
   // suppression de compte — confirmation en 2 temps
   const [deleteArmed, setDeleteArmed] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+
+  // « paiement simulé » seulement si le paiement réel est coupé
+  const payments = usePaymentsMode();
+  const uid = useId();
+
+  /* Le bouton touché disparaît au profit de la confirmation (et
+     inversement) : le focus va à ce qui le remplace, sinon il retombe
+     sur <body> et VoiceOver repart du haut de la page. */
+  const swapThenFocus = (update: () => void, targetId: string) => {
+    flushSync(update);
+    document.getElementById(targetId)?.focus();
+  };
 
   // réglage : accepter les messages directs
   const [dmOpen, setDmOpen] = useState<boolean | null>(null);
@@ -227,12 +250,26 @@ export default function ProfilPage() {
 
   const withdraw = async (id: string) => {
     setWithdrawing(id);
+    setWithdrawError(null);
     const res = await api.withdrawProduct(id);
-    setWithdrawing(null);
-    if (res.ok) {
-      await Promise.all([loadMine(), refreshProducts()]);
+    if (!res.ok) {
+      setWithdrawing(null);
+      setWithdrawError(res.error);
+      return;
     }
+    focusAfterReload.current = id;
+    // la confirmation reste affichée (« Retrait… ») jusqu'au rechargement
+    await Promise.all([loadMine(), refreshProducts()]);
+    setWithdrawing(null);
+    setWithdrawArmed(null);
   };
+
+  useEffect(() => {
+    const id = focusAfterReload.current;
+    if (!id) return;
+    focusAfterReload.current = null;
+    document.getElementById(`${uid}-statut-${id}`)?.focus();
+  }, [myProds, uid]);
 
   const myListings = myProds.length;
 
@@ -286,7 +323,9 @@ export default function ProfilPage() {
               className="relative grid size-28 place-items-center rounded-full ring-2 ring-ink md:size-32"
               style={{ background: gradientFor(user.handle) }}
             >
-              <span className="font-display text-4xl font-bold tracking-wide text-bone/85">
+              {/* gradientFor est toujours sombre : texte clair, même en
+                  thème clair */}
+              <span className="theme-dark font-display text-4xl font-bold tracking-wide text-bone/85">
                 {initials(user.name || user.handle)}
               </span>
             </span>
@@ -423,10 +462,9 @@ export default function ProfilPage() {
                     {o.item.name}
                   </p>
                   <p className="mt-0.5 text-[11px] text-ash">
-                    {o.id} ·{" "}
-                    {/^\d{4}$/.test(o.last4)
-                      ? `carte •••• ${o.last4}`
-                      : "paiement simulé (démo)"}
+                    {[o.id, paymentNote(o.last4, payments)]
+                      .filter(Boolean)
+                      .join(" · ")}
                   </p>
                 </div>
                 <div className="flex flex-col items-end gap-1">
@@ -460,49 +498,107 @@ export default function ProfilPage() {
             Mes annonces · {myProds.length}
           </p>
           <div className="flex flex-col gap-2">
-            {myProds.map((p) => (
-              <div
-                key={p.id}
-                className="glass flex items-center gap-3 rounded-2xl p-2.5"
-              >
-                <span
-                  className="grid size-14 shrink-0 place-items-center overflow-hidden rounded-xl ring-1 ring-bone/10"
-                  style={{ background: gradientFor(p.id) }}
-                >
-                  {p.images[0] && (
-                    /* eslint-disable-next-line @next/next/no-img-element */
-                    <img
-                      src={p.images[0]}
-                      alt={p.name}
-                      className="size-full object-cover"
-                    />
+            {myProds.map((p) => {
+              // retrait définitif (aucune route ne remet en vente) : 2 temps
+              const armed = p.status === "available" && withdrawArmed === p.id;
+              return (
+                <div key={p.id} className="glass rounded-2xl p-2.5">
+                  <div className="flex items-center gap-3">
+                    <span
+                      className="grid size-14 shrink-0 place-items-center overflow-hidden rounded-xl ring-1 ring-bone/10"
+                      style={{ background: gradientFor(p.id) }}
+                    >
+                      {p.images[0] && (
+                        /* eslint-disable-next-line @next/next/no-img-element */
+                        <img
+                          src={p.images[0]}
+                          alt={p.name}
+                          className="size-full object-cover"
+                        />
+                      )}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[12px] text-ash">{p.brand}</p>
+                      <p className="font-display truncate text-[14px] font-semibold tracking-tight text-bone">
+                        {p.name}
+                      </p>
+                      <p className="mt-0.5 text-[11px] text-ash">
+                        {euro(p.priceEUR)} · {p.size}
+                      </p>
+                    </div>
+                    {p.status === "available" ? (
+                      !armed && (
+                        <button
+                          id={`${uid}-retirer-${p.id}`}
+                          type="button"
+                          onClick={() =>
+                            swapThenFocus(() => {
+                              setWithdrawError(null);
+                              setWithdrawArmed(p.id);
+                            }, `${uid}-retrait-${p.id}`)
+                          }
+                          aria-label={`Retirer l'annonce ${p.name}`}
+                          disabled={withdrawing !== null}
+                          className="inline-flex min-h-11 shrink-0 items-center rounded-full border border-bone/20 px-3.5 text-[12px] font-medium text-bone/80 transition-colors hover:border-bone/50 hover:text-bone disabled:opacity-40"
+                        >
+                          Retirer
+                        </button>
+                      )
+                    ) : (
+                      <span
+                        id={`${uid}-statut-${p.id}`}
+                        tabIndex={-1}
+                        className="inline-flex shrink-0 items-center rounded-full bg-bone/10 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wider text-bone/80"
+                      >
+                        {p.status === "sold" ? "Vendue" : "Retirée"}
+                      </span>
+                    )}
+                  </div>
+                  {armed && (
+                    <div className="mt-2.5 border-t border-bone/10 px-1 pt-3">
+                      <p
+                        id={`${uid}-retrait-${p.id}`}
+                        tabIndex={-1}
+                        className="text-[12.5px] leading-relaxed text-bone/85"
+                      >
+                        Retirer «&nbsp;{p.name}&nbsp;» de la vente&nbsp;? Pour
+                        la remettre en ligne, il faudra la redéposer.
+                      </p>
+                      {withdrawError && (
+                        <p role="alert" className="mt-2 text-[12px] text-danger">
+                          {withdrawError}
+                        </p>
+                      )}
+                      <div className="mt-3 flex gap-2">
+                        <Button
+                          variant="danger"
+                          size="sm"
+                          disabled={withdrawing === p.id}
+                          onClick={() => void withdraw(p.id)}
+                        >
+                          {withdrawing === p.id
+                            ? "Retrait…"
+                            : "Confirmer le retrait"}
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          disabled={withdrawing === p.id}
+                          onClick={() =>
+                            swapThenFocus(() => {
+                              setWithdrawArmed(null);
+                              setWithdrawError(null);
+                            }, `${uid}-retirer-${p.id}`)
+                          }
+                        >
+                          Garder l&apos;annonce
+                        </Button>
+                      </div>
+                    </div>
                   )}
-                </span>
-                <div className="min-w-0 flex-1">
-                  <p className="text-[12px] text-ash">{p.brand}</p>
-                  <p className="font-display truncate text-[14px] font-semibold tracking-tight text-bone">
-                    {p.name}
-                  </p>
-                  <p className="mt-0.5 text-[11px] text-ash">
-                    {euro(p.priceEUR)} · {p.size}
-                  </p>
                 </div>
-                {p.status === "available" ? (
-                  <button
-                    type="button"
-                    onClick={() => void withdraw(p.id)}
-                    disabled={withdrawing === p.id}
-                    className="inline-flex min-h-11 shrink-0 items-center rounded-full border border-bone/20 px-3.5 text-[12px] font-medium text-bone/80 transition-colors hover:border-bone/50 hover:text-bone disabled:opacity-40"
-                  >
-                    {withdrawing === p.id ? "Retrait…" : "Retirer"}
-                  </button>
-                ) : (
-                  <span className="inline-flex shrink-0 items-center rounded-full bg-bone/10 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wider text-bone/70">
-                    {p.status === "sold" ? "Vendue" : "Retirée"}
-                  </span>
-                )}
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}
@@ -598,12 +694,13 @@ export default function ProfilPage() {
                       /* eslint-disable-next-line @next/next/no-img-element */
                       <img
                         src={p.poster || p.gallery[0]}
-                        alt={p.caption || "Publication"}
+                        alt={p.caption ? "" : "Publication"}
                         loading="lazy"
                         className="absolute inset-0 size-full object-cover"
                       />
                     ) : null}
-                    <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent p-3">
+                    {/* texte posé sur la photo : clair dans les deux thèmes */}
+                    <div className="theme-dark absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent p-3">
                       <span className="line-clamp-2 text-[11px] text-bone/85">
                         {p.caption}
                       </span>
@@ -649,12 +746,14 @@ export default function ProfilPage() {
                         "radial-gradient(60% 50% at 50% 30%, rgba(255,255,255,0.12), transparent 62%)",
                     }}
                   />
-                  <div className="absolute inset-0 grid place-items-center">
+                  {/* fond gradientFor toujours sombre, voile noir : texte
+                      clair dans les deux thèmes */}
+                  <div className="theme-dark absolute inset-0 grid place-items-center">
                     <span className="font-editorial text-3xl font-semibold text-bone/85 transition-transform duration-700 group-hover:scale-110">
                       {l.title}
                     </span>
                   </div>
-                  <div className="absolute inset-x-0 bottom-0 flex items-center justify-between bg-gradient-to-t from-black/70 to-transparent p-3 text-[11px] text-bone/80">
+                  <div className="theme-dark absolute inset-x-0 bottom-0 flex items-center justify-between bg-gradient-to-t from-black/70 to-transparent p-3 text-[11px] text-bone/80">
                     <span>@{l.creator.handle}</span>
                     <span className="tabular-nums">♡ {compact(l.likes)}</span>
                   </div>
@@ -725,7 +824,7 @@ export default function ProfilPage() {
             <button
               type="button"
               onClick={disconnect}
-              className="inline-flex min-h-11 items-center px-4 text-[12px] text-ash/70 underline-offset-4 transition-colors hover:text-bone hover:underline"
+              className="inline-flex min-h-11 items-center px-4 text-[12px] text-ash underline-offset-4 transition-colors hover:text-bone hover:underline"
             >
               Déconnexion
             </button>
@@ -733,15 +832,25 @@ export default function ProfilPage() {
             {/* zone danger — suppression du compte, confirmation en 2 temps */}
             {!deleteArmed ? (
               <button
+                id={`${uid}-supprimer`}
                 type="button"
-                onClick={() => setDeleteArmed(true)}
+                onClick={() =>
+                  swapThenFocus(
+                    () => setDeleteArmed(true),
+                    `${uid}-supprimer-question`,
+                  )
+                }
                 className="inline-flex min-h-11 items-center px-4 text-[11px] text-danger/80 underline-offset-4 transition-colors hover:text-danger hover:underline"
               >
                 Supprimer mon compte
               </button>
             ) : (
               <div className="mt-2 w-full max-w-sm rounded-2xl border border-danger/30 bg-danger/10 p-4">
-                <p className="text-[13px] leading-relaxed text-bone/85">
+                <p
+                  id={`${uid}-supprimer-question`}
+                  tabIndex={-1}
+                  className="text-[13px] leading-relaxed text-bone/85"
+                >
                   Sûr ? Toutes tes données seront effacées.
                 </p>
                 {deleteError && (
@@ -759,10 +868,12 @@ export default function ProfilPage() {
                   </Button>
                   <button
                     type="button"
-                    onClick={() => {
-                      setDeleteArmed(false);
-                      setDeleteError(null);
-                    }}
+                    onClick={() =>
+                      swapThenFocus(() => {
+                        setDeleteArmed(false);
+                        setDeleteError(null);
+                      }, `${uid}-supprimer`)
+                    }
                     disabled={deleting}
                     className="inline-flex min-h-11 items-center rounded-full border border-bone/20 px-4 text-[13px] text-bone/80 transition-colors hover:border-bone/50 hover:text-bone disabled:opacity-40"
                   >
@@ -779,7 +890,7 @@ export default function ProfilPage() {
         <div className="flex flex-wrap items-center gap-1">
           <Link
             href="/informations-legales"
-            className="inline-flex min-h-11 items-center px-2 text-[11px] text-ash/60 underline-offset-4 transition-colors hover:text-bone hover:underline"
+            className="inline-flex min-h-11 items-center px-2 text-[11px] text-ash underline-offset-4 transition-colors hover:text-bone hover:underline"
           >
             Informations légales
           </Link>
@@ -788,7 +899,7 @@ export default function ProfilPage() {
           </span>
           <Link
             href="/confidentialite"
-            className="inline-flex min-h-11 items-center px-2 text-[11px] text-ash/60 underline-offset-4 transition-colors hover:text-bone hover:underline"
+            className="inline-flex min-h-11 items-center px-2 text-[11px] text-ash underline-offset-4 transition-colors hover:text-bone hover:underline"
           >
             Confidentialité
           </Link>
@@ -797,7 +908,7 @@ export default function ProfilPage() {
           </span>
           <Link
             href="/charte-moderation"
-            className="inline-flex min-h-11 items-center px-2 text-[11px] text-ash/60 underline-offset-4 transition-colors hover:text-bone hover:underline"
+            className="inline-flex min-h-11 items-center px-2 text-[11px] text-ash underline-offset-4 transition-colors hover:text-bone hover:underline"
           >
             Modération
           </Link>

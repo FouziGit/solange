@@ -72,9 +72,9 @@ survenir pour maintenance, mise à jour, ou du fait de tiers dont dépend le
 service. Lorsqu'une interruption est programmée et significative, la
 Plateforme vous en informe par avance dans la mesure du possible.
 
-**Le service fonctionne actuellement en version d'essai.** Des
-fonctionnalités peuvent évoluer ou disparaître. Les paiements y sont
-simulés (voir article 2 des [CGV](/cgv)).
+Des fonctionnalités du service peuvent encore évoluer ou disparaître.
+**Les paiements sont réels depuis le 24 septembre 2026** : ils se font par
+carte bancaire, via Stripe (voir article 12 des [CGV](/cgv)).
 
 ## 5. Compte
 

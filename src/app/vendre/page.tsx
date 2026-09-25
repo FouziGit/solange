@@ -1,7 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/Button";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import Link from "next/link";
 import { PageShell } from "@/components/ui/PageShell";
 import { FieldLabel } from "@/components/ui/FieldLabel";
@@ -14,6 +14,7 @@ import { normaliserMarque, suggestions } from "@/lib/brands";
 import { PRIX_MAX_EUR } from "@/lib/payments";
 import { commission, euro, gradientFor } from "@/lib/utils";
 import { api, resizeImage } from "@/lib/api";
+import { announce } from "@/lib/announce";
 import { useStore } from "@/lib/store";
 import { Camera, Crown, Check, X } from "@/components/chrome/icons";
 
@@ -22,6 +23,16 @@ const cats = categories.filter((c) => c !== "Tout");
 const MAX_PHOTOS = 4;
 
 const VENTE_DRAFT = "solange:brouillon-vente";
+
+/** Mention visible dès l'arrivée, lue avec l'étiquette du champ. */
+function Obligatoire() {
+  return (
+    <span className="font-normal normal-case tracking-normal">
+      {" "}
+      · obligatoire
+    </span>
+  );
+}
 
 /** Brouillon (sessionStorage) — la saisie survit à un refresh accidentel. */
 function readDraft<T>(key: string): T | null {
@@ -87,6 +98,20 @@ export default function VendrePage() {
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
+  const uid = useId();
+  const addPhotoRef = useRef<HTMLButtonElement>(null);
+  const successRef = useRef<HTMLHeadingElement>(null);
+  /* Le bouton touché disparaît (retrait d'une photo, publication) : le
+     focus est reposé après le rendu, sinon il retombe sur <body> et
+     VoiceOver repart du haut de la page. */
+  const focusNext = useRef<"photos" | "succes" | null>(null);
+  useEffect(() => {
+    const target = focusNext.current;
+    if (!target) return;
+    focusNext.current = null;
+    (target === "succes" ? successRef : addPhotoRef).current?.focus();
+  }, [listed, images]);
+
   const p = Number(price) || 0;
   const { rate, fee, net } = commission(p);
 
@@ -95,8 +120,15 @@ export default function VendrePage() {
   const missing = [
     !title.trim() && "un titre",
     !(p > 0) && "un prix",
+    tropCher && `un prix de ${PRIX_MAX_EUR.toLocaleString("fr-FR")} € au plus`,
     !cond && "un état",
   ].filter(Boolean) as string[];
+
+  /* « Ajoute des photos » garde le focus quand le sélecteur se referme.
+     Bloqué pendant le traitement ou une fois le maximum atteint, il est
+     aria-disabled et non disabled : désactivé sous le focus, il renvoyait
+     celui-ci sur <body> à chaque ajout, et le clavier repartait du haut. */
+  const addBlocked = photoBusy || images.length >= MAX_PHOTOS;
 
   async function onFilesPicked(e: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files ?? []);
@@ -116,6 +148,11 @@ export default function VendrePage() {
       const urls: string[] = [];
       for (const f of picked) urls.push(await resizeImage(f));
       setImages((cur) => [...cur, ...urls].slice(0, MAX_PHOTOS));
+      announce(
+        urls.length === 1
+          ? `Photo ${Math.min(images.length + 1, MAX_PHOTOS)} ajoutée.`
+          : `${urls.length} photos ajoutées.`,
+      );
       if (files.length > slots) {
         setPhotoError(
           `Maximum ${MAX_PHOTOS} photos — seules les ${slots === 1 ? "première a" : `${slots} premières ont`} été gardées.`,
@@ -133,6 +170,8 @@ export default function VendrePage() {
   function removePhoto(index: number) {
     setImages((cur) => cur.filter((_, i) => i !== index));
     setPhotoError(null);
+    focusNext.current = "photos";
+    announce(`Photo ${index + 1} retirée.`);
   }
 
   async function publish() {
@@ -151,6 +190,8 @@ export default function VendrePage() {
     });
     if (res.ok) {
       setListed(true);
+      focusNext.current = "succes";
+      announce(`${title.trim()} est en ligne dans le Marché.`);
       void refreshProducts();
     } else {
       setSubmitError(res.error);
@@ -171,6 +212,7 @@ export default function VendrePage() {
     setImages([]);
     setPhotoError(null);
     setSubmitError(null);
+    focusNext.current = "photos";
   }
 
   function goSignIn() {
@@ -209,12 +251,15 @@ export default function VendrePage() {
             />
             <div className="grid grid-cols-4 gap-2.5">
               <button
+                ref={addPhotoRef}
                 type="button"
-                onClick={() => fileRef.current?.click()}
-                disabled={photoBusy || images.length >= MAX_PHOTOS}
+                aria-disabled={addBlocked || undefined}
+                onClick={() => {
+                  if (!addBlocked) fileRef.current?.click();
+                }}
                 className={`col-span-2 row-span-2 flex aspect-square flex-col items-center justify-center gap-2 rounded-2xl border border-dashed text-ash transition-colors ${
                   images.length >= MAX_PHOTOS
-                    ? "cursor-default border-bone/10 text-ash/50"
+                    ? "cursor-default border-bone/10"
                     : "border-bone/25 hover:border-bone/50 hover:text-bone"
                 }`}
               >
@@ -248,8 +293,13 @@ export default function VendrePage() {
                       alt={`Photo ${i + 1}${i === 0 ? " (couverture)" : ""}`}
                       className="size-full object-cover"
                     />
+                    {/* bandeau pleine largeur : 11 px lisibles sans déborder
+                        de la vignette ; déjà dit par l'alt de la photo */}
                     {i === 0 && (
-                      <span className="absolute bottom-1 left-1 rounded bg-ink/75 px-1.5 py-0.5 text-[8px] uppercase tracking-[0.14em] text-bone">
+                      <span
+                        aria-hidden="true"
+                        className="absolute inset-x-0 bottom-0 bg-ink/75 py-0.5 text-center text-[11px] font-medium text-bone"
+                      >
                         Couverture
                       </span>
                     )}
@@ -279,23 +329,27 @@ export default function VendrePage() {
 
           <div className="grid gap-5 sm:grid-cols-2">
             <div>
-              <FieldLabel>Titre de l&apos;annonce</FieldLabel>
+              <FieldLabel htmlFor={`${uid}-titre`}>
+                Titre de l&apos;annonce
+                <Obligatoire />
+              </FieldLabel>
               <GlassInput
-                aria-label="Titre"
+                id={`${uid}-titre`}
+                aria-required="true"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder="Veste en cuir vintage"
               />
             </div>
             <div>
-              <FieldLabel>Marque</FieldLabel>
+              <FieldLabel htmlFor={`${uid}-marque`}>Marque</FieldLabel>
               {/* Liste OUVERTE : on suggère 400 maisons, on n'en impose
                   aucune. Personne ne connaît toutes les marques, et une
                   liste fermée transformerait un dépôt en devinette. La
                   normalisation au départ regroupe « nike », « NIKE » et
                   « Nike » sous un seul libellé dans les filtres. */}
               <GlassInput
-                aria-label="Marque"
+                id={`${uid}-marque`}
                 list="marques-solange"
                 value={brand}
                 onChange={(e) => setBrand(e.target.value)}
@@ -311,10 +365,19 @@ export default function VendrePage() {
           </div>
 
           <div>
-            <FieldLabel>Catégorie</FieldLabel>
-            <div className="flex flex-wrap gap-2">
+            <FieldLabel id={`${uid}-categorie`}>Catégorie</FieldLabel>
+            <div
+              role="radiogroup"
+              aria-labelledby={`${uid}-categorie`}
+              className="flex flex-wrap gap-2"
+            >
               {cats.map((c) => (
-                <Chip key={c} active={c === cat} onClick={() => setCat(c)}>
+                <Chip
+                  key={c}
+                  radio
+                  active={c === cat}
+                  onClick={() => setCat(c)}
+                >
                   {c}
                 </Chip>
               ))}
@@ -323,18 +386,22 @@ export default function VendrePage() {
 
           <div className="grid gap-5 sm:grid-cols-2">
             <div>
-              <FieldLabel>Taille</FieldLabel>
+              <FieldLabel htmlFor={`${uid}-taille`}>Taille</FieldLabel>
               <GlassInput
-                aria-label="Taille"
+                id={`${uid}-taille`}
                 value={size}
                 onChange={(e) => setSize(e.target.value)}
                 placeholder="M · 38 · 42…"
               />
             </div>
             <div>
-              <FieldLabel>Prix (€)</FieldLabel>
+              <FieldLabel htmlFor={`${uid}-prix`}>
+                Prix (€)
+                <Obligatoire />
+              </FieldLabel>
               <GlassInput
-                aria-label="Prix"
+                id={`${uid}-prix`}
+                aria-required="true"
                 value={price}
                 onChange={(e) => setPrice(e.target.value.replace(/[^\d]/g, ""))}
                 inputMode="numeric"
@@ -350,10 +417,23 @@ export default function VendrePage() {
           </div>
 
           <div>
-            <FieldLabel>État</FieldLabel>
-            <div className="flex flex-wrap gap-2">
+            <FieldLabel id={`${uid}-etat`}>
+              État
+              <Obligatoire />
+            </FieldLabel>
+            <div
+              role="radiogroup"
+              aria-labelledby={`${uid}-etat`}
+              aria-required="true"
+              className="flex flex-wrap gap-2"
+            >
               {conditions.map((c) => (
-                <Chip key={c} active={c === cond} onClick={() => setCond(c)}>
+                <Chip
+                  key={c}
+                  radio
+                  active={c === cond}
+                  onClick={() => setCond(c)}
+                >
                   {c}
                 </Chip>
               ))}
@@ -361,10 +441,10 @@ export default function VendrePage() {
           </div>
 
           <div>
-            <FieldLabel>Description</FieldLabel>
+            <FieldLabel htmlFor={`${uid}-description`}>Description</FieldLabel>
             <GlassInput
               multiline
-              aria-label="Description"
+              id={`${uid}-description`}
               rows={4}
               value={desc}
               onChange={(e) => setDesc(e.target.value)}
@@ -381,9 +461,13 @@ export default function VendrePage() {
               /* success state — l'annonce existe réellement côté serveur */
               <div className="flex flex-col items-center py-6 text-center">
                 <Stamp>Déposée</Stamp>
-                <p className="mt-5 font-editorial text-2xl font-semibold text-bone">
+                <h2
+                  ref={successRef}
+                  tabIndex={-1}
+                  className="mt-5 font-editorial text-2xl font-semibold text-bone"
+                >
                   En ligne
-                </p>
+                </h2>
                 <p className="mt-1 max-w-[26ch] text-[13px] leading-relaxed text-ash">
                   {title || "Ta pièce"} est publiée : ton annonce est désormais
                   visible par tout le monde dans le Marché.
@@ -404,8 +488,10 @@ export default function VendrePage() {
               <>
                 {/* preview */}
                 <div className="flex items-center gap-3">
+                  {/* fond gradientFor toujours sombre : texte clair dans les
+                      deux thèmes */}
                   <span
-                    className="grid size-14 place-items-center overflow-hidden rounded-xl ring-1 ring-bone/10"
+                    className="theme-dark grid size-14 place-items-center overflow-hidden rounded-xl ring-1 ring-bone/10"
                     style={{
                       background: gradientFor(brand || title || "solange-new"),
                     }}
@@ -418,7 +504,10 @@ export default function VendrePage() {
                         className="size-full object-cover"
                       />
                     ) : (
-                      <span className="font-editorial text-xs italic text-bone/40">
+                      <span
+                        aria-hidden="true"
+                        className="font-editorial text-xs italic text-bone/40"
+                      >
                         {(brand || "SOLANGE").slice(0, 3).toUpperCase()}
                       </span>
                     )}
@@ -457,7 +546,7 @@ export default function VendrePage() {
                   </span>
                 </div>
 
-                <p className="mt-3 text-[10.5px] leading-relaxed text-ash">
+                <p className="mt-3 text-[12px] leading-relaxed text-ash">
                   Commission dégressive : 4 % &lt; 200 € · 3,5 % 200–500 € · 2,5
                   % 500–1000 € · 2 % &gt; 1000 €.
                 </p>
@@ -529,7 +618,12 @@ export default function VendrePage() {
                     <button
                       type="button"
                       onClick={() => void publish()}
-                      disabled={!ready || submitting || !authReady}
+                      /* pendant l'envoi : aria-disabled (publish() ignore le
+                         second appui), pas disabled — sinon, en cas d'échec, le
+                         focus est déjà retombé sur <body> */
+                      disabled={!ready || !authReady}
+                      aria-disabled={submitting || undefined}
+                      aria-describedby={ready ? undefined : `${uid}-manque`}
                       className={`mt-4 flex min-h-11 w-full items-center justify-center gap-2 rounded-none py-3.5 text-sm font-semibold transition-transform active:scale-95 ${
                         ready && !submitting && authReady
                           ? "bg-bone text-ink"
@@ -545,7 +639,10 @@ export default function VendrePage() {
                       )}
                     </button>
                     {!ready && (
-                      <p className="mt-2 text-center text-[11px] text-ash">
+                      <p
+                        id={`${uid}-manque`}
+                        className="mt-2 text-center text-[11px] text-ash"
+                      >
                         Ajoute {missing.join(", ")} pour publier.
                       </p>
                     )}

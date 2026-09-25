@@ -17,6 +17,8 @@ export function FeedModeShell() {
 
   return (
     <>
+      {/* titre de l'accueil pour le rotor ; suit le fil affiché */}
+      <h1 className="sr-only">{mode === "scroll" ? "Looks" : "Pièces"}</h1>
       <FeedTopBar mode={mode} onModeChange={setMode} />
       {mode === "scroll" ? <VideoFeed /> : <ShopFeed />}
     </>

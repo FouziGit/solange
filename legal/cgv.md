@@ -8,12 +8,13 @@ effectiveDate: "[À COMPLÉTER : date de publication]"
      PUBLICATION.
 
      Articles à relire en priorité :
-       - art. 2 : l'état réel du service (paiement simulé). Il est placé en
-         tête volontairement : c'est le fait le plus important pour la
-         personne qui lit, il ne peut pas être relégué en note ;
+       - art. 2 : la période de paiement simulé. Elle est close depuis
+         l'activation du paiement réel (24 septembre 2026, art. 12) ;
+         l'article a été réécrit au passé et déclaré inapplicable, pour
+         ne plus affirmer au lecteur qu'aucune somme n'est débitée ;
        - art. 12 : régime applicable À COMPTER de l'activation du paiement
-         réel. Il est expressément NON APPLICABLE aujourd'hui et le
-         restera tant qu'une date n'y sera pas inscrite. Sa rédaction est
+         réel. Il s'applique depuis la date d'activation qui y est
+         inscrite (24 septembre 2026). Sa rédaction est
          volontairement prudente : plusieurs points (séquestre, statut au
          regard de la DSP2, obligations de lutte anti-blanchiment) dépendent
          du prestataire de paiement retenu et ne peuvent pas être arrêtés
@@ -45,34 +46,34 @@ Les présentes conditions complètent les [conditions générales
 d'utilisation](/cgu), auxquelles elles se réfèrent pour tout ce qu'elles
 ne traitent pas.
 
-## 2. État actuel du service : les paiements sont simulés
+## 2. Période d'essai, close le 24 septembre 2026 : paiements simulés
 
-**Cet article décrit le fonctionnement réel du service aujourd'hui. Lisez-le
-avant tout le reste.**
+**Les paiements sont réels depuis le 24 septembre 2026. Le régime
+applicable est désormais celui de l'article 12 : le présent article ne
+s'applique plus.** Il décrit, pour mémoire, le fonctionnement du service
+avant cette date.
 
-À la date d'entrée en vigueur des présentes :
+Jusqu'au 24 septembre 2026 :
 
-- **aucune somme n'est débitée.** Les champs de carte bancaire affichés au
-  moment de la commande sont figés sur un numéro de démonstration et ne
-  peuvent pas être modifiés. N'y saisissez jamais une vraie carte : ce
-  n'est pas possible, et ce n'est pas demandé ;
-- **aucune donnée bancaire n'est collectée, transmise ni conservée** ;
-- **la Plateforme ne détient aucun fonds** et n'effectue aucun versement ;
-- **la commission décrite à l'article 5 est affichée à titre indicatif et
-  n'est pas prélevée** ;
-- **aucune expédition n'est organisée par la Plateforme** : les options de
-  livraison et les points relais proposés sont des simulations, aucun
-  bordereau n'est émis, aucun colis n'est pris en charge ;
-- en conséquence, **aucune vente réelle n'est conclue par le service**, et
-  les parcours d'achat que vous pouvez suivre sont des démonstrations.
+- **aucune somme n'était débitée.** Les champs de carte bancaire affichés
+  au moment de la commande étaient figés sur un numéro de démonstration et
+  ne pouvaient pas être modifiés ;
+- **aucune donnée bancaire n'était collectée, transmise ni conservée** ;
+- **la Plateforme ne détenait aucun fonds** et n'effectuait aucun
+  versement ;
+- **la commission décrite à l'article 5 était affichée à titre indicatif
+  et n'était pas prélevée** ;
+- les options de livraison et les points relais proposés étaient des
+  simulations ;
+- en conséquence, **aucune vente réelle n'était conclue par le service**,
+  et les parcours d'achat effectués pendant cette période étaient des
+  démonstrations.
 
-Les articles 3 à 11 décrivent le cadre applicable aux ventes lorsque
-celles-ci seront réelles. Ils s'appliquent d'ores et déjà aux obligations
-qui ne dépendent pas du paiement — sincérité des annonces, respect des
-règles de publication, conduite entre Membres.
-
-L'activation des paiements réels fera l'objet de l'article 12, qui n'est
-pas applicable à ce jour.
+Pendant cette période, les articles 3 à 11 s'appliquaient déjà aux
+obligations qui ne dépendent pas du paiement — sincérité des annonces,
+respect des règles de publication, conduite entre Membres. Depuis
+l'activation des paiements réels, ils s'appliquent en totalité, complétés
+par l'article 12.
 
 ## 3. Qualité des vendeurs
 
@@ -241,7 +242,7 @@ modération.
 > n'est pas le cas, l'article 2 s'applique seul. Les deux ne s'appliquent
 > jamais ensemble.
 >
-> **Date d'activation : [À COMPLÉTER — à renseigner le jour de l'activation]**
+> **Date d'activation : 24 septembre 2026**
 
 1. **Prestataire de paiement.** Les paiements sont traités par **Stripe**,
    établissement de paiement agréé. Les données de carte sont saisies sur

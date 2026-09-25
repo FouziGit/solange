@@ -44,7 +44,7 @@ export function PageHeader({
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-            className="eyebrow text-sm text-bone/55"
+            className="eyebrow text-sm text-ash"
           >
             {eyebrow}
           </motion.p>
@@ -71,7 +71,7 @@ export function PageHeader({
       {(right || sectionNo) && (
         <div className="flex shrink-0 flex-col items-end gap-1">
           {sectionNo && (
-            <span className="etiquette text-[11px] text-bone/40">
+            <span className="etiquette text-[11px] text-ash">
               {sectionNo}
             </span>
           )}

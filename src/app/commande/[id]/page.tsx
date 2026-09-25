@@ -10,13 +10,16 @@
    UN fetch, squelette DA, zéro cascade.
    ============================================================ */
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useId, useState } from "react";
+import { flushSync } from "react-dom";
 import { useParams } from "next/navigation";
 import { api, type ApiOrder } from "@/lib/api";
 import { useStore } from "@/lib/store";
 import { track } from "@/lib/track";
+import { announce } from "@/lib/announce";
 import { euro } from "@/lib/utils";
 import { STATUS_LABEL, TIMELINE, type OrderStatus } from "@/lib/order-state";
+import { stepState } from "@/lib/order-display";
 import { PageShell } from "@/components/ui/PageShell";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Button } from "@/components/ui/Button";
@@ -40,19 +43,24 @@ const DATE_FMT: Intl.DateTimeFormatOptions = {
 };
 const when = (t: number) => new Date(t).toLocaleDateString("fr-FR", DATE_FMT);
 
-/** Frise payée → expédiée → reçue → terminée. */
+/** Frise payée → expédiée → reçue → terminée. L'étape en cours porte
+    aria-current="step" ; franchie / à venir est dit en texte, pas
+    seulement par le remplissage du cercle. */
 function Timeline({ status }: { status: OrderStatus }) {
-  const idx = TIMELINE.indexOf(status);
-  const stopped = status === "annulee" || status === "litige";
   return (
     <ol
       className="mt-5 flex items-start"
       aria-label="Avancement de la commande"
     >
       {TIMELINE.map((s, i) => {
-        const on = !stopped && idx >= i;
+        const step = stepState(status, s);
+        const on = step !== "a_venir";
         return (
-          <li key={s} className="flex flex-1 flex-col items-center gap-1.5">
+          <li
+            key={s}
+            aria-current={step === "actuelle" ? "step" : undefined}
+            className="flex flex-1 flex-col items-center gap-1.5"
+          >
             <span className="flex w-full items-center">
               <span
                 className={`h-px flex-1 ${i === 0 ? "opacity-0" : on ? "bg-bone" : "bg-bone/15"}`}
@@ -67,13 +75,19 @@ function Timeline({ status }: { status: OrderStatus }) {
                 <Check className="size-3" />
               </span>
               <span
-                className={`h-px flex-1 ${i === TIMELINE.length - 1 ? "opacity-0" : !stopped && idx > i ? "bg-bone" : "bg-bone/15"}`}
+                className={`h-px flex-1 ${i === TIMELINE.length - 1 ? "opacity-0" : step === "franchie" ? "bg-bone" : "bg-bone/15"}`}
               />
             </span>
             <span
               className={`text-[11px] ${on ? "font-semibold text-bone" : "text-ash"}`}
             >
               {STATUS_LABEL[s]}
+              {step === "franchie" && (
+                <span className="sr-only"> (étape franchie)</span>
+              )}
+              {step === "a_venir" && (
+                <span className="sr-only"> (à venir)</span>
+              )}
             </span>
           </li>
         );
@@ -102,7 +116,21 @@ export default function CommandePage() {
   const [disputeNote, setDisputeNote] = useState("");
   const [cancelArmed, setCancelArmed] = useState(false);
   const [cancelNote, setCancelNote] = useState("");
+  // « Bien reçu » clôt la commande et ferme le litige : 2 temps
+  const [receiveArmed, setReceiveArmed] = useState(false);
+  // 2 minutes de relecture sans confirmation de la banque
+  const [attenteLongue, setAttenteLongue] = useState(false);
   const [copied, setCopied] = useState(false);
+  // champs reliés à leur étiquette (VoiceOver, Contrôle vocal)
+  const uid = useId();
+
+  /* Le bouton touché disparaît au profit de la confirmation (et
+     inversement) : le focus va à ce qui le remplace, sinon il retombe
+     sur <body> et VoiceOver repart du haut de la page. */
+  const swapThenFocus = (update: () => void, targetId: string) => {
+    flushSync(update);
+    document.getElementById(targetId)?.focus();
+  };
 
   const load = useCallback(async () => {
     setState({ kind: "loading" });
@@ -125,8 +153,10 @@ export default function CommandePage() {
       essais++;
       const res = await api.orderById(id);
       if (res.ok) setState({ kind: "ready", order: res.data.order });
-      if (essais >= 40 || (res.ok && res.data.order.status !== "en_attente"))
-        clearInterval(t);
+      const confirmee = res.ok && res.data.order.status !== "en_attente";
+      if (essais >= 40 || confirmee) clearInterval(t);
+      // la page promet de se mettre à jour : quand elle arrête, elle le dit
+      if (essais >= 40 && !confirmee) setAttenteLongue(true);
     }, 3000);
     return () => clearInterval(t);
   }, [enAttente, id]);
@@ -153,6 +183,7 @@ export default function CommandePage() {
       setShipOpen(false);
       setDisputeOpen(false);
       setCancelArmed(false);
+      setReceiveArmed(false);
       setState({ kind: "ready", order: res.data.order });
     } else {
       setActionError(res.error);
@@ -221,6 +252,7 @@ export default function CommandePage() {
                 `${o.address.name}\n${o.address.line}\n${o.address.postal} ${o.address.city}`,
               );
               setCopied(true);
+              announce("Adresse copiée");
               window.setTimeout(() => setCopied(false), 1800);
             } catch {
               /* presse-papier indisponible — l'adresse reste lisible */
@@ -251,16 +283,34 @@ export default function CommandePage() {
               </div>
 
               {status === "en_attente" && (
-                <div
-                  role="status"
-                  className="mt-5 flex items-start gap-3 border border-bone/25 bg-bone/[0.05] px-3.5 py-3"
-                >
-                  <span className="mt-0.5 size-4 shrink-0 animate-spin rounded-full border-2 border-bone/30 border-t-bone" />
-                  <p className="text-[12.5px] leading-relaxed text-bone/85">
-                    Ta banque confirme le paiement. Cela prend en général
-                    quelques secondes — cette page se met à jour toute seule.
-                  </p>
-                </div>
+                <>
+                  <div
+                    role="status"
+                    className="mt-5 flex items-start gap-3 border border-bone/25 bg-bone/[0.05] px-3.5 py-3"
+                  >
+                    {!attenteLongue && (
+                      <span className="mt-0.5 size-4 shrink-0 animate-spin rounded-full border-2 border-bone/30 border-t-bone" />
+                    )}
+                    <p className="text-[12.5px] leading-relaxed text-bone/85">
+                      {attenteLongue
+                        ? "Ta banque n'a pas encore confirmé le paiement. Cette page ne se met plus à jour seule : actualise-la dans un instant."
+                        : "Ta banque confirme le paiement. Cela prend en général quelques secondes — cette page se met à jour toute seule."}
+                    </p>
+                  </div>
+                  {attenteLongue && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setAttenteLongue(false);
+                        void load();
+                      }}
+                      className="mt-2.5"
+                    >
+                      Actualiser
+                    </Button>
+                  )}
+                </>
               )}
               {status === "annulee" &&
                 (o as { cancelReason?: string }).cancelReason?.startsWith(
@@ -350,7 +400,9 @@ export default function CommandePage() {
                 </p>
               )}
 
-              {actionError && (
+              {/* feuille ouverte : l'erreur s'affiche DANS la feuille, pas
+                  derrière son voile */}
+              {actionError && !shipOpen && !disputeOpen && (
                 <p role="alert" className="mt-4 text-[13px] text-bone/85">
                   {actionError}
                 </p>
@@ -363,7 +415,10 @@ export default function CommandePage() {
                     <>
                       <Button
                         size="lg"
-                        onClick={() => setShipOpen(true)}
+                        onClick={() => {
+                          setActionError(null);
+                          setShipOpen(true);
+                        }}
                         disabled={busy}
                       >
                         J&apos;ai expédié
@@ -379,8 +434,11 @@ export default function CommandePage() {
                         </Button>
                       ) : (
                         <div className="border border-danger/60 p-4">
-                          <FieldLabel>Motif de l&apos;annulation</FieldLabel>
+                          <FieldLabel htmlFor={`${uid}-annulation`}>
+                            Motif de l&apos;annulation
+                          </FieldLabel>
                           <input
+                            id={`${uid}-annulation`}
                             value={cancelNote}
                             onChange={(e) => setCancelNote(e.target.value)}
                             placeholder="Ex. pièce abîmée au stockage"
@@ -472,24 +530,70 @@ export default function CommandePage() {
                     </>
                   )}
 
+                  {/* « Bien reçu » clôt la commande : plus de litige
+                      possible ensuite. Un appui de trop ne doit pas coûter
+                      la protection acheteur — confirmation en 2 temps. */}
                   {!seller && status === "expediee" && (
                     <>
-                      <Button
-                        size="lg"
-                        disabled={busy}
-                        onClick={() =>
-                          void transition(
-                            { id: o.id, action: "receive" },
-                            "order_receive",
-                          )
-                        }
-                      >
-                        {busy ? "Un instant…" : "Bien reçu"}
-                      </Button>
+                      {!receiveArmed ? (
+                        <Button
+                          id={`${uid}-recu`}
+                          size="lg"
+                          disabled={busy}
+                          onClick={() =>
+                            swapThenFocus(
+                              () => setReceiveArmed(true),
+                              `${uid}-recu-question`,
+                            )
+                          }
+                        >
+                          Bien reçu
+                        </Button>
+                      ) : (
+                        <div className="border border-bone/25 p-4">
+                          <p
+                            id={`${uid}-recu-question`}
+                            tabIndex={-1}
+                            className="text-[13px] leading-relaxed text-bone"
+                          >
+                            Tu confirmes avoir reçu la pièce conforme&nbsp;? Tu
+                            ne pourras plus ouvrir de litige.
+                          </p>
+                          <div className="mt-3 flex gap-2">
+                            <Button
+                              size="sm"
+                              disabled={busy}
+                              onClick={() =>
+                                void transition(
+                                  { id: o.id, action: "receive" },
+                                  "order_receive",
+                                )
+                              }
+                            >
+                              {busy ? "Un instant…" : "Confirmer la réception"}
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() =>
+                                swapThenFocus(
+                                  () => setReceiveArmed(false),
+                                  `${uid}-recu`,
+                                )
+                              }
+                            >
+                              Pas encore
+                            </Button>
+                          </div>
+                        </div>
+                      )}
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => setDisputeOpen(true)}
+                        onClick={() => {
+                          setActionError(null);
+                          setDisputeOpen(true);
+                        }}
                         className="self-start"
                       >
                         Signaler un problème
@@ -500,7 +604,10 @@ export default function CommandePage() {
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => setDisputeOpen(true)}
+                      onClick={() => {
+                        setActionError(null);
+                        setDisputeOpen(true);
+                      }}
                       className="self-start"
                     >
                       Signaler un problème
@@ -581,14 +688,20 @@ export default function CommandePage() {
               {/* sheet expédition */}
               <Sheet
                 open={shipOpen}
-                onClose={() => setShipOpen(false)}
+                onClose={() => {
+                  setShipOpen(false);
+                  setActionError(null);
+                }}
                 eyebrow="Commande"
                 title="Expédition"
               >
                 <div className="flex flex-col gap-4 px-5 py-4 pb-8">
                   <div>
-                    <FieldLabel>Transporteur (facultatif)</FieldLabel>
+                    <FieldLabel htmlFor={`${uid}-transporteur`}>
+                      Transporteur (facultatif)
+                    </FieldLabel>
                     <input
+                      id={`${uid}-transporteur`}
                       value={carrier}
                       onChange={(e) => setCarrier(e.target.value)}
                       placeholder={o.shippingMethod ?? "Mondial Relay"}
@@ -596,14 +709,25 @@ export default function CommandePage() {
                     />
                   </div>
                   <div>
-                    <FieldLabel>Numéro de suivi (facultatif)</FieldLabel>
+                    <FieldLabel htmlFor={`${uid}-suivi`}>
+                      Numéro de suivi (facultatif)
+                    </FieldLabel>
                     <input
+                      id={`${uid}-suivi`}
                       value={tracking}
                       onChange={(e) => setTracking(e.target.value)}
                       placeholder="Ex. 6A1234567890"
                       className="field w-full"
                     />
                   </div>
+                  {actionError && (
+                    <p
+                      role="alert"
+                      className="text-[12.5px] leading-relaxed text-bone"
+                    >
+                      {actionError}
+                    </p>
+                  )}
                   <Button
                     size="lg"
                     disabled={busy}
@@ -627,28 +751,44 @@ export default function CommandePage() {
               {/* sheet litige */}
               <Sheet
                 open={disputeOpen}
-                onClose={() => setDisputeOpen(false)}
+                onClose={() => {
+                  setDisputeOpen(false);
+                  setActionError(null);
+                }}
                 eyebrow="Commande"
                 title="Un problème ?"
               >
                 <div className="flex flex-col gap-4 px-5 py-4 pb-8">
-                  <div className="flex gap-2">
-                    <Chip
-                      active={disputeReason === "non_recue"}
-                      onClick={() => setDisputeReason("non_recue")}
+                  {/* choix unique : radiogroup nommé, flèches entre motifs */}
+                  <div>
+                    <FieldLabel id={`${uid}-motif`}>Motif</FieldLabel>
+                    <div
+                      role="radiogroup"
+                      aria-labelledby={`${uid}-motif`}
+                      className="flex gap-2"
                     >
-                      Non reçue
-                    </Chip>
-                    <Chip
-                      active={disputeReason === "non_conforme"}
-                      onClick={() => setDisputeReason("non_conforme")}
-                    >
-                      Non conforme
-                    </Chip>
+                      <Chip
+                        radio
+                        active={disputeReason === "non_recue"}
+                        onClick={() => setDisputeReason("non_recue")}
+                      >
+                        Non reçue
+                      </Chip>
+                      <Chip
+                        radio
+                        active={disputeReason === "non_conforme"}
+                        onClick={() => setDisputeReason("non_conforme")}
+                      >
+                        Non conforme
+                      </Chip>
+                    </div>
                   </div>
                   <div>
-                    <FieldLabel>Précisions (facultatif)</FieldLabel>
+                    <FieldLabel htmlFor={`${uid}-precisions`}>
+                      Précisions (facultatif)
+                    </FieldLabel>
                     <textarea
+                      id={`${uid}-precisions`}
                       value={disputeNote}
                       onChange={(e) => setDisputeNote(e.target.value)}
                       rows={3}
@@ -660,6 +800,14 @@ export default function CommandePage() {
                     Le litige gèle la commande. L&apos;équipe lit les deux
                     parties et tranche.
                   </p>
+                  {actionError && (
+                    <p
+                      role="alert"
+                      className="text-[12.5px] leading-relaxed text-bone"
+                    >
+                      {actionError}
+                    </p>
+                  )}
                   <Button
                     variant="danger"
                     size="lg"

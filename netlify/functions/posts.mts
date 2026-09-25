@@ -14,6 +14,7 @@ import {
   rateLimit,
 } from "./_shared/core.mts";
 import { storeImages, storeVideo } from "./_shared/media.mts";
+import { cleanTranscript } from "../../src/lib/transcript.ts";
 
 export default async (req: Request) => {
   const posts = store("posts");
@@ -45,6 +46,7 @@ export default async (req: Request) => {
     images?: string[];
     video?: string;
     poster?: string;
+    transcript?: unknown;
     productIds?: string[];
   }>(req);
   if (!(await rateLimit(`post:${user.id}`, 10, 24 * 3_600_000)))
@@ -66,9 +68,14 @@ export default async (req: Request) => {
      D-028) et voyage comme une photo ordinaire. */
   let video: string | undefined;
   let poster: string | undefined;
+  let transcript: string | undefined;
   if (b?.video) {
     if (process.env.NEXT_PUBLIC_VIDEO_UPLOAD !== "1")
       return bad("Publication vidéo pas encore ouverte", 503);
+    // transcription (WCAG 1.2) validée AVANT de stocker la vidéo
+    const t = cleanTranscript(b.transcript);
+    if (!t.ok) return bad(t.message);
+    transcript = t.value;
     const v = await storeVideo(b.video);
     if (!v.ok) return bad(v.error);
     video = v.path;
@@ -96,6 +103,7 @@ export default async (req: Request) => {
     gallery,
     video,
     poster,
+    transcript,
     productIds,
     createdAt: Date.now(),
   };

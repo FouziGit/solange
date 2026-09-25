@@ -5,8 +5,9 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { api } from "@/lib/api";
 import { useStore } from "@/lib/store";
-import { LEGAL_DOCS, MIN_AGE } from "@/lib/legal";
+import { LEGAL_DOCS, MIN_AGE, paymentsClaim } from "@/lib/legal";
 import { acceptanceKind, needsAcceptance } from "@/lib/legal-consent";
+import { usePaymentsMode } from "@/lib/use-payments-mode";
 import { Button } from "@/components/ui/Button";
 
 /* ============================================================
@@ -81,10 +82,7 @@ export function LegalGate({ children }: { children: React.ReactNode }) {
             : "On a mis à jour nos conditions. Prends le temps de les lire, puis dis-nous que tu es d'accord."}
         </p>
 
-        <p className="mt-3 text-[12.5px] leading-relaxed text-ash">
-          Rappel : les paiements sont simulés. Aucune somme n&apos;est débitée
-          et aucune vente n&apos;est réellement conclue.
-        </p>
+        <PaymentsReminder />
 
         <div className="mt-7 flex flex-col gap-4 border-t border-bone/10 pt-6">
           <label className="flex cursor-pointer items-start gap-3">
@@ -165,5 +163,20 @@ export function LegalGate({ children }: { children: React.ReactNode }) {
         </div>
       </div>
     </div>
+  );
+}
+
+/* Composant à part : /api/payments/config n'est interrogé que si l'écran
+   s'affiche, pas à chaque ouverture de l'app. Rien tant que le serveur
+   n'a pas dit si le paiement est réel. */
+function PaymentsReminder() {
+  const claim = paymentsClaim(usePaymentsMode());
+  if (!claim) return null;
+  return (
+    <p className="mt-3 text-[12.5px] leading-relaxed text-ash">
+      {claim === "simule"
+        ? "Rappel : les paiements sont simulés. Aucune somme n'est débitée et aucune vente n'est réellement conclue."
+        : "Rappel : le paiement se fait par carte, via Stripe."}
+    </p>
   );
 }

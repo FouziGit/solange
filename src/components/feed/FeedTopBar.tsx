@@ -48,7 +48,9 @@ export function FeedTopBar({
   return (
     <header
       style={{ paddingTop: "calc(env(safe-area-inset-top) + 0.75rem)" }}
-      className="pointer-events-none absolute inset-x-0 top-0 z-40 flex flex-col items-center gap-2 px-4 md:px-8"
+      /* côtés : l'encoche en paysage (à gauche dès md, la SideNav s'en
+         charge) */
+      className="pointer-events-none absolute inset-x-0 top-0 z-40 flex flex-col items-center gap-2 pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] md:pl-8 md:pr-[max(2rem,env(safe-area-inset-right))]"
     >
       {/* row 1 — [live dot] · logo centered · [bell]. Hidden on md (SideNav
           carries the logo there). */}
@@ -71,7 +73,7 @@ export function FeedTopBar({
         <Link
           href="/"
           aria-label="SOLANGE — accueil"
-          className="pointer-events-auto justify-self-center"
+          className="pointer-events-auto grid size-11 place-items-center justify-self-center"
         >
           <LogoMark variant="white" className="size-7" />
         </Link>
@@ -106,7 +108,8 @@ export function FeedTopBar({
                 role="tab"
                 aria-selected={on}
                 onClick={() => onModeChange(id)}
-                className="relative rounded-full px-4 py-1.5"
+                /* zone tactile de 44 px (HIG) sans grandir la pastille */
+                className="relative rounded-full px-4 py-1.5 before:absolute before:inset-x-0 before:-inset-y-2"
               >
                 {on && (
                   <motion.span
@@ -117,7 +120,7 @@ export function FeedTopBar({
                 )}
                 <span
                   className={`relative z-10 flex items-center gap-1.5 text-[13px] font-semibold tracking-wide transition-colors ${
-                    on ? "text-ink" : "text-bone/70"
+                    on ? "text-ink" : "text-bone/75"
                   }`}
                 >
                   <Icon className="size-4" />

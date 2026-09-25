@@ -67,18 +67,19 @@ export function JournalView({ articles }: { articles: Article[] }) {
                 className="transition-transform duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-[1.03]"
               />
 
-              {/* kicker row — top hairline, rubrique + folio */}
-              <div className="absolute inset-x-0 top-0 flex items-center justify-between border-b border-bone/15 px-5 py-3 md:px-8">
+              {/* kicker row — top hairline, rubrique + folio. theme-dark :
+                  texte posé sur la photo, clair dans tous les thèmes */}
+              <div className="theme-dark absolute inset-x-0 top-0 flex items-center justify-between border-b border-bone/15 px-5 py-3 md:px-8">
                 <span className="etiquette text-[11px] text-bone/80">
                   {KIND_LABEL[cover.kind]}
                 </span>
-                <span className="etiquette text-[11px] text-bone/50">
+                <span className="etiquette text-[11px] text-bone/75">
                   {folio(0)} — À la une
                 </span>
               </div>
 
               {/* headline block */}
-              <div className="absolute inset-x-0 bottom-0 flex flex-col gap-3 p-5 md:p-8">
+              <div className="theme-dark absolute inset-x-0 bottom-0 flex flex-col gap-3 p-5 md:p-8">
                 <h2 className="font-editorial max-w-4xl text-[clamp(2.1rem,8vw,4.75rem)] font-semibold leading-[0.95] tracking-tight text-bone">
                   {cover.title}
                 </h2>
@@ -86,14 +87,14 @@ export function JournalView({ articles }: { articles: Article[] }) {
                   {cover.standfirst}
                 </p>
                 <div className="mt-1 flex items-center gap-3 border-t border-bone/20 pt-3">
-                  <span className="etiquette text-[11px] text-bone/60">
+                  <span className="etiquette text-[11px] text-bone/75">
                     {cover.readingMin} min de lecture
                   </span>
-                  <span className="etiquette text-[11px] text-bone/60">
+                  <span className="etiquette text-[11px] text-bone/75">
                     {frDate(cover.date)}
                   </span>
                   {cover.brand && (
-                    <span className="hidden text-[12px] text-bone/60 md:inline">
+                    <span className="hidden text-[12px] text-bone/75 md:inline">
                       {cover.brand}
                     </span>
                   )}
@@ -108,8 +109,8 @@ export function JournalView({ articles }: { articles: Article[] }) {
       {rest.length > 0 && (
         <section className="mt-12 md:mt-16">
           <div className="flex items-baseline justify-between border-t border-bone/20 pt-3">
-            <h2 className="eyebrow text-sm text-bone/55">Au sommaire</h2>
-            <span className="etiquette text-[11px] text-bone/40">
+            <h2 className="eyebrow text-sm text-ash">Au sommaire</h2>
+            <span className="etiquette text-[11px] text-ash">
               {rest.length} article{rest.length > 1 ? "s" : ""}
             </span>
           </div>
@@ -135,10 +136,10 @@ export function JournalView({ articles }: { articles: Article[] }) {
                 >
                   {/* thin top rule + rubrique + folio */}
                   <div className="flex items-baseline justify-between border-t border-bone/25 pt-3">
-                    <span className="etiquette text-[11px] text-bone/60">
+                    <span className="etiquette text-[11px] text-ash">
                       {KIND_LABEL[a.kind]}
                     </span>
-                    <span className="etiquette text-[11px] text-bone/35">
+                    <span className="etiquette text-[11px] text-ash">
                       {folio(i + 1)}
                     </span>
                   </div>
@@ -168,7 +169,7 @@ export function JournalView({ articles }: { articles: Article[] }) {
                         {a.brand}
                       </span>
                     )}
-                    <span className="etiquette text-[11px] text-bone/45">
+                    <span className="etiquette text-[11px] text-ash">
                       {a.readingMin} min · {frDate(a.date)}
                     </span>
                   </div>
@@ -182,7 +183,7 @@ export function JournalView({ articles }: { articles: Article[] }) {
       {/* closing folio */}
       <div className="mt-14 flex items-center justify-center gap-4 border-t border-bone/15 pt-6">
         <span aria-hidden="true" className="h-px w-10 bg-bone/20" />
-        <span className="etiquette text-[11px] text-bone/35">
+        <span className="etiquette text-[11px] text-ash">
           Journal — Solange Éditions
         </span>
         <span aria-hidden="true" className="h-px w-10 bg-bone/20" />

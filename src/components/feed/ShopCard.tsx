@@ -1,14 +1,15 @@
 /* eslint-disable @next/next/no-img-element */
 "use client";
 
-import { useState } from "react";
+import { useId, useState } from "react";
 import { useStore } from "@/lib/store";
+import { announce } from "@/lib/announce";
 import { euro, compact, gradientFor, initials } from "@/lib/utils";
 import { imgItem } from "@/lib/img";
 import type { DisplayItem } from "../ui/ProductCard";
 import { Button } from "../ui/Button";
 import { Heart, Bookmark, Share, Bag } from "../chrome/icons";
-import { RailAction } from "./RailAction";
+import { RailAction, shareOrCopy } from "./RailAction";
 
 /**
  * Full-screen shoppable product card — the Vinted-in-TikTok side of the feed.
@@ -20,9 +21,12 @@ import { RailAction } from "./RailAction";
 export function ShopCard({
   item,
   index,
+  total,
 }: {
   item: DisplayItem;
   index: number;
+  /** Nombre de pièces du fil (aria-setsize). */
+  total: number;
 }) {
   const { isLiked, toggleLike, isSaved, toggleSave, isSold } = useStore();
   const liked = isLiked(item.id);
@@ -34,10 +38,36 @@ export function ShopCard({
   const off = item.originalEUR
     ? Math.round((1 - item.priceEUR / item.originalEUR) * 100)
     : null;
+  const brandId = useId();
+  const nameId = useId();
+
+  /* Partager : la fiche de la pièce ; une annonce membre n'a pas encore de
+     page à elle (pas de SSG en beta), on partage le profil du vendeur, où
+     elle figure dans « En vente ». */
+  const [copied, setCopied] = useState(false);
+  const onShare = async () => {
+    const path = item.member
+      ? `/membre/${encodeURIComponent(item.seller)}`
+      : `/article/${item.id}`;
+    const outcome = await shareOrCopy({
+      title: `${item.brand} — ${item.name}`,
+      url: new URL(path, window.location.origin).href,
+    });
+    if (outcome === "copied") {
+      announce("Lien copié");
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } else if (outcome === "failed") {
+      announce("Impossible de partager ce lien", "assertive");
+    }
+  };
 
   return (
-    <section
+    <article
       data-index={index}
+      aria-labelledby={`${brandId} ${nameId}`}
+      aria-posinset={index + 1}
+      aria-setsize={total}
       className="feed-snap relative flex h-[100dvh] w-full items-center justify-center md:py-[3vh]"
     >
       <div
@@ -45,7 +75,10 @@ export function ShopCard({
         style={{ background: gradientFor(item.seed) }}
       >
         {/* gradient + monogram fallback (shows if the photo is missing) */}
-        <span className="absolute inset-0 grid place-items-center">
+        <span
+          aria-hidden="true"
+          className="absolute inset-0 grid place-items-center"
+        >
           <span className="font-display text-[7rem] font-black text-bone/10">
             {initials(item.brand)}
           </span>
@@ -89,34 +122,37 @@ export function ShopCard({
         {off !== null && off > 0 && !sold && (
           <span
             style={{ top: "calc(env(safe-area-inset-top) + 6.75rem)" }}
-            className="absolute left-4 z-20 bg-bone px-2.5 py-1 text-[11px] font-bold tracking-wide text-ink"
+            className="absolute left-[max(1rem,env(safe-area-inset-left))] z-20 bg-bone px-2.5 py-1 text-[11px] font-bold tracking-wide text-ink md:left-4"
           >
             −{off}%
           </span>
         )}
 
-        {/* action rail — like / save / share */}
+        {/* action rail — like / save / share (resserré sur écran court) */}
         <div
           style={{ bottom: "calc(var(--tabbar-clearance) + 9rem)" }}
-          className="absolute right-3 z-20 flex flex-col items-center gap-5 md:!bottom-40"
+          className="absolute right-[max(0.75rem,env(safe-area-inset-right))] z-20 flex flex-col items-center gap-5 md:!bottom-40 md:right-3 [@media(max-height:700px)]:gap-2"
         >
           <RailAction
             label={compact(item.likes + (liked ? 1 : 0))}
+            hint="j'aime"
             onClick={() => toggleLike(item.id)}
             pressed={liked}
-            ariaLabel={liked ? "Retirer le j'aime" : "J'aime"}
           >
             <Heart filled={liked} className="size-6 text-bone" />
           </RailAction>
+          {/* libellé fixe : l'état passe par aria-pressed et le signet plein */}
           <RailAction
-            label={saved ? "Gardé" : "Garder"}
+            label="Garder"
             onClick={() => toggleSave(item.id)}
             pressed={saved}
-            ariaLabel={saved ? "Retirer des favoris" : "Enregistrer"}
           >
             <Bookmark filled={saved} className="size-6 text-bone" />
           </RailAction>
-          <RailAction label="Partager" ariaLabel="Partager">
+          <RailAction
+            label={copied ? "Copié" : "Partager"}
+            onClick={() => void onShare()}
+          >
             <Share className="size-[22px] text-bone" />
           </RailAction>
         </div>
@@ -124,12 +160,18 @@ export function ShopCard({
         {/* bottom info + buy CTA */}
         <div
           style={{ paddingBottom: "calc(var(--tabbar-clearance) + 1rem)" }}
-          className="absolute inset-x-0 bottom-0 z-20 space-y-2.5 p-4 pr-20 md:!pb-9"
+          className="absolute inset-x-0 bottom-0 z-20 space-y-2.5 p-4 pl-[max(1rem,env(safe-area-inset-left))] pr-[calc(5rem+env(safe-area-inset-right))] md:!pb-9 md:pl-4 md:pr-20"
         >
-          <p className="text-[12px] text-bone/70">{item.brand}</p>
-          <p className="font-display max-w-[24ch] text-[16px] font-semibold leading-snug tracking-tight text-bone">
-            {item.name}
+          <p id={brandId} className="text-[12px] text-bone/75">
+            {item.brand}
           </p>
+          {/* un titre par écran du fil Pièces (rotor VoiceOver) */}
+          <h2
+            id={nameId}
+            className="font-display max-w-[24ch] text-[16px] font-semibold leading-snug tracking-tight text-bone"
+          >
+            {item.name}
+          </h2>
 
           <div className="flex items-baseline gap-2">
             <span className="font-display text-2xl font-black tracking-mega text-bone">
@@ -179,6 +221,6 @@ export function ShopCard({
           </div>
         </div>
       </div>
-    </section>
+    </article>
   );
 }

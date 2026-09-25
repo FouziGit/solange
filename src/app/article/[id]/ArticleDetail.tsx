@@ -8,6 +8,7 @@ import { compact, euro } from "@/lib/utils";
 import { imgItem } from "@/lib/img";
 import { track } from "@/lib/track";
 import { useStore } from "@/lib/store";
+import { usePaymentsMode } from "@/lib/use-payments-mode";
 import { Avatar } from "@/components/chrome/Avatar";
 import { Button } from "@/components/ui/Button";
 import { LuxeMedia } from "@/components/ui/LuxeMedia";
@@ -24,6 +25,8 @@ export function ArticleDetail({
   similar: CatalogItem[];
 }) {
   const { isSaved, toggleSave, isSold, likeCount } = useStore();
+  // « simulé » seulement quand le serveur l'a confirmé (paiement réel en prod)
+  const payments = usePaymentsMode();
   const [reportOpen, setReportOpen] = useState(false);
   const saved = isSaved(item.id);
   const sold = isSold(item.id);
@@ -46,11 +49,13 @@ export function ArticleDetail({
           transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
         >
           <div className="relative aspect-[3/4] overflow-hidden rounded-3xl ring-1 ring-bone/10">
+            {/* theme-dark : le filigrane reste clair sur le fond sombre */}
             <LuxeMedia
               seed={item.seed}
               brand={item.brand}
               image={imgItem(item.id)}
               eager
+              className="theme-dark"
             />
           </div>
           <div className="mt-3 grid grid-cols-2 gap-3">
@@ -59,7 +64,12 @@ export function ArticleDetail({
                 key={t}
                 className="relative aspect-[4/3] overflow-hidden rounded-3xl ring-1 ring-bone/10"
               >
-                <LuxeMedia seed={t} brand={item.brand} small />
+                <LuxeMedia
+                  seed={t}
+                  brand={item.brand}
+                  small
+                  className="theme-dark"
+                />
               </div>
             ))}
           </div>
@@ -205,8 +215,12 @@ export function ArticleDetail({
           </div>
 
           <p className="mt-6 text-[13px] leading-relaxed text-ash">
-            Protection acheteur (démo) — paiement simulé, aucune transaction
-            réelle. Commission dégressive reversée au vendeur.
+            {payments.ready && !payments.live
+              ? "Protection acheteur (démo) — paiement simulé, aucune transaction réelle."
+              : payments.live
+                ? "Protection acheteur — le paiement se fait par carte, via Stripe."
+                : "Protection acheteur."}{" "}
+            Commission dégressive reversée au vendeur.
           </p>
 
           {/* Lot 4 : les annonces étaient le SEUL contenu non signalable

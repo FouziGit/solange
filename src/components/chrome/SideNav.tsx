@@ -106,7 +106,9 @@ export function SideNav() {
   }, [composeOpen]);
 
   return (
-    <aside className="fixed inset-y-0 left-0 z-50 hidden w-[88px] flex-col items-center justify-between border-r border-bone/10 bg-ink/70 py-7 backdrop-blur-xl md:flex">
+    /* en paysage sur iPhone, l'encoche est à gauche : la colonne s'élargit
+       d'autant (layout décale <main> du même calcul) */
+    <aside className="fixed inset-y-0 left-0 z-50 hidden w-[calc(88px+env(safe-area-inset-left))] flex-col items-center justify-between border-r border-bone/10 bg-ink/70 py-7 pl-[env(safe-area-inset-left)] backdrop-blur-xl md:flex">
       <Link
         href="/"
         className="grid size-11 place-items-center transition-transform duration-300 hover:scale-110"
@@ -123,6 +125,7 @@ export function SideNav() {
             <Link
               key={href}
               href={href}
+              aria-current={on ? "page" : undefined}
               className="group relative flex w-[72px] flex-col items-center gap-1.5 rounded-2xl py-3 transition-colors"
             >
               {on && (
@@ -152,18 +155,20 @@ export function SideNav() {
                 )}
                 {badge && !live && (
                   <span
+                    aria-hidden="true"
                     className="absolute -right-1 -top-0.5 size-2 rounded-full bg-bone ring-2 ring-ink"
-                    aria-label="Du nouveau dans tes cercles"
                   />
                 )}
               </span>
               <span
                 className={`relative text-[11px] font-medium tracking-wide transition-colors ${
-                  on ? "text-bone" : "text-ash/70 group-hover:text-bone"
+                  on ? "text-bone" : "text-ash group-hover:text-bone"
                 }`}
               >
                 {label}
               </span>
+              {/* un aria-label sur un <span> n'est pas fiable : texte masqué */}
+              {badge && !live && <span className="sr-only">, du nouveau</span>}
             </Link>
           );
         })}
@@ -227,6 +232,7 @@ export function SideNav() {
           name="Nouh B"
           seed="solange-me-01"
           className="relative size-10 text-lg"
+          decorative
         />
       </Link>
     </aside>

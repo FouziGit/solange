@@ -41,6 +41,7 @@ import {
   buildSaleConsent,
   saleAcceptanceIsValid,
 } from "../../src/lib/legal-consent.ts";
+import { validateRelay } from "../../src/lib/shipping.ts";
 
 const SHIPPING_EUR = 4.9;
 /* Barème transporteur — miroir du front (src/lib/shipping.ts). */
@@ -116,8 +117,12 @@ export default async (req: Request) => {
     price: SHIPPING_EUR,
     carrier: "Livraison suivie",
   });
-  const relayLabel =
-    typeof b?.relayLabel === "string" ? b.relayLabel.slice(0, 80) : "";
+  /* Point relais : obligatoire en Mondial Relay / Point Relais (le
+     vendeur doit savoir où déposer le colis), 160 caractères au plus
+     (nom, adresse, code postal, ville). Même règle qu'au paiement. */
+  const relayCheck = validateRelay(method, b?.relayLabel);
+  if (!relayCheck.ok) return bad(relayCheck.error, 400);
+  const relayLabel = relayCheck.label;
 
   // Livraison à domicile (Chronopost) : adresse requise, validée serveur.
   // En point relais, l'adresse du relais fait foi — rien d'autre n'est stocké.

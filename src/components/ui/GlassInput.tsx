@@ -2,9 +2,13 @@
 
 import { cn } from "@/lib/utils";
 
-type BaseProps = {
-  /** Accessible label — required so the field is never unlabelled. */
-  "aria-label": string;
+/** Nom accessible obligatoire, pour qu'aucun champ ne reste muet : un
+    `aria-label`, ou mieux un `id` relié à une <FieldLabel htmlFor={id}>
+    visible (VoiceOver et Contrôle vocal lisent alors l'étiquette affichée). */
+type BaseProps = (
+  | { "aria-label": string; id?: string }
+  | { id: string; "aria-label"?: undefined }
+) & {
   className?: string;
 };
 

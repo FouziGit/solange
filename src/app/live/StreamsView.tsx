@@ -1,8 +1,14 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 
-import { AnimatePresence, motion } from "motion/react";
+import {
+  AnimatePresence,
+  motion,
+  useIsPresent,
+  useReducedMotion,
+} from "motion/react";
 import { PageShell } from "@/components/ui/PageShell";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Button } from "@/components/ui/Button";
@@ -21,12 +27,14 @@ import { cn, compact, euro, EASE } from "@/lib/utils";
    a shoppable product rail. Mock data only, strict noir & blanc.
    ============================================================ */
 
-/** Looping muted preview that fails open to the LuxeMedia still. */
+/** Looping muted preview that fails open to the LuxeMedia still.
+ *  `playing` faux : reste sur l'affiche (pause, Réduire les animations). */
 function StreamVideo({
   src,
   poster,
   seed,
   muted = true,
+  playing = true,
   eager,
   className,
 }: {
@@ -34,6 +42,7 @@ function StreamVideo({
   poster: string;
   seed: string;
   muted?: boolean;
+  playing?: boolean;
   eager?: boolean;
   className?: string;
 }) {
@@ -50,6 +59,10 @@ function StreamVideo({
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
+    if (!playing) {
+      el.pause();
+      return;
+    }
     const io = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) void el.play().catch(() => {});
@@ -59,7 +72,7 @@ function StreamVideo({
     );
     io.observe(el);
     return () => io.disconnect();
-  }, []);
+  }, [playing]);
 
   if (failed) return <LuxeMedia seed={seed} watermark className={className} />;
 
@@ -125,6 +138,29 @@ function SoundIcon({
   );
 }
 
+function PlayPauseIcon({
+  paused,
+  className,
+}: {
+  paused: boolean;
+  className?: string;
+}) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      className={className}
+      aria-hidden="true"
+    >
+      {paused ? (
+        <path d="M7 4.5 19 12 7 19.5z" />
+      ) : (
+        <path d="M7 5h3.5v14H7zM13.5 5H17v14h-3.5z" />
+      )}
+    </svg>
+  );
+}
+
 /** Pulsing EN DIRECT badge (bone dot + ping). */
 function LiveBadge({ className }: { className?: string }) {
   return (
@@ -153,6 +189,8 @@ function LiveTile({
   index: number;
   onOpen: () => void;
 }) {
+  // Réduire les animations : la grille reste sur les affiches, rien ne boucle
+  const reduce = useReducedMotion();
   return (
     <motion.button
       type="button"
@@ -167,6 +205,7 @@ function LiveTile({
         src={stream.video}
         poster={stream.poster}
         seed={stream.seed}
+        playing={!reduce}
       />
 
       {/* top overlays */}
@@ -258,15 +297,15 @@ function UpcomingRow({ stream, index }: { stream: Stream; index: number }) {
 function ChatRow({ line }: { line: ChatLine }) {
   return (
     <div className="flex items-start gap-2">
+      {/* le pseudo est écrit juste à côté : le log ne le lit qu'une fois */}
       <Avatar
         name={line.handle}
         seed={line.seed}
+        decorative
         className="mt-0.5 size-6 shrink-0 text-[11px]"
       />
       <p className="min-w-0 text-[13px] leading-snug text-bone/90">
-        <span className="mr-1.5 font-semibold text-bone/60">
-          @{line.handle}
-        </span>
+        <span className="mr-1.5 font-semibold text-ash">@{line.handle}</span>
         {line.text}
       </p>
     </div>
@@ -346,8 +385,15 @@ function Composer({ onSend }: { onSend: (text: string) => void }) {
 /** Full-screen live viewer: player + chat + shoppable rail. */
 function Viewer({ stream, onClose }: { stream: Stream; onClose: () => void }) {
   const [muted, setMuted] = useState(true);
+  const [paused, setPaused] = useState(false);
   const [mine, setMine] = useState<ChatLine[]>([]);
   const chat = [...stream.chat, ...mine];
+  // mobile : six dernières lignes, clés stables (le log n'annonce que l'ajout)
+  const recent = chat.slice(-6);
+  const recentFrom = chat.length - recent.length;
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const closeRef = useRef<HTMLButtonElement>(null);
+  const isPresent = useIsPresent();
 
   const send = (text: string) =>
     setMine((m) => [...m, { handle: "toi", seed: "solange-me-01", text }]);
@@ -360,6 +406,42 @@ function Viewer({ stream, onClose }: { stream: Stream; onClose: () => void }) {
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
   }, [onClose]);
+
+  /* Focus : entre dans le lecteur à l'ouverture (sinon il reste sur la
+     tuile, cachée dessous), boucle dedans avec Tab, et revient à la tuile
+     dès la fermeture. */
+  useEffect(() => {
+    if (!isPresent) return;
+    const prev =
+      document.activeElement instanceof HTMLElement
+        ? document.activeElement
+        : null;
+    closeRef.current?.focus({ preventScroll: true });
+    const onTab = (e: KeyboardEvent) => {
+      const root = dialogRef.current;
+      if (e.key !== "Tab" || !root) return;
+      // seulement les éléments affichés (chat mobile OU panneau desktop)
+      const items = [
+        ...root.querySelectorAll<HTMLElement>("button, [href], input"),
+      ].filter((el) => el.getClientRects().length > 0);
+      if (items.length === 0) return;
+      const first = items[0];
+      const last = items[items.length - 1];
+      const active = document.activeElement;
+      if (e.shiftKey && (active === first || !root.contains(active))) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && (active === last || !root.contains(active))) {
+        e.preventDefault();
+        first.focus();
+      }
+    };
+    document.addEventListener("keydown", onTab);
+    return () => {
+      document.removeEventListener("keydown", onTab);
+      if (prev?.isConnected) prev.focus({ preventScroll: true });
+    };
+  }, [isPresent]);
 
   const header = (
     <div className="flex min-w-0 items-center gap-2.5">
@@ -401,8 +483,15 @@ function Viewer({ stream, onClose }: { stream: Stream; onClose: () => void }) {
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 0.3, ease: EASE.luxe }}
-      className="fixed inset-0 z-[70] flex flex-col bg-coal md:flex-row"
+      ref={dialogRef}
+      /* en sortie, le voile invisible ne doit plus capter un toucher */
+      inert={isPresent ? undefined : true}
+      className={cn(
+        "fixed inset-0 z-[70] flex flex-col bg-coal md:flex-row",
+        !isPresent && "pointer-events-none",
+      )}
       role="dialog"
+      aria-modal="true"
       aria-label={`Live · ${stream.title}`}
     >
       {/* STAGE */}
@@ -412,6 +501,7 @@ function Viewer({ stream, onClose }: { stream: Stream; onClose: () => void }) {
           poster={stream.poster}
           seed={stream.seed}
           muted={muted}
+          playing={!paused}
           eager
           className="absolute inset-0"
         />
@@ -422,6 +512,7 @@ function Viewer({ stream, onClose }: { stream: Stream; onClose: () => void }) {
         {/* top bar: close + creator */}
         <div className="absolute inset-x-0 top-0 flex items-center gap-3 p-4 pt-[calc(1rem+env(safe-area-inset-top))]">
           <button
+            ref={closeRef}
             type="button"
             onClick={onClose}
             aria-label="Fermer le live"
@@ -433,17 +524,29 @@ function Viewer({ stream, onClose }: { stream: Stream; onClose: () => void }) {
           {header}
         </div>
 
-        {/* mute toggle */}
-        <button
-          type="button"
-          onClick={() => setMuted((m) => !m)}
-          aria-label={muted ? "Activer le son" : "Couper le son"}
-          aria-pressed={!muted}
-          data-cursor="link"
-          className="glass absolute right-4 top-[calc(5.5rem+env(safe-area-inset-top))] z-10 grid size-11 place-items-center rounded-full text-bone transition-transform active:scale-90 md:bottom-4 md:top-auto"
-        >
-          <SoundIcon muted={muted} className="size-5" />
-        </button>
+        {/* son + pause — le libellé porte l'état (pas d'aria-pressed en plus) */}
+        <div className="absolute right-4 top-[calc(5.5rem+env(safe-area-inset-top))] z-10 flex flex-col gap-3 md:bottom-4 md:top-auto md:flex-row">
+          <button
+            type="button"
+            onClick={() => setMuted((m) => !m)}
+            aria-label={muted ? "Activer le son" : "Couper le son"}
+            data-cursor="link"
+            className="glass grid size-11 place-items-center rounded-full text-bone transition-transform active:scale-90"
+          >
+            <SoundIcon muted={muted} className="size-5" />
+          </button>
+          <button
+            type="button"
+            onClick={() => setPaused((p) => !p)}
+            aria-label={
+              paused ? "Reprendre la vidéo" : "Mettre la vidéo en pause"
+            }
+            data-cursor="link"
+            className="glass grid size-11 place-items-center rounded-full text-bone transition-transform active:scale-90"
+          >
+            <PlayPauseIcon paused={paused} className="size-5" />
+          </button>
+        </div>
 
         {/* desktop: shoppable rail pinned to the bottom of the stage */}
         <div className="pointer-events-none absolute inset-x-0 bottom-0 hidden bg-gradient-to-t from-ink to-transparent pt-16 md:block">
@@ -457,9 +560,13 @@ function Viewer({ stream, onClose }: { stream: Stream; onClose: () => void }) {
           <div className="pointer-events-none h-24 bg-gradient-to-t from-coal to-transparent" />
           <div className="bg-coal">
             <ShoppableRail productIds={stream.productIds} />
-            <div className="flex max-h-40 flex-col justify-end gap-2 overflow-y-auto px-4">
-              {chat.slice(-6).map((line, i) => (
-                <ChatRow key={i} line={line} />
+            <div
+              role="log"
+              aria-label="Chat du live"
+              className="flex max-h-40 flex-col justify-end gap-2 overflow-y-auto px-4"
+            >
+              {recent.map((line, i) => (
+                <ChatRow key={recentFrom + i} line={line} />
               ))}
             </div>
             <div className="px-4 pb-[calc(0.75rem+env(safe-area-inset-bottom))] pt-3">
@@ -472,13 +579,17 @@ function Viewer({ stream, onClose }: { stream: Stream; onClose: () => void }) {
       {/* desktop: live chat panel */}
       <aside className="hidden w-[380px] shrink-0 flex-col border-l border-bone/10 bg-ink/40 md:flex">
         <header className="flex items-center gap-2 border-b border-bone/10 px-4 py-4">
-          <p className="eyebrow text-sm text-bone/55">Chat en direct</p>
+          <p className="eyebrow text-sm text-ash">Chat en direct</p>
           <span className="ml-auto flex items-center gap-1 text-[11px] text-ash">
             <Eye className="size-3.5" />
             {compact(stream.viewers)}
           </span>
         </header>
-        <div className="flex flex-1 flex-col gap-2.5 overflow-y-auto px-4 py-4">
+        <div
+          role="log"
+          aria-label="Chat du live"
+          className="flex flex-1 flex-col gap-2.5 overflow-y-auto px-4 py-4"
+        >
           {chat.map((line, i) => (
             <ChatRow key={i} line={line} />
           ))}
@@ -493,6 +604,11 @@ function Viewer({ stream, onClose }: { stream: Stream; onClose: () => void }) {
 
 export function StreamsView({ streams }: { streams: Stream[] }) {
   const [selId, setSelId] = useState<string | null>(null);
+  // Portail : sort le lecteur du contexte d'empilement de la transition de
+  // page (template.tsx) — sinon z-[70] reste sous la barre d'onglets et
+  // cache le champ du chat.
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => queueMicrotask(() => setMounted(true)), []);
   const live = streams.filter((s) => s.live);
   const upcoming = streams.filter((s) => !s.live);
   const selected = streams.find((s) => s.id === selId) ?? null;
@@ -542,7 +658,7 @@ export function StreamsView({ streams }: { streams: Stream[] }) {
             <h2 className="font-editorial text-2xl font-semibold tracking-tight text-bone">
               À venir
             </h2>
-            <span className="etiquette text-[11px] text-bone/35">
+            <span className="etiquette text-[11px] text-ash">
               Nº {String(upcoming.length).padStart(2, "0")}
             </span>
           </div>
@@ -555,11 +671,19 @@ export function StreamsView({ streams }: { streams: Stream[] }) {
       )}
 
       {/* Full-screen viewer */}
-      <AnimatePresence>
-        {selected && (
-          <Viewer stream={selected} onClose={() => setSelId(null)} />
+      {mounted &&
+        createPortal(
+          <AnimatePresence>
+            {selected && (
+              <Viewer
+                key={selected.id}
+                stream={selected}
+                onClose={() => setSelId(null)}
+              />
+            )}
+          </AnimatePresence>,
+          document.body,
         )}
-      </AnimatePresence>
     </PageShell>
   );
 }

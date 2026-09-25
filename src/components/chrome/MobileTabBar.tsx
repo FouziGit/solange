@@ -148,6 +148,7 @@ function TabLink({
   return (
     <Link
       href={href}
+      aria-current={on ? "page" : undefined}
       className="relative z-10 flex flex-1 flex-col items-center gap-1 py-1.5"
     >
       <span className="relative">
@@ -162,16 +163,20 @@ function TabLink({
         )}
         {badge && !live && (
           <span
+            aria-hidden="true"
             className="absolute -right-1 -top-0.5 size-1.5 rounded-full bg-bone"
-            aria-label="Du nouveau dans tes cercles"
           />
         )}
       </span>
+      {/* inactif en text-ash (≥ 4.5:1 sur la barre) ; l'actif se distingue
+          aussi par la graisse et le point, pas par la seule couleur */}
       <span
-        className={`text-[11px] font-medium tracking-wide transition-colors ${on ? "text-bone" : "text-ash/60"}`}
+        className={`text-[11px] tracking-wide transition-colors ${on ? "font-semibold text-bone" : "font-medium text-ash"}`}
       >
         {label}
       </span>
+      {/* un aria-label sur un <span> n'est pas fiable : texte masqué */}
+      {badge && !live && <span className="sr-only">, du nouveau</span>}
       {on && (
         <motion.span
           layoutId="tab-active"

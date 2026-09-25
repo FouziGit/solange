@@ -1,12 +1,17 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { motion, useReducedMotion } from "motion/react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { motion } from "motion/react";
 import type { Drop } from "@/lib/mock";
 import { catalogItem } from "@/lib/mock";
 import { compact } from "@/lib/utils";
 import { imgItem } from "@/lib/img";
 import { track } from "@/lib/track";
+import {
+  formatCountdown,
+  formatCountdownMinutes,
+  nextCountdownDelay,
+} from "@/lib/drop-countdown";
 import { Avatar } from "@/components/chrome/Avatar";
 import { LuxeMedia } from "@/components/ui/LuxeMedia";
 import { ProductCard } from "@/components/ui/ProductCard";
@@ -14,39 +19,52 @@ import { TogglePill } from "@/components/ui/TogglePill";
 import { Button } from "@/components/ui/Button";
 import { Check, Verified } from "@/components/chrome/icons";
 
-/** Format a remaining-seconds count as a zero-padded HH:MM:SS string. */
-function formatCountdown(total: number): string {
-  const s = Math.max(0, Math.floor(total));
-  const h = Math.floor(s / 3600);
-  const m = Math.floor((s % 3600) / 60);
-  const sec = s % 60;
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${pad(h)}:${pad(m)}:${pad(sec)}`;
+const REDUCE_QUERY = "(prefers-reduced-motion: reduce)";
+
+/** « Réduire les animations », lu sans écart d'hydratation : le rendu
+ *  serveur et le premier rendu client affichent la même valeur. */
+function usePrefersReducedMotion() {
+  return useSyncExternalStore(
+    (cb) => {
+      const mq = window.matchMedia(REDUCE_QUERY);
+      mq.addEventListener("change", cb);
+      return () => mq.removeEventListener("change", cb);
+    },
+    () => window.matchMedia(REDUCE_QUERY).matches,
+    () => false,
+  );
 }
 
 /**
- * Live featured countdown. Ticks the Wave-A `secondsToStart` down once a second.
+ * Live featured countdown, computed from a fixed deadline.
  * - secondsToStart === 0 → the drop is live, render the "EN DIRECT" label instead.
- * - reduced-motion → no interval, render the static initial value (no flicker).
+ * - reduced-motion → jamais figé : affichage à la minute (« 2 h 14 min »),
+ *   mis à jour une fois par minute, sans aria-live.
  */
 function FeaturedCountdown({ seconds }: { seconds: number }) {
-  const reduce = useReducedMotion();
-  const [remaining, setRemaining] = useState(seconds);
+  const byMinute = usePrefersReducedMotion();
+  const [remainingMs, setRemainingMs] = useState(seconds * 1000);
+  // échéance posée une fois : basculer le réglage ne relance pas le décompte
+  const deadline = useRef<number | null>(null);
 
-  // Subscribe to a 1 s ticker; cleared on unmount or when reduced-motion is on.
-  // `seconds` is fixed for the featured drop, so initial state covers the static
-  // (reduced-motion / live) cases without re-syncing inside the effect.
   useEffect(() => {
-    if (seconds <= 0 || reduce) return;
-    const id = setInterval(() => {
-      setRemaining((r) => (r <= 1 ? 0 : r - 1));
-    }, 1000);
-    return () => clearInterval(id);
-  }, [seconds, reduce]);
+    if (seconds <= 0) return;
+    deadline.current ??= Date.now() + seconds * 1000;
+    const end = deadline.current;
+    let id: ReturnType<typeof setTimeout>;
+    const tick = () => {
+      const left = Math.max(0, end - Date.now());
+      setRemainingMs(left);
+      if (left > 0) id = setTimeout(tick, nextCountdownDelay(left, byMinute));
+    };
+    id = setTimeout(tick, nextCountdownDelay(end - Date.now(), byMinute));
+    return () => clearTimeout(id);
+  }, [seconds, byMinute]);
 
+  const s = remainingMs / 1000;
   return (
     <span className="glass rounded-full px-3 py-1.5 text-[12px] font-medium tabular-nums text-bone">
-      Démarre dans {formatCountdown(remaining)}
+      Démarre dans {byMinute ? formatCountdownMinutes(s) : formatCountdown(s)}
     </span>
   );
 }
@@ -62,7 +80,7 @@ function NotifySwitch({ label }: { label: string }) {
       aria-label={label}
       onClick={() => setOn((v) => !v)}
       data-cursor="link"
-      className="flex shrink-0 items-center gap-2"
+      className="flex min-h-11 shrink-0 items-center gap-2"
     >
       <span className="hidden text-[11px] font-medium text-bone/70 sm:inline">
         Me prévenir
@@ -99,11 +117,22 @@ function ProductRow({ ids }: { ids: string[] }) {
 }
 
 export function DropsView({ drops }: { drops: Drop[] }) {
-  const featured = drops.find((d) => d.badge === "LIVE") ?? drops[0];
-  const upcoming = drops.filter((d) => d.id !== featured.id);
-
   const gridRef = useRef<HTMLDivElement>(null);
   const [reserved, setReserved] = useState(false);
+
+  const featured = drops.find((d) => d.badge === "LIVE") ?? drops[0];
+  // Aucun drop : on le dit, plutôt que de planter sur un drop inexistant.
+  if (!featured)
+    return (
+      <div className="py-16 text-center">
+        <p className="text-[14px] text-bone">Aucun drop pour le moment.</p>
+        <p className="mx-auto mt-1.5 max-w-[36ch] text-[12.5px] leading-relaxed text-ash">
+          Les prochaines ventes et collaborations apparaîtront ici, avec
+          l&apos;heure de leur ouverture.
+        </p>
+      </div>
+    );
+  const upcoming = drops.filter((d) => d.id !== featured.id);
 
   /** Scroll the featured product grid into view instead of leaving the page. */
   const seeDrop = () => {
@@ -134,8 +163,9 @@ export function DropsView({ drops }: { drops: Drop[] }) {
             eager
           />
 
-          {/* top badges */}
-          <div className="absolute inset-x-0 top-0 flex items-center justify-between p-5">
+          {/* top badges — theme-dark : posés sur la photo, jamais en encre
+              sombre sur voile noir (thème clair) */}
+          <div className="theme-dark absolute inset-x-0 top-0 flex items-center justify-between p-5">
             {featured.badge === "LIVE" ? (
               <span className="flex items-center gap-2 rounded-full bg-bone/10 px-3 py-1 ring-1 ring-bone/40 backdrop-blur">
                 <span className="relative grid place-items-center">
@@ -162,9 +192,9 @@ export function DropsView({ drops }: { drops: Drop[] }) {
           </div>
 
           {/* bottom content */}
-          <div className="absolute inset-x-0 bottom-0 p-5 md:p-7">
+          <div className="theme-dark absolute inset-x-0 bottom-0 p-5 md:p-7">
             {featured.collab && (
-              <p className="etiquette text-[11px] text-bone/60">
+              <p className="etiquette text-[11px] text-bone/75">
                 {featured.collab}
               </p>
             )}

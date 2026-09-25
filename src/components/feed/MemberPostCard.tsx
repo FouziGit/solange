@@ -1,7 +1,7 @@
 /* eslint-disable @next/next/no-img-element */
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import {
   AnimatePresence,
   motion,
@@ -18,7 +18,7 @@ import { MemberVideo } from "./MemberVideo";
 import { RailAction } from "./RailAction";
 import { ShopTheLook } from "./ShopTheLook";
 import { ReportSheet } from "../ui/ReportSheet";
-import { Heart, Bookmark, Hanger } from "../chrome/icons";
+import { Heart, Bookmark, Hanger, ChevronRight } from "../chrome/icons";
 
 const group: Variants = {
   hide: {},
@@ -46,11 +46,14 @@ export function MemberPostCard({
   post,
   active,
   index,
+  total,
   inView,
 }: {
   post: ApiPost;
   active: boolean;
   index: number;
+  /** Nombre de publications du fil (aria-setsize). */
+  total: number;
   inView: boolean;
 }) {
   const reduce = useReducedMotion();
@@ -64,6 +67,7 @@ export function MemberPostCard({
   } = useStore();
   const liked = isLiked(post.id);
   const saved = isSaved(post.id);
+  const headingId = useId();
 
   const hasGallery = post.gallery.length > 1;
   const hero = post.gallery[0];
@@ -113,10 +117,18 @@ export function MemberPostCard({
   const onReport = () => setReportOpen(true);
 
   return (
-    <section
+    <article
       data-index={index}
+      aria-labelledby={headingId}
+      aria-posinset={index + 1}
+      aria-setsize={total}
       className="feed-snap relative flex h-[100dvh] w-full items-center justify-center md:py-[3vh]"
     >
+      {/* repère du rotor, présent même hors fenêtre : la liste des titres
+          compte toutes les publications, pas seulement les 3 montées */}
+      <h2 id={headingId} className="sr-only">
+        Publication {index + 1} sur {total} · @{post.authorHandle}
+      </h2>
       <motion.div
         animate={{
           scale: reduce ? 1 : active ? 1 : 0.95,
@@ -206,14 +218,15 @@ export function MemberPostCard({
                 delay: active ? 0.18 : 0,
               }}
               style={{ bottom: "calc(var(--tabbar-clearance) + 4.5rem)" }}
-              className="absolute right-3 z-20 md:!bottom-40"
+              className="absolute right-[max(0.75rem,env(safe-area-inset-right))] z-20 md:!bottom-40 md:right-3"
             >
-              <div className="flex flex-col items-center gap-5">
+              {/* écran court : rail resserré, il ne sort plus de la carte */}
+              <div className="flex flex-col items-center gap-5 [@media(max-height:700px)]:gap-2">
                 {taggedPieces.length > 0 && (
                   <RailAction
                     label={`${taggedPieces.length} pièce${taggedPieces.length > 1 ? "s" : ""}`}
+                    hint="à shopper"
                     onClick={() => setShopOpen(true)}
-                    ariaLabel="Voir les pièces à shopper"
                   >
                     <Hanger className="size-6 text-bone" />
                   </RailAction>
@@ -221,9 +234,9 @@ export function MemberPostCard({
 
                 <RailAction
                   label={compact(likeCount(post.id, 0) + (liked ? 1 : 0))}
+                  hint="j'aime"
                   onClick={() => toggleLike(post.id)}
                   pressed={liked}
-                  ariaLabel={liked ? "Retirer le j'aime" : "J'aime"}
                 >
                   <motion.span
                     key={liked ? "on" : "off"}
@@ -234,14 +247,12 @@ export function MemberPostCard({
                   </motion.span>
                 </RailAction>
 
+                {/* libellé fixe, état par aria-pressed et le signet plein */}
                 <RailAction
-                  label={saved ? "Enregistré" : "Garder"}
+                  label="Garder"
                   onClick={() => toggleSave(post.id)}
                   accent
                   pressed={saved}
-                  ariaLabel={
-                    saved ? "Retirer des enregistrements" : "Enregistrer"
-                  }
                 >
                   <Bookmark filled={saved} className="size-6 text-bone" />
                 </RailAction>
@@ -269,7 +280,7 @@ export function MemberPostCard({
               style={{
                 paddingBottom: "calc(var(--tabbar-clearance) + 1rem)",
               }}
-              className="absolute inset-x-0 bottom-0 z-20 space-y-3 p-4 pr-20 md:!pb-9"
+              className="absolute inset-x-0 bottom-0 z-20 space-y-3 p-4 pl-[max(1rem,env(safe-area-inset-left))] pr-[calc(5rem+env(safe-area-inset-right))] md:!pb-9 md:pl-4 md:pr-20"
             >
               {/* auteur — rangée compacte en bas (mobile), profil cliquable */}
               <motion.div variants={item} className="flex items-center gap-2.5">
@@ -315,6 +326,21 @@ export function MemberPostCard({
                 </motion.div>
               ) : null}
 
+              {/* ce que dit la vidéo, pour qui ne l'entend pas */}
+              {post.transcript ? (
+                <motion.div variants={item} className="max-w-[34ch]">
+                  <details className="group">
+                    <summary className="flex min-h-11 cursor-pointer list-none items-center gap-1 text-[12px] font-medium tracking-wide text-ash transition-colors hover:text-bone [&::-webkit-details-marker]:hidden">
+                      Transcription
+                      <ChevronRight className="size-3.5 transition-transform group-open:rotate-90" />
+                    </summary>
+                    <p className="max-h-[30dvh] overflow-y-auto overscroll-contain whitespace-pre-line text-[13px] leading-relaxed text-bone/90">
+                      {post.transcript}
+                    </p>
+                  </details>
+                </motion.div>
+              ) : null}
+
               {post.brandTags.length > 0 && (
                 <motion.div
                   variants={item}
@@ -323,7 +349,7 @@ export function MemberPostCard({
                   {post.brandTags.map((b) => (
                     <span
                       key={b}
-                      className="border border-bone/20 px-2.5 py-1 text-[11px] font-medium text-bone/70"
+                      className="border border-bone/20 px-2.5 py-1 text-[11px] font-medium text-bone/75"
                     >
                       #{b}
                     </span>
@@ -366,6 +392,6 @@ export function MemberPostCard({
         targetId={post.id}
         targetLabel={`Publication de @${post.authorHandle}`}
       />
-    </section>
+    </article>
   );
 }

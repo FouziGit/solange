@@ -18,6 +18,10 @@ import { Photo } from "./Photo";
  *
  * The parent MUST be `relative overflow-hidden` and sized (aspect ratio /
  * explicit height) — LuxeMedia only paints inside it.
+ *
+ * Lecteurs d'écran : le filigrane est décoratif (aria-hidden). `alt` décrit
+ * la photo (« Chanel, veste en tweed ») ; `alt=""` la rend décorative quand
+ * la carte affiche déjà le nom. Sans `alt`, la marque sert de repli.
  */
 export function LuxeMedia({
   seed,
@@ -27,10 +31,13 @@ export function LuxeMedia({
   eager,
   className,
   watermark = true,
+  alt,
 }: {
   seed: string;
   image?: string;
   brand?: string;
+  /** Texte alternatif de la photo ; "" = décorative. Défaut : `brand`. */
+  alt?: string;
   small?: boolean;
   eager?: boolean;
   className?: string;
@@ -63,7 +70,10 @@ export function LuxeMedia({
       />
       {/* centered Bodoni brand watermark */}
       {watermark && brand && (
-        <div className="absolute inset-0 grid place-items-center px-4">
+        <div
+          aria-hidden="true"
+          className="absolute inset-0 grid place-items-center px-4"
+        >
           <span
             className={`font-editorial text-center italic leading-tight text-bone/30 ${small ? "text-lg" : "text-3xl md:text-5xl"}`}
           >
@@ -72,7 +82,7 @@ export function LuxeMedia({
         </div>
       )}
       {/* real photo (covers the gradient when it loads) */}
-      {image && <Photo src={image} alt={brand ?? ""} eager={eager} />}
+      {image && <Photo src={image} alt={alt ?? brand ?? ""} eager={eager} />}
       {/* bottom scrim */}
       <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/70 to-transparent" />
       {/* inset vignette */}

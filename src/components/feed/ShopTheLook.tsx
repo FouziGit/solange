@@ -2,12 +2,34 @@
 
 import { Sheet } from "../ui/Sheet";
 import { Button } from "../ui/Button";
-import { useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 import { motion } from "motion/react";
 import type { Product } from "@/lib/mock";
 import { track } from "@/lib/track";
 import { euro, gradientFor, initials } from "@/lib/utils";
 import { Bag, Check, ChevronUp } from "../chrome/icons";
+
+const DESKTOP = "(min-width: 48rem)";
+
+/**
+ * Où ouvrir une feuille du feed. Sur mobile, `fixed` : le portail la sort
+ * du fil et la pose AU-DESSUS de la barre d'onglets (sinon le champ et
+ * les boutons du bas passaient dessous, et un glissement sur le voile
+ * faisait défiler le fil). Dès md, plus de barre d'onglets : la feuille
+ * reste dans la carte (`absolute`).
+ */
+export function useFeedSheetContainer(): "fixed" | "absolute" {
+  const desktop = useSyncExternalStore(
+    (cb) => {
+      const mq = window.matchMedia(DESKTOP);
+      mq.addEventListener("change", cb);
+      return () => mq.removeEventListener("change", cb);
+    },
+    () => window.matchMedia(DESKTOP).matches,
+    () => false,
+  );
+  return desktop ? "absolute" : "fixed";
+}
 
 export function ShopTheLook({
   products,
@@ -31,6 +53,7 @@ export function ShopTheLook({
   const [added, setAdded] = useState(false);
   const showTrigger = variant !== "drawer";
   const showDrawer = variant !== "trigger";
+  const container = useFeedSheetContainer();
 
   // reset the micro-state whenever the drawer is dismissed so re-opening
   // always shows the actionable "Tout ajouter" label again
@@ -79,9 +102,9 @@ export function ShopTheLook({
         onClose={close}
         eyebrow="Shop the look"
         title={`${products.length} pièce${products.length > 1 ? "s" : ""} à chiner`}
-        container="absolute"
+        container={container}
       >
-        <div className="flex flex-col gap-2 overflow-y-auto px-5 py-4">
+        <div className="flex flex-col gap-2 overflow-y-auto overscroll-contain px-5 py-4">
           {products.map((p) => {
             const hot = highlightId === p.id;
             return (
@@ -136,7 +159,9 @@ export function ShopTheLook({
           })}
         </div>
 
-        <div className="flex items-center justify-between gap-3 border-t border-bone/10 px-5 pb-24 pt-4 md:pb-5">
+        {/* au-dessus de la barre d'onglets (feuille fixed) : seul l'indicateur
+            d'accueil reste à dégager */}
+        <div className="flex items-center justify-between gap-3 border-t border-bone/10 px-5 pb-[calc(1rem+env(safe-area-inset-bottom))] pt-4 md:pb-5">
           <span className="text-xs text-ash">
             Protection acheteur incluse · livraison 48h
           </span>

@@ -22,6 +22,7 @@ export function KenBurnsMedia({
   video,
   poster,
   inView = true,
+  userStarted = false,
 }: {
   seed: string;
   title: string;
@@ -33,6 +34,9 @@ export function KenBurnsMedia({
   poster?: string;
   /** La carte est visible ou juste à côté : seule celle-là charge sa vidéo. */
   inView?: boolean;
+  /** Lecture demandée par la personne : passe outre « Réduire les
+      animations », qui ne coupe que la lecture AUTO. */
+  userStarted?: boolean;
 }) {
   const reduce = useReducedMotion();
   const c = composition(seed);
@@ -42,17 +46,18 @@ export function KenBurnsMedia({
   const showVideo = Boolean(video) && videoOk;
   const showPhoto = Boolean(image) && imgOk;
 
-  // drive playback off active/paused (reduced-motion never autoplays → poster)
+  // drive playback off active/paused (reduced-motion never AUTOplays → poster,
+  // mais une lecture demandée reste possible)
   useEffect(() => {
     const el = videoRef.current;
     if (!el) return;
-    if (active && !paused && !reduce) {
+    if (active && !paused && (!reduce || userStarted)) {
       // autoplay refusé par le navigateur : voulu — le poster reste affiché
       el.play().catch(() => {});
     } else {
       el.pause();
     }
-  }, [active, paused, reduce, showVideo]);
+  }, [active, paused, reduce, userStarted, showVideo]);
   const sx = 30 + (c.h % 40); // key-light x
   const sy = 18 + ((c.h >> 4) % 22); // key-light y
 

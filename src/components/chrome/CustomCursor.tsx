@@ -1,7 +1,12 @@
 "use client";
 
 import { useEffect, useState, useSyncExternalStore } from "react";
-import { motion, useMotionValue, useSpring } from "motion/react";
+import {
+  motion,
+  useMotionValue,
+  useReducedMotion,
+  useSpring,
+} from "motion/react";
 
 const QUERY = "(hover: hover) and (pointer: fine)";
 
@@ -26,9 +31,13 @@ function useFinePointer() {
  *
  * Le pointeur système reste visible : le point précis qui le remplaçait a été
  * retiré (il faisait doublon) et la règle `cursor: none` de globals.css avec.
+ *
+ * « Réduire les animations » l'éteint tout à fait : useSpring n'obéit pas au
+ * MotionConfig, et le pointeur système suffit.
  */
 export function CustomCursor() {
   const enabled = useFinePointer();
+  const reduce = useReducedMotion();
   const [variant, setVariant] = useState<"default" | "link" | "media">(
     "default",
   );
@@ -40,7 +49,7 @@ export function CustomCursor() {
   const ringY = useSpring(y, { stiffness: 320, damping: 28, mass: 0.6 });
 
   useEffect(() => {
-    if (!enabled) return;
+    if (!enabled || reduce) return;
 
     const move = (e: MouseEvent) => {
       x.set(e.clientX);
@@ -62,9 +71,9 @@ export function CustomCursor() {
       document.removeEventListener("mouseleave", leave);
       document.removeEventListener("mouseenter", enter);
     };
-  }, [enabled, x, y]);
+  }, [enabled, reduce, x, y]);
 
-  if (!enabled) return null;
+  if (!enabled || reduce) return null;
 
   const ringSize = variant === "media" ? 72 : variant === "link" ? 52 : 30;
 

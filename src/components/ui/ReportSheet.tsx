@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { api } from "@/lib/api";
+import { announce } from "@/lib/announce";
 import { Sheet } from "./Sheet";
 import { Button } from "./Button";
 
@@ -58,6 +59,8 @@ export function ReportSheet({
       return;
     }
     setStep("sent");
+    // une région live créée avec son texte reste muette sous VoiceOver
+    announce("Signalement envoyé. On regarde rapidement.");
     setTimeout(close, 1600);
   };
 
@@ -71,11 +74,16 @@ export function ReportSheet({
     >
       <div className="flex flex-col gap-4 px-5 pb-[calc(env(safe-area-inset-bottom)+1.25rem)] pt-4">
         {step === "sent" ? (
-          <p aria-live="polite" className="py-6 text-center text-sm text-bone">
+          <p className="py-6 text-center text-sm text-bone">
             Signalement envoyé. On regarde rapidement.
           </p>
         ) : (
           <>
+            {/* le nom du champ est l'étiquette visible (Contrôle vocal :
+                « Toucher Ce qui ne va pas »). Pas d'autoFocus : la feuille
+                pose le focus sur son panneau, et un focus pris avant elle
+                l'empêchait de le rendre au bouton « Signaler » à la
+                fermeture. */}
             <label className="flex flex-col gap-2">
               <span className="etiquette text-[11px] text-ash">
                 Ce qui ne va pas
@@ -85,9 +93,7 @@ export function ReportSheet({
                 onChange={(e) => setReason(e.target.value)}
                 rows={4}
                 maxLength={500}
-                autoFocus
                 placeholder="Contrefaçon, arnaque, contenu déplacé…"
-                aria-label="Raison du signalement"
                 className="field resize-none text-base"
               />
             </label>

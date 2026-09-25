@@ -34,9 +34,11 @@ export function CreatorHeader({
                 : "bg-bone/25"
             }`}
           />
+          {/* le lien porte déjà le nom : avatar muet */}
           <Avatar
             name={creator.name}
             seed={creator.seed}
+            decorative
             className="relative size-11 text-2xl ring-2 ring-ink"
           />
           {creator.live && (

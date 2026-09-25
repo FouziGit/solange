@@ -1,4 +1,8 @@
-/* Minimal line-icon set — 24×24, currentColor stroke. No icon dependency. */
+/* Minimal line-icon set — 24×24, currentColor stroke. No icon dependency.
+   Décoratives par défaut (aria-hidden) : le nom vient du bouton ou du lien
+   hôte. Pour une icône qui porte seule un sens, surcharger :
+   aria-hidden={false} role="img" aria-label="…". Exception : Verified, qui
+   s'annonce « Compte vérifié ». */
 import type { SVGProps } from "react";
 
 type P = SVGProps<SVGSVGElement>;
@@ -9,6 +13,8 @@ const base = {
   strokeWidth: 1.6,
   strokeLinecap: "round" as const,
   strokeLinejoin: "round" as const,
+  "aria-hidden": true,
+  focusable: "false" as const,
 };
 
 export const Home = (p: P) => (
@@ -77,8 +83,16 @@ export const Search = (p: P) => (
   </svg>
 );
 
+/** Badge vérifié : seule mention de la vérification, donc annoncé. */
 export const Verified = (p: P) => (
-  <svg viewBox="0 0 24 24" fill="currentColor" {...p}>
+  <svg
+    viewBox="0 0 24 24"
+    fill="currentColor"
+    role="img"
+    aria-label="Compte vérifié"
+    focusable="false"
+    {...p}
+  >
     <path d="m12 1.8 2.3 1.9 3 .1.9 2.8 2.4 1.7-.8 2.9 1 2.8-2 2.2.1 3-2.8 1-1.5 2.6h-3l-2.5 1.7-2.5-1.7h-3L6 18.9l-2.8-1 .1-3-2-2.2 1-2.8-.8-2.9L4 5.5l.9-2.8 3-.1z" />
     <path
       d="m8.5 12 2.4 2.4 4.6-4.8"
@@ -128,7 +142,13 @@ export const Volume = (p: P) => (
 );
 
 export const Play = (p: P) => (
-  <svg viewBox="0 0 24 24" fill="currentColor" {...p}>
+  <svg
+    viewBox="0 0 24 24"
+    fill="currentColor"
+    aria-hidden="true"
+    focusable="false"
+    {...p}
+  >
     <path d="M7 4.5 19 12 7 19.5z" />
   </svg>
 );
@@ -146,7 +166,13 @@ export const X = (p: P) => (
 );
 
 export const Sparkle = (p: P) => (
-  <svg viewBox="0 0 24 24" fill="currentColor" {...p}>
+  <svg
+    viewBox="0 0 24 24"
+    fill="currentColor"
+    aria-hidden="true"
+    focusable="false"
+    {...p}
+  >
     <path d="M12 2c.6 4.8 2.2 6.4 7 7-4.8.6-6.4 2.2-7 7-.6-4.8-2.2-6.4-7-7 4.8-.6 6.4-2.2 7-7Z" />
   </svg>
 );

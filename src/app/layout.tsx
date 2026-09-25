@@ -8,6 +8,8 @@ import { MobileTabBar } from "@/components/chrome/MobileTabBar";
 import { FeedThemeLock } from "@/components/chrome/FeedThemeLock";
 import { AuthGate } from "@/components/chrome/AuthGate";
 import { PushInvite } from "@/components/chrome/PushInvite";
+import { MotionRoot } from "@/components/chrome/MotionRoot";
+import { LiveAnnouncer } from "@/components/chrome/LiveAnnouncer";
 import { SolangeProvider } from "@/lib/store";
 
 // Display / titles — Montserrat: geometric, minimalist-luxe, modern.
@@ -90,17 +92,30 @@ export default function RootLayout({
     >
       <body className="bg-noir text-bone">
         <SolangeProvider>
-          <FeedThemeLock />
-          <GrainOverlay />
-          <CustomCursor />
-          <AuthGate>
-            {/* Pas de bandeau global : la nature démo est dite là où ça
-                compte (écran d'auth, checkout, mentions légales). */}
-            <SideNav />
-            <main className="md:pl-[88px]">{children}</main>
-            <MobileTabBar />
-            <PushInvite />
-          </AuthGate>
+          <MotionRoot>
+            <FeedThemeLock />
+            <GrainOverlay />
+            <CustomCursor />
+            {/* PWA iOS (black-translucent) : l'heure et la batterie sont
+                blanches, invisibles sur l'ivoire du thème clair. Ce voile
+                sombre a la hauteur exacte de la barre d'état (0 dans
+                Safari) ; en thème sombre, le fond suffit. */}
+            <div
+              aria-hidden="true"
+              className="theme-dark pointer-events-none fixed inset-x-0 top-0 z-[80] h-[env(safe-area-inset-top)] bg-noir/85 backdrop-blur dark:hidden"
+            />
+            <AuthGate>
+              {/* Pas de bandeau global : la nature démo est dite là où ça
+                  compte (écran d'auth, checkout, mentions légales). */}
+              <SideNav />
+              <main className="md:pl-[calc(88px+env(safe-area-inset-left))]">
+                {children}
+              </main>
+              <MobileTabBar />
+              <PushInvite />
+            </AuthGate>
+            <LiveAnnouncer />
+          </MotionRoot>
         </SolangeProvider>
       </body>
     </html>

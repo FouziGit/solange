@@ -25,15 +25,16 @@ const VARIANT: Record<Variant, string> = {
 };
 
 const SIZE: Record<Size, string> = {
-  sm: "min-h-9 px-3.5 text-[12px]",
+  /* 44 px au doigt (HIG), 36 px seulement avec une souris */
+  sm: "min-h-11 px-3.5 text-[12px] pointer-fine:min-h-9",
   md: "min-h-11 px-5 text-[13.5px]",
   lg: "min-h-12 w-full px-6 text-[15px]",
 };
 
 /**
  * CTA unique de l'app. `href` → <Link>, sinon <button>. Toujours un verbe
- * d'action en libellé (DA §8). Cibles ≥ 44px en md/lg ; sm réservé aux
- * contextes denses (listes) où la rangée entière reste ≥ 44px.
+ * d'action en libellé (DA §8). Cibles ≥ 44px au doigt ; sm, réservé aux
+ * contextes denses (listes), ne descend à 36px qu'avec une souris.
  */
 export function Button({
   variant = "primary",

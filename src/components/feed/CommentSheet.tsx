@@ -5,6 +5,7 @@ import { useState } from "react";
 import { commentsByLook } from "@/lib/mock";
 import { Avatar } from "../chrome/Avatar";
 import { Send } from "../chrome/icons";
+import { useFeedSheetContainer } from "./ShopTheLook";
 
 /**
  * Bottom-sheet comment thread for a feed look. Mirrors ShopTheLook's
@@ -23,6 +24,7 @@ export function CommentSheet({
 }) {
   const [draft, setDraft] = useState("");
   const thread = commentsByLook[lookId] ?? [];
+  const container = useFeedSheetContainer();
 
   return (
     <Sheet
@@ -30,9 +32,9 @@ export function CommentSheet({
       onClose={() => onOpenChange(false)}
       eyebrow="Commentaires"
       title={`${thread.length} message${thread.length > 1 ? "s" : ""}`}
-      container="absolute"
+      container={container}
     >
-      <div className="flex flex-1 flex-col gap-4 overflow-y-auto px-5 py-4">
+      <div className="flex flex-1 flex-col gap-4 overflow-y-auto overscroll-contain px-5 py-4">
         {thread.length === 0 ? (
           <p className="py-8 text-center text-sm text-ash">
             Aucun commentaire pour l&apos;instant.
@@ -43,6 +45,7 @@ export function CommentSheet({
               <Avatar
                 name={c.name}
                 seed={c.seed}
+                decorative
                 className="size-9 shrink-0 text-sm"
               />
               <div className="min-w-0 flex-1">
@@ -63,7 +66,8 @@ export function CommentSheet({
         )}
       </div>
 
-      {/* composer — non-submitting (mock), clears the home indicator */}
+      {/* composer — non-submitting (mock), clears the home indicator ; la
+          feuille fixed passe au-dessus de la barre d'onglets sur mobile */}
       <div className="flex items-center gap-2 border-t border-bone/10 px-4 pb-[calc(1rem+env(safe-area-inset-bottom))] pt-3 md:pb-5">
         <input
           value={draft}

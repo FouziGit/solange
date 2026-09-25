@@ -130,6 +130,7 @@ export default function FavorisPage() {
                 <Avatar
                   name={c.name}
                   seed={c.seed}
+                  decorative
                   className="size-12 shrink-0"
                 />
                 <span className="min-w-0">

@@ -99,11 +99,9 @@ export default function NotificationsPage() {
       ) : user ? (
         /* ————— membre connecté : notifications réelles ————— */
         status === "loading" ? (
-          <div
-            className="mt-8"
-            aria-busy="true"
-            aria-label="Chargement des notifications"
-          >
+          <div className="mt-8" aria-busy="true">
+            {/* texte, pas aria-label : sur un div générique, il n'est pas lu */}
+            <p className="sr-only">Chargement des notifications…</p>
             <SkeletonRow />
             <SkeletonRow />
             <SkeletonRow />
@@ -153,11 +151,16 @@ export default function NotificationsPage() {
                     <span className="text-[11px] text-ash">
                       {timeAgo(n.at)}
                     </span>
+                    {/* non lue : un point à voir, un mot à entendre (un
+                        aria-label sur un span n'est pas lu) */}
                     {!n.read && (
-                      <span
-                        className="size-2 rounded-full bg-bone"
-                        aria-label="Non lue"
-                      />
+                      <>
+                        <span
+                          aria-hidden="true"
+                          className="size-2 rounded-full bg-bone"
+                        />
+                        <span className="sr-only">, non lue</span>
+                      </>
                     )}
                   </div>
                 </Link>
@@ -202,10 +205,13 @@ export default function NotificationsPage() {
                   <div className="flex shrink-0 flex-col items-end gap-1.5">
                     <span className="text-[11px] text-ash">{n.time}</span>
                     {n.unread && (
-                      <span
-                        className="size-2 rounded-full bg-bone"
-                        aria-label="Non lue"
-                      />
+                      <>
+                        <span
+                          aria-hidden="true"
+                          className="size-2 rounded-full bg-bone"
+                        />
+                        <span className="sr-only">, non lue</span>
+                      </>
                     )}
                   </div>
                 </li>

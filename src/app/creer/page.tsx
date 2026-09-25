@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { PageShell } from "@/components/ui/PageShell";
 import { FieldLabel } from "@/components/ui/FieldLabel";
 import { Stamp } from "@/components/ui/Stamp";
@@ -13,6 +13,8 @@ import { catalogBrands } from "@/lib/data";
 import { euro, gradientFor } from "@/lib/utils";
 import { api, fileToDataUrl, resizeImage, videoPoster } from "@/lib/api";
 import { MAX_VIDEO_SECONDS, checkVideo } from "@/lib/video";
+import { TRANSCRIPT_MAX } from "@/lib/transcript";
+import { announce } from "@/lib/announce";
 import { Button } from "@/components/ui/Button";
 import { useStore } from "@/lib/store";
 import {
@@ -96,10 +98,25 @@ export default function CreerPage() {
   const videoRef = useRef<HTMLInputElement>(null);
   const [videoBusy, setVideoBusy] = useState(false);
   const [videoError, setVideoError] = useState<string | null>(null);
+  /* ce qui se dit dans la vidéo, en texte (WCAG 1.2) — facultatif */
+  const [transcript, setTranscript] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
 
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+
+  const uid = useId();
+  const addPhotoRef = useRef<HTMLButtonElement>(null);
+  const successRef = useRef<HTMLHeadingElement>(null);
+  /* Le bouton touché disparaît (retrait d'une photo, publication) : le
+     focus est reposé après le rendu, sinon il retombe sur <body>. */
+  const focusNext = useRef<"photos" | "succes" | null>(null);
+  useEffect(() => {
+    const target = focusNext.current;
+    if (!target) return;
+    focusNext.current = null;
+    (target === "succes" ? successRef : addPhotoRef).current?.focus();
+  }, [published, photos]);
 
   const brands = useMemo(() => catalogBrands(), []);
 
@@ -144,6 +161,12 @@ export default function CreerPage() {
         ? "Publier l'actu"
         : "Publier mes achats";
 
+  /* « Ajoute des photos » garde le focus quand le sélecteur se referme.
+     Bloqué pendant le traitement ou une fois le maximum atteint, il est
+     aria-disabled et non disabled : désactivé sous le focus, il renvoyait
+     celui-ci sur <body> à chaque ajout, et le clavier repartait du haut. */
+  const addBlocked = photoBusy || photos.length >= MAX_PHOTOS;
+
   async function onFilesPicked(e: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files ?? []);
     e.target.value = "";
@@ -162,6 +185,11 @@ export default function CreerPage() {
       const urls: string[] = [];
       for (const f of picked) urls.push(await resizeImage(f));
       setPhotos((cur) => [...cur, ...urls].slice(0, MAX_PHOTOS));
+      announce(
+        urls.length === 1
+          ? `Photo ${Math.min(photos.length + 1, MAX_PHOTOS)} ajoutée.`
+          : `${urls.length} photos ajoutées.`,
+      );
       if (files.length > slots) {
         setPhotoError(
           `Maximum ${MAX_PHOTOS} photos — seules les ${slots === 1 ? "première a" : `${slots} premières ont`} été gardées.`,
@@ -208,6 +236,8 @@ export default function CreerPage() {
   function removePhoto(index: number) {
     setPhotos((cur) => cur.filter((_, i) => i !== index));
     setPhotoError(null);
+    focusNext.current = "photos";
+    announce(`Photo ${index + 1} retirée.`);
   }
 
   async function publish() {
@@ -236,12 +266,16 @@ export default function CreerPage() {
       images: photos,
       video: video?.dataUrl,
       poster: video?.poster,
+      // sans vidéo, la transcription n'a rien à décrire
+      transcript: (video && transcript.trim()) || undefined,
       // lot 5 : les pièces taguées existaient côté client mais n'étaient
       // jamais envoyées — « Shop the look » ne pouvait donc pas s'ouvrir
       productIds: taggedItems.map((it) => it.id),
     });
     if (res.ok) {
       setPublished(true);
+      focusNext.current = "succes";
+      announce(`${title.trim() || "Ton post"} est en ligne dans le feed.`);
     } else if (res.status === 401) {
       setSubmitError("Ta session a expiré — reconnecte-toi pour publier.");
       void refreshSession();
@@ -258,6 +292,7 @@ export default function CreerPage() {
     setPhotos([]);
     setPhotoError(null);
     setSubmitError(null);
+    focusNext.current = "photos";
   }
 
   function goSignIn() {
@@ -295,12 +330,15 @@ export default function CreerPage() {
               />
               <div className="grid grid-cols-4 gap-2.5">
                 <button
+                  ref={addPhotoRef}
                   type="button"
-                  onClick={() => fileRef.current?.click()}
-                  disabled={photoBusy || photos.length >= MAX_PHOTOS}
+                  aria-disabled={addBlocked || undefined}
+                  onClick={() => {
+                    if (!addBlocked) fileRef.current?.click();
+                  }}
                   className={`col-span-2 row-span-2 flex aspect-square flex-col items-center justify-center gap-2 rounded-2xl border border-dashed text-ash transition-colors ${
                     photos.length >= MAX_PHOTOS
-                      ? "cursor-default border-bone/10 text-ash/50"
+                      ? "cursor-default border-bone/10"
                       : "border-bone/25 hover:border-bone/50 hover:text-bone"
                   }`}
                 >
@@ -334,8 +372,13 @@ export default function CreerPage() {
                         alt={`Photo ${i + 1}${i === 0 ? " (couverture)" : ""}`}
                         className="size-full object-cover"
                       />
+                      {/* bandeau pleine largeur : 11 px lisibles sans
+                          déborder ; déjà dit par l'alt de la photo */}
                       {i === 0 && (
-                        <span className="absolute bottom-1 left-1 rounded bg-ink/75 px-1.5 py-0.5 text-[8px] uppercase tracking-[0.14em] text-bone">
+                        <span
+                          aria-hidden="true"
+                          className="absolute inset-x-0 bottom-0 bg-ink/75 py-0.5 text-center text-[11px] font-medium text-bone"
+                        >
                           Couverture
                         </span>
                       )}
@@ -402,6 +445,7 @@ export default function CreerPage() {
                         onClick={() => {
                           setVideo(null);
                           setVideoError(null);
+                          setTranscript("");
                         }}
                       >
                         Retirer
@@ -425,6 +469,33 @@ export default function CreerPage() {
                     <p className="mt-1 text-[11px] text-ash" role="alert">
                       {videoError}
                     </p>
+                  )}
+                  {video && (
+                    <div className="mt-5">
+                      <FieldLabel htmlFor={`${uid}-transcription`}>
+                        Ce que tu dis dans la vidéo
+                      </FieldLabel>
+                      <GlassInput
+                        multiline
+                        id={`${uid}-transcription`}
+                        aria-describedby={`${uid}-transcription-aide`}
+                        rows={4}
+                        maxLength={TRANSCRIPT_MAX}
+                        value={transcript}
+                        onChange={(e) => setTranscript(e.target.value)}
+                        placeholder="Taille M, portée deux fois, un petit accroc au col…"
+                        className="resize-none"
+                      />
+                      <p
+                        id={`${uid}-transcription-aide`}
+                        className="mt-2 text-[11px] leading-relaxed text-ash"
+                      >
+                        Facultatif · pour les personnes sourdes ou
+                        malentendantes, et pour qui regarde sans le son.{" "}
+                        {TRANSCRIPT_MAX.toLocaleString("fr-FR")} caractères
+                        maximum.
+                      </p>
+                    </div>
                   )}
                 </div>
               )}
@@ -567,9 +638,13 @@ export default function CreerPage() {
               /* success state — comme sur Vendre */
               <div className="flex flex-col items-center py-6 text-center">
                 <Stamp>Publié</Stamp>
-                <p className="mt-5 font-editorial text-2xl font-semibold text-bone">
+                <h2
+                  ref={successRef}
+                  tabIndex={-1}
+                  className="mt-5 font-editorial text-2xl font-semibold text-bone"
+                >
                   En ligne
-                </p>
+                </h2>
                 <p className="mt-1 max-w-[24ch] text-[13px] leading-relaxed text-ash">
                   {title.trim() || "Ton post"} est en ligne — visible dans le
                   feed.
@@ -584,9 +659,10 @@ export default function CreerPage() {
             ) : (
               <>
                 {kind === "look" ? (
-                  /* mini feed stage — 9:16 tile */
+                  /* mini feed stage — 9:16 tile ; sombre dans les deux thèmes,
+                     comme le feed : le texte posé sur la photo reste clair */
                   <div
-                    className="relative aspect-[9/16] overflow-hidden rounded-2xl ring-1 ring-bone/10"
+                    className="theme-dark relative aspect-[9/16] overflow-hidden rounded-2xl ring-1 ring-bone/10"
                     style={{ background: gradientFor(seed) }}
                   >
                     {/* cover photo, once one is added */}
@@ -628,7 +704,7 @@ export default function CreerPage() {
                             "Ta légende s'affiche ici, au-dessus des pièces shoppables."}
                         </p>
                         {hashtags.length > 0 && (
-                          <p className="truncate text-[11px] text-bone/55">
+                          <p className="truncate text-[11px] text-bone/75">
                             {hashtags.join(" ")}
                           </p>
                         )}
@@ -725,7 +801,11 @@ export default function CreerPage() {
                     <button
                       type="button"
                       onClick={() => void publish()}
-                      disabled={!ready || submitting || !authReady}
+                      /* pendant l'envoi : aria-disabled (publish() ignore le
+                         second appui), pas disabled — sinon, en cas d'échec, le
+                         focus est déjà retombé sur <body> */
+                      disabled={!ready || !authReady}
+                      aria-disabled={submitting || undefined}
                       className={`mt-3 flex min-h-11 w-full items-center justify-center gap-2 rounded-none py-3.5 text-sm font-semibold transition-transform active:scale-95 ${
                         ready && !submitting && authReady
                           ? "bg-bone text-ink"
@@ -755,7 +835,7 @@ export default function CreerPage() {
                     )}
                   </>
                 )}
-                <p className="mt-2.5 px-1 text-[10.5px] leading-relaxed text-ash">
+                <p className="mt-2.5 px-1 text-[12px] leading-relaxed text-ash">
                   {kind === "look"
                     ? "Ton look part dans le feed avec ta légende, tes photos et les marques taguées."
                     : kind === "actu"

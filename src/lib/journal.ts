@@ -33,6 +33,7 @@ export const articles: Article[] = [
       "L'autre décision, c'est la commission. Elle est dégressive : 4 % sous 200 €, puis 3,5 %, 2,5 %, et 2 % au-delà de 1 000 €. Plus la pièce est chère, moins on prend en proportion, parce qu'une pièce chère ne nous coûte pas plus à héberger qu'une autre. Elle est affichée avant la mise en ligne, jamais découverte après.",
       "Enfin, il faut le dire clairement : à ce stade, les paiements sont simulés. Aucune somme n'est débitée, aucune donnée bancaire n'est collectée. Le paiement réel demande une société immatriculée et un prestataire agréé — c'est en cours, et ce sera annoncé le jour où ce sera vrai, pas avant.",
       "Si vous êtes là maintenant, vous arrivez avant tout le monde, sur quelque chose d'inachevé. C'est exactement le moment où votre avis compte le plus. Écrivez-nous : on lit tout.",
+      "Mise à jour du 24 septembre 2026 : le paiement par carte est ouvert, via Stripe. L'argent de l'acheteur est encaissé par Stripe et la part du vendeur lui est versée directement.",
     ],
   },
   {

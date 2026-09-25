@@ -16,6 +16,13 @@ import { api, type ApiConversation } from "@/lib/api";
 import { ReportSheet } from "@/components/ui/ReportSheet";
 import { useStore } from "@/lib/store";
 import { EASE, euro } from "@/lib/utils";
+import { announce, type Politeness } from "@/lib/announce";
+import {
+  filterConversations,
+  isOpenConversation,
+  searchResultsLabel,
+  speakerPrefix,
+} from "@/lib/conversation-search";
 import {
   Verified,
   Search,
@@ -145,6 +152,7 @@ function MessagesInner() {
         setConvError(null);
       } else {
         setConvError(res.error);
+        announce(`Tes fils n'ont pas chargé — ${res.error}`, "assertive");
       }
     });
     return () => {
@@ -220,6 +228,40 @@ function MessagesInner() {
     if (selBlocked) queueMicrotask(() => setSelId(null));
   }, [selBlocked]);
 
+  // Recherche : filtre la liste (pas le fil ouvert) ; le nombre de résultats
+  // est lu une fois la frappe posée.
+  const [query, setQuery] = useState("");
+  const listed = useMemo(
+    () => filterConversations(visibleConvs, query),
+    [visibleConvs, query],
+  );
+  useEffect(() => {
+    if (!query.trim()) return;
+    const t = setTimeout(
+      () => announce(searchResultsLabel(listed.length)),
+      600,
+    );
+    return () => clearTimeout(t);
+  }, [query, listed.length]);
+
+  // Focus : ouvrir un fil masque la liste (mobile) → le titre du fil prend
+  // le focus ; « Retour » le rend au fil d'origine dans la liste.
+  const threadTitleRef = useRef<HTMLHeadingElement>(null);
+  const listTitleRef = useRef<HTMLHeadingElement>(null);
+  const convButtons = useRef(new Map<string, HTMLButtonElement>());
+  const [focusReq, setFocusReq] = useState<
+    { to: "thread" } | { to: "list"; id?: string } | null
+  >(null);
+  useEffect(() => {
+    if (!focusReq) return;
+    if (focusReq.to === "thread") threadTitleRef.current?.focus();
+    else
+      (
+        (focusReq.id && convButtons.current.get(focusReq.id)) ||
+        listTitleRef.current
+      )?.focus();
+  }, [focusReq]);
+
   const active: Conversation | undefined = selBlocked
     ? undefined
     : (visibleConvs.find((c) => c.id === selId) ??
@@ -239,15 +281,22 @@ function MessagesInner() {
     },
     [],
   );
-  const showFeedback = (msg: string) => {
+  // Le toast est visuel ; la lecture passe par announce() (région toujours
+  // montée), assertive pour une erreur.
+  const showFeedback = (msg: string, politeness: Politeness = "polite") => {
     setFeedback(msg);
+    announce(msg, politeness);
     if (feedbackTimer.current) clearTimeout(feedbackTimer.current);
     feedbackTimer.current = setTimeout(() => setFeedback(null), 3000);
   };
 
   const [reportOpen, setReportOpen] = useState(false);
+  // le menu disparaît avec l'entrée touchée : le focus passe d'abord sur
+  // « Options », que la feuille de signalement lui rendra à la fermeture
+  const optionsRef = useRef<HTMLButtonElement>(null);
   const reportActive = () => {
     if (!active) return;
+    optionsRef.current?.focus();
     setMenuOpen(false);
     setReportOpen(true);
   };
@@ -257,9 +306,29 @@ function MessagesInner() {
     setMenuOpen(false);
     const wasBlocked = isBlocked(active.handle);
     toggleBlock(active.handle);
+    // le fil bloqué disparaît avec le menu qui avait le focus : retour à la
+    // liste dans le même rendu, focus sur son titre
+    if (!wasBlocked) {
+      setSelId(null);
+      setFocusReq({ to: "list" });
+    }
     showFeedback(
       wasBlocked ? `@${active.handle} débloqué.` : `@${active.handle} bloqué.`,
     );
+  };
+
+  const openConv = (id: string) => {
+    setMenuOpen(false);
+    // fil déjà ouvert (desktop) : aucun rendu à attendre
+    if (id === selId) threadTitleRef.current?.focus();
+    else {
+      setSelId(id);
+      setFocusReq({ to: "thread" });
+    }
+  };
+  const backToList = () => {
+    setSelId(null);
+    setFocusReq({ to: "list", id: active?.id });
   };
 
   const send = () => {
@@ -299,7 +368,7 @@ function MessagesInner() {
               return { ...e, [convId]: list.toSpliced(i, 1) };
             });
             setDraft((cur) => cur || text);
-            showFeedback(`Message non envoyé — ${res.error}`);
+            showFeedback(`Message non envoyé — ${res.error}`, "assertive");
           });
       }
     }
@@ -313,28 +382,33 @@ function MessagesInner() {
           selId ? "hidden md:flex" : "flex"
         }`}
       >
-        <header className="px-5 pb-4 pt-10 md:pt-12">
-          <p className="eyebrow text-sm text-bone/55">Boîte de réception</p>
-          <h1 className="font-editorial text-4xl font-semibold tracking-tight text-bone">
+        <header className="px-5 pb-4 pt-[calc(env(safe-area-inset-top)+2.5rem)] md:pt-[calc(env(safe-area-inset-top)+3rem)]">
+          <p className="eyebrow text-sm text-ash">Boîte de réception</p>
+          <h1
+            ref={listTitleRef}
+            tabIndex={-1}
+            className="font-editorial text-4xl font-semibold tracking-tight text-bone"
+          >
             Messages
           </h1>
           <div className="glass mt-4 flex items-center gap-2 rounded-full px-3.5 py-2.5">
             <Search className="size-4 text-ash" />
             <input
+              type="search"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
               placeholder="Rechercher une conversation…"
               aria-label="Rechercher une conversation"
-              className="w-full bg-transparent text-base text-bone outline-none placeholder:text-ash md:text-[13px]"
+              className="w-full appearance-none bg-transparent text-base text-bone outline-none placeholder:text-ash md:text-[13px]"
             />
           </div>
         </header>
 
         <div className="flex-1 overflow-y-auto px-3 pb-28 md:pb-4">
+          {/* annoncé par announce() au chargement : pas de région créée
+              en même temps que son texte */}
           {convError && (
-            <div
-              role="status"
-              aria-live="polite"
-              className="mx-3 mb-2 flex flex-wrap items-center justify-between gap-2 border border-bone/15 px-3.5 py-3"
-            >
+            <div className="mx-3 mb-2 flex flex-wrap items-center justify-between gap-2 border border-bone/15 px-3.5 py-3">
               <p className="text-[13px] text-ash">
                 Tes fils n&apos;ont pas chargé — {convError}
               </p>
@@ -354,16 +428,25 @@ function MessagesInner() {
               — la discussion vivra ici.
             </p>
           )}
-          {visibleConvs.map((c) => {
+          {visibleConvs.length > 0 && listed.length === 0 && (
+            <p className="px-3 py-6 text-[13px] text-ash">
+              Aucune conversation ne correspond à « {query.trim()} ».
+            </p>
+          )}
+          {listed.map((c) => {
             const on = active?.id === c.id;
             const last = (extra[c.id] ?? []).at(-1) ?? c.messages.at(-1);
             return (
               <button
                 key={c.id}
-                onClick={() => {
-                  setSelId(c.id);
-                  setMenuOpen(false);
+                ref={(el) => {
+                  if (el) convButtons.current.set(c.id, el);
+                  else convButtons.current.delete(c.id);
                 }}
+                onClick={() => openConv(c.id)}
+                aria-current={
+                  isOpenConversation(c.id, selId) ? "true" : undefined
+                }
                 className={`flex w-full items-center gap-3 rounded-2xl p-2.5 text-left transition-colors ${
                   on ? "bg-bone/[0.07]" : "hover:bg-bone/[0.04]"
                 }`}
@@ -371,6 +454,7 @@ function MessagesInner() {
                 <Avatar
                   name={c.name}
                   seed={c.seed}
+                  decorative
                   className="size-12 text-xl"
                 />
                 <div className="min-w-0 flex-1">
@@ -389,8 +473,11 @@ function MessagesInner() {
                   </p>
                 </div>
                 {c.unread > 0 && (
-                  <span className="grid size-5 place-items-center rounded-full bg-bone text-[11px] font-bold text-ink">
+                  <span className="relative grid size-5 place-items-center rounded-full bg-bone text-[11px] font-bold text-ink">
                     {c.unread}
+                    <span className="sr-only">
+                      {c.unread > 1 ? " messages non lus" : " message non lu"}
+                    </span>
                   </span>
                 )}
               </button>
@@ -411,36 +498,51 @@ function MessagesInner() {
         {active && (
           <>
             {/* thread header */}
-            <header className="flex items-center gap-3 border-b border-bone/10 px-4 py-3 pt-10 md:pt-3">
+            <header className="flex items-center gap-3 border-b border-bone/10 px-4 py-3 pt-[calc(env(safe-area-inset-top)+2.5rem)] md:pt-[calc(env(safe-area-inset-top)+0.75rem)]">
+              {/* 44 px au doigt, pastille visuelle de 36 px ; -mx-1 garde
+                  l'encombrement d'avant */}
               <button
-                onClick={() => setSelId(null)}
-                className="grid size-9 place-items-center rounded-full text-bone hover:bg-bone/10 md:hidden"
+                onClick={backToList}
+                className="group -mx-1 grid size-11 shrink-0 place-items-center rounded-full text-bone md:hidden"
                 aria-label="Retour"
               >
-                <ArrowLeft className="size-5" />
+                <span className="grid size-9 place-items-center rounded-full group-hover:bg-bone/10">
+                  <ArrowLeft className="size-5" />
+                </span>
               </button>
               <Avatar
                 name={active.name}
                 seed={active.seed}
+                decorative
                 className="size-10 text-lg"
               />
-              <Link
-                href={`/membre/${active.handle}`}
-                className="min-w-0"
-                aria-label={`Voir le profil de @${active.handle}`}
-              >
-                <div className="flex items-center gap-1">
+              {/* titre du fil (focalisé à l'ouverture) ; le lien vers le
+                  profil couvre tout le bloc, comme avant */}
+              <div className="relative min-w-0">
+                <h2
+                  ref={threadTitleRef}
+                  tabIndex={-1}
+                  className="flex items-center gap-1"
+                >
+                  <span className="sr-only">Conversation avec </span>
                   <span className="truncate text-sm font-semibold text-bone">
                     {active.name}
                   </span>
                   {active.verified && (
                     <Verified className="size-3.5 text-bone" />
                   )}
-                </div>
-                <span className="text-[11px] text-ash">@{active.handle}</span>
-              </Link>
+                </h2>
+                <Link
+                  href={`/membre/${active.handle}`}
+                  className="block after:absolute after:inset-0 after:content-['']"
+                  aria-label={`Voir le profil de @${active.handle}`}
+                >
+                  <span className="text-[11px] text-ash">@{active.handle}</span>
+                </Link>
+              </div>
               <div className="relative ml-auto">
                 <button
+                  ref={optionsRef}
                   onClick={() => setMenuOpen((o) => !o)}
                   aria-label="Options de la conversation"
                   aria-haspopup="menu"
@@ -513,23 +615,37 @@ function MessagesInner() {
               </div>
             )}
 
-            {/* messages */}
-            <div className="flex flex-1 flex-col gap-2 overflow-y-auto px-4 py-5">
-              {thread.map((m, i) => (
-                <motion.div
-                  key={i}
-                  initial={{ opacity: 0, y: 6 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.3, ease: EASE.luxe }}
-                  className={`max-w-[78%] rounded-2xl px-3.5 py-2 text-[13.5px] leading-snug ${
-                    m.from === "me"
-                      ? "self-end rounded-br-md bg-bone text-ink"
-                      : "self-start rounded-bl-md bg-coal text-bone"
-                  }`}
-                >
-                  {m.text}
-                </motion.div>
-              ))}
+            {/* messages — role="log" lit chaque nouvelle bulle (envoi
+                confirmé) ; remonté à chaque fil (key) pour ne pas relire
+                tout un fil quand on en change. L'auteur n'est pas que dans
+                l'alignement : préfixe masqué « Toi : » / « @handle : ». */}
+            <div
+              key={active.id}
+              role="log"
+              aria-label={`Conversation avec @${active.handle}`}
+              tabIndex={0}
+              className="flex-1 overflow-y-auto px-4 py-5"
+            >
+              <ol role="list" className="flex flex-col gap-2">
+                {thread.map((m, i) => (
+                  <motion.li
+                    key={i}
+                    initial={{ opacity: 0, y: 6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.3, ease: EASE.luxe }}
+                    className={`relative max-w-[78%] rounded-2xl px-3.5 py-2 text-[13.5px] leading-snug ${
+                      m.from === "me"
+                        ? "self-end rounded-br-md bg-bone text-ink"
+                        : "self-start rounded-bl-md bg-coal text-bone"
+                    }`}
+                  >
+                    <span className="sr-only">
+                      {speakerPrefix(m.from, active.handle)}
+                    </span>
+                    {m.text}
+                  </motion.li>
+                ))}
+              </ol>
             </div>
 
             {/* composer — clears the floating mobile tab bar + home indicator */}
@@ -554,12 +670,10 @@ function MessagesInner() {
         )}
       </section>
 
-      {/* feedback éphémère (signalement / blocage) */}
+      {/* feedback éphémère (blocage, envoi échoué) — visuel seulement, la
+          lecture passe par announce() dans showFeedback */}
       {feedback && (
-        <div
-          role="status"
-          className="pointer-events-none fixed inset-x-0 bottom-[calc(7rem+env(safe-area-inset-bottom))] z-50 flex justify-center px-4 md:bottom-24"
-        >
+        <div className="pointer-events-none fixed inset-x-0 bottom-[calc(7rem+env(safe-area-inset-bottom))] z-50 flex justify-center px-4 md:bottom-24">
           <span className="rounded-full border border-bone/10 bg-coal px-4 py-2 text-[13px] text-bone shadow-xl">
             {feedback}
           </span>

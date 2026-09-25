@@ -9,6 +9,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { api } from "@/lib/api";
+import { announce, type Politeness } from "@/lib/announce";
 import {
   DEFAULT_PREFS,
   PUSH_LABELS,
@@ -69,6 +70,13 @@ export function PushSettings() {
     if (res.ok) setState({ ...state, prefs: res.data.prefs });
   };
 
+  /* message visible ET dit à voix haute : un role="status" créé en même
+     temps que son texte reste muet sous VoiceOver */
+  const say = (m: string, politeness: Politeness = "polite") => {
+    setMessage(m);
+    announce(m, politeness);
+  };
+
   const toggleType = (t: (typeof PUSH_TYPES)[number]) =>
     void save({
       ...state.prefs,
@@ -81,25 +89,26 @@ export function PushSettings() {
     const support = pushSupport();
     if (support.kind === "ios-install") {
       setBusy(false);
-      setMessage(
+      say(
         "Sur iPhone : ajoute d'abord SOLANGE à ton écran d'accueil (Partager → Sur l'écran d'accueil), puis rouvre l'app depuis l'icône.",
       );
       return;
     }
     if (support.kind === "denied") {
       setBusy(false);
-      setMessage(
+      say(
         "Ton navigateur bloque les notifications pour SOLANGE. Réautorise-les dans ses réglages de site.",
+        "assertive",
       );
       return;
     }
     const res = await subscribeDevice();
     setBusy(false);
     if (res.ok) {
-      setMessage("Cet appareil recevra les notifications.");
+      say("Cet appareil recevra les notifications.");
       void load();
     } else {
-      setMessage(res.error);
+      say(res.error, "assertive");
     }
   };
 
@@ -107,7 +116,7 @@ export function PushSettings() {
     setBusy(true);
     await unsubscribeDevice();
     setBusy(false);
-    setMessage("Cet appareil ne recevra plus de notifications.");
+    say("Cet appareil ne recevra plus de notifications.");
     void load();
   };
 
@@ -238,7 +247,7 @@ export function PushSettings() {
         )}
 
         {message && (
-          <p role="status" className="mt-3 text-[12.5px] text-bone/85">
+          <p className="mt-3 text-[12.5px] text-bone/85">
             {message}
           </p>
         )}

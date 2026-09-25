@@ -60,7 +60,9 @@
   --c-coal: #141416;
   --c-smoke: #1d1d20;
   --c-bone: #f3f0e8;
-  --c-ash: #8a8782;
+  /* texte secondaire : ≥ 4.5:1 sur ink/noir/coal, sur bone/10 et sous la
+     tab bar (verrouillé par src/lib/__tests__/a11y-css.test.ts) */
+  --c-ash: #9a9791;
   --c-pure: #ffffff;
   --c-danger: #c99b94; /* oxblood clair sur mondes sombres */
 
@@ -75,8 +77,9 @@
   --glass-bone-bg: rgba(244, 241, 233, 0.07);
   --hairline: rgba(244, 241, 233, 0.1);
   --field-bg: rgba(243, 240, 232, 0.03);
-  --field-border: rgba(243, 240, 232, 0.15);
-  --field-border-focus: rgba(243, 240, 232, 0.4);
+  /* contour de champ ≥ 3:1 (WCAG 1.4.11) */
+  --field-border: rgba(243, 240, 232, 0.4);
+  --field-border-focus: rgba(243, 240, 232, 0.7);
 
   --background: #0b0b0c;
   --foreground: #f4f1e9;
@@ -95,7 +98,7 @@
     --c-coal: #fbf9f4;
     --c-smoke: #e4dfd2;
     --c-bone: #1a1813;
-    --c-ash: #6b6862;
+    --c-ash: #5c5953;
     --c-pure: #000000;
     --c-danger: #6e3a35; /* oxblood profond sur mondes clairs */
 
@@ -104,8 +107,8 @@
     --glass-bone-bg: rgba(20, 20, 20, 0.045);
     --hairline: rgba(20, 20, 20, 0.12);
     --field-bg: rgba(20, 20, 20, 0.03);
-    --field-border: rgba(20, 20, 20, 0.15);
-    --field-border-focus: rgba(20, 20, 20, 0.4);
+    --field-border: rgba(20, 20, 20, 0.5);
+    --field-border-focus: rgba(20, 20, 20, 0.8);
 
     --background: #f4f1e9;
     --foreground: #1a1813;
@@ -122,7 +125,7 @@
   --c-coal: #141416;
   --c-smoke: #1d1d20;
   --c-bone: #f3f0e8;
-  --c-ash: #8a8782;
+  --c-ash: #9a9791;
   --c-pure: #ffffff;
   --c-danger: #c99b94;
 
@@ -131,13 +134,48 @@
   --glass-bone-bg: rgba(244, 241, 233, 0.07);
   --hairline: rgba(244, 241, 233, 0.1);
   --field-bg: rgba(243, 240, 232, 0.03);
-  --field-border: rgba(243, 240, 232, 0.15);
-  --field-border-focus: rgba(243, 240, 232, 0.4);
+  --field-border: rgba(243, 240, 232, 0.4);
+  --field-border-focus: rgba(243, 240, 232, 0.7);
 
   --background: #0b0b0c;
   --foreground: #f4f1e9;
 
   color-scheme: dark;
+}
+
+/* ---- Contraste renforcé — iOS « Augmenter le contraste » (Safari expose
+   prefers-contrast: more). Filets, verre et champs nettement marqués, texte
+   secondaire à ≥ 7:1. Ordre voulu : sombre, clair, puis .theme-dark pour que
+   le feed forcé en sombre garde des valeurs sombres. ---- */
+@media (prefers-contrast: more) {
+  :root {
+    --c-ash: #b0ada6;
+    --glass-bg: rgba(20, 20, 22, 0.85);
+    --glass-border: rgba(244, 241, 233, 0.4);
+    --hairline: rgba(244, 241, 233, 0.4);
+    --field-border: rgba(243, 240, 232, 0.6);
+    --field-border-focus: rgba(243, 240, 232, 0.9);
+  }
+}
+@media (prefers-contrast: more) and (prefers-color-scheme: light) {
+  :root {
+    --c-ash: #4a4741;
+    --glass-bg: rgba(255, 255, 255, 0.85);
+    --glass-border: rgba(20, 20, 20, 0.5);
+    --hairline: rgba(20, 20, 20, 0.5);
+    --field-border: rgba(20, 20, 20, 0.7);
+    --field-border-focus: rgba(20, 20, 20, 0.9);
+  }
+}
+@media (prefers-contrast: more) {
+  .theme-dark {
+    --c-ash: #b0ada6;
+    --glass-bg: rgba(20, 20, 22, 0.85);
+    --glass-border: rgba(244, 241, 233, 0.4);
+    --hairline: rgba(244, 241, 233, 0.4);
+    --field-border: rgba(243, 240, 232, 0.6);
+    --field-border-focus: rgba(243, 240, 232, 0.9);
+  }
 }
 
 @media (min-width: 768px) {
@@ -154,6 +192,8 @@ html {
   background: var(--background);
   color: var(--foreground);
   scroll-behavior: smooth;
+  /* l'élément focalisé ne finit jamais sous la tab bar fixe (0px dès md) */
+  scroll-padding-bottom: var(--tabbar-clearance);
 }
 
 body {
@@ -240,6 +280,11 @@ body {
   -webkit-backdrop-filter: blur(20px);
   border: 1px solid var(--glass-border);
 }
+@media (prefers-contrast: more) {
+  .glass-bar {
+    background: var(--background);
+  }
+}
 
 .glass-bone {
   background: var(--glass-bone-bg);
@@ -252,23 +297,33 @@ body {
 }
 
 /* ---------- Form input (glass field) ---------- */
-.field {
-  width: 100%;
-  border-radius: 0; /* brutalist: sharp fields */
-  border: 1px solid var(--field-border);
-  background: var(--field-bg);
-  padding: 0.75rem 1rem;
-  font-size: 0.875rem;
-  line-height: 1.25rem;
-  color: var(--color-bone);
-  outline: none;
-  transition: border-color 0.2s ease;
-}
-.field::placeholder {
-  color: var(--color-ash);
-}
-.field:focus {
-  border-color: var(--field-border-focus);
+/* Dans @layer components, et c'est porteur : hors couche, .field écrasait
+   tous les utilitaires Tailwind (text-base, rounded-full, pr-14,
+   border-bone/70…) et son `outline: none` annulait l'anneau :focus-visible
+   global. 16px sous md : en dessous, Safari iOS zoome au focus. */
+@layer components {
+  .field {
+    width: 100%;
+    border-radius: 0; /* brutalist: sharp fields */
+    border: 1px solid var(--field-border);
+    background: var(--field-bg);
+    padding: 0.75rem 1rem;
+    font-size: 1rem;
+    line-height: 1.25rem;
+    color: var(--color-bone);
+    transition: border-color 0.2s ease;
+  }
+  @media (min-width: 768px) {
+    .field {
+      font-size: 0.875rem;
+    }
+  }
+  .field::placeholder {
+    color: var(--color-ash);
+  }
+  .field:focus {
+    border-color: var(--field-border-focus);
+  }
 }
 
 /* ---------- Horizontal scroller (momentum + edge fade) ---------- */
@@ -318,8 +373,10 @@ body {
 /* Load-bearing: this MUST be CSS, not Motion. A Motion `initial={opacity:0}`
    bakes opacity:0 into the SSR HTML and only clears it once the client bundle
    boots — leaving a black page on any browser where JS fails (seen on Safari).
-   `both` fill-mode guarantees the element ends visible even if the animation
-   never runs, so content can never be trapped invisible. */
+   The element ends visible even if the animation never runs, so content can
+   never be trapped invisible. `backwards`, not `both`: once finished, no
+   transform is left on the wrapper, so it stops being the containing block of
+   every `fixed` element in the page (toasts, click-catchers). */
 @keyframes page-enter {
   from {
     opacity: 0;
@@ -331,7 +388,7 @@ body {
   }
 }
 .page-enter {
-  animation: page-enter 0.45s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: page-enter 0.45s cubic-bezier(0.16, 1, 0.3, 1) backwards;
 }
 
 /* ---------- Keyframes ---------- */
@@ -411,7 +468,8 @@ body {
   .grain,
   .sweep,
   .pulse-ring,
-  .spin-disc {
+  .spin-disc,
+  .animate-ping {
     animation: none !important;
   }
   /* keep content visible (opacity 1) — just skip the fade-up */

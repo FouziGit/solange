@@ -53,7 +53,7 @@ export function CommunityView() {
           onChange={(e) => setQ(e.target.value)}
           placeholder="Chercher un cercle…"
           aria-label="Chercher un cercle"
-          className="w-full bg-transparent text-sm text-bone outline-none placeholder:text-ash"
+          className="w-full bg-transparent text-base text-bone outline-none placeholder:text-ash md:text-sm"
         />
       </div>
 
@@ -113,14 +113,19 @@ function CommunityRow({
         data-cursor="link"
         className="group flex items-center gap-3.5 border border-bone/10 p-3.5 transition-colors hover:border-bone/25 hover:bg-bone/[0.03]"
       >
-        <Avatar name={c.name} seed={c.seed} className="size-12 shrink-0" />
+        <Avatar
+          name={c.name}
+          seed={c.seed}
+          decorative
+          className="size-12 shrink-0"
+        />
 
         <div className="min-w-0 flex-1">
           <p className="truncate text-[15px] font-semibold text-bone">
             {c.name}
           </p>
           <p className="mt-0.5 truncate text-[12.5px] text-ash">{c.tagline}</p>
-          <p className="mt-1 flex items-center gap-1 text-[11px] text-ash/80">
+          <p className="mt-1 flex items-center gap-1 text-[11px] text-ash">
             <Users className="size-3" />
             {compact(c.members)} membres
           </p>

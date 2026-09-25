@@ -11,7 +11,9 @@ export default function manifest(): MetadataRoute.Manifest {
     id: "/",
     start_url: "/",
     display: "standalone",
-    orientation: "portrait",
+    /* aucun verrou : un téléphone fixé en paysage (fauteuil, support)
+       doit pouvoir s'en servir (WCAG 1.3.4) */
+    orientation: "any",
     background_color: "#0d0d0e",
     theme_color: "#0d0d0e",
     lang: "fr",

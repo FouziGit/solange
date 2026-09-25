@@ -1,12 +1,13 @@
 "use client";
 
 import { Button } from "@/components/ui/Button";
-import { useEffect, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import Link from "next/link";
 import { AnimatePresence, motion } from "motion/react";
 import type { CatalogItem } from "@/lib/mock";
 import { useStore } from "@/lib/store";
 import { api, type ApiOrder } from "@/lib/api";
+import { usePaymentsMode, retryPaymentsMode } from "@/lib/use-payments-mode";
 import { PageShell } from "@/components/ui/PageShell";
 import { Stamp } from "@/components/ui/Stamp";
 import { FieldLabel } from "@/components/ui/FieldLabel";
@@ -17,8 +18,10 @@ import { toCents, toEur } from "@/lib/fees";
 import {
   SHIP_OPTIONS,
   shipOption,
+  relayAddressLine,
+  relayLabelFor,
   type ShipMethodId,
-  type RelayPoint,
+  type RelayChoice,
 } from "@/lib/shipping";
 import { RelayPicker } from "@/components/checkout/RelayPicker";
 import {
@@ -33,6 +36,20 @@ import {
 } from "@/components/chrome/icons";
 
 type Step = "form" | "processing" | "done";
+
+/** Ce qui manque pour payer : texte d'aide, erreur, champ à rejoindre. */
+type Blocker = {
+  key: "relay" | "address" | "cgv" | "login";
+  hint: string;
+  error: string;
+  target: string;
+};
+
+/** « a, b et c » */
+const joinFr = (parts: string[]) =>
+  parts.length < 2
+    ? parts.join("")
+    : `${parts.slice(0, -1).join(", ")} et ${parts[parts.length - 1]}`;
 
 /* Valeurs de démo figées — le formulaire ne peut JAMAIS recevoir
    une vraie carte : tous les champs sont readOnly. */
@@ -60,20 +77,23 @@ export function CheckoutView({ item }: { item: CatalogItem }) {
      par le serveur (netlify/functions/orders.mts) : la case seule ne
      prouverait rien, c'est l'horodatage sur la commande qui compte. */
   const [cgvAccepted, setCgvAccepted] = useState(false);
-  /* Paiement réel ou démonstration ? Tant qu'on ne sait pas, on ne montre
-     ni la fausse carte ni le bouton — afficher « simulé » à quelqu'un qui
-     va payer pour de vrai serait pire que d'attendre une demi-seconde. */
-  const [paiementReel, setPaiementReel] = useState<boolean | null>(null);
-  useEffect(() => {
-    void api
-      .paymentsConfig()
-      .then((r) => setPaiementReel(r.ok ? r.data.live : false));
-  }, []);
+  /* Paiement réel ou démonstration ? Tant qu'on ne sait pas (chargement,
+     ou pas de réponse), on ne montre ni la fausse carte ni le bouton, et on
+     n'affirme rien : afficher « simulé » à quelqu'un qui va payer pour de
+     vrai serait pire que d'attendre une demi-seconde. */
+  const payments = usePaymentsMode();
+  const paiementReel: boolean | null = payments.ready ? payments.live : null;
   const [soldOut, setSoldOut] = useState(false); // 409 pendant le paiement
 
   // livraison — choisie avant paiement (Vinted-like)
   const [method, setMethod] = useState<ShipMethodId>("mondial_relay");
-  const [relay, setRelay] = useState<RelayPoint | null>(null);
+  /* Le point relais appartient au réseau pour lequel il a été choisi : un
+     relais Mondial Relay ne vaut pas pour le réseau Pickup. */
+  const [relayPick, setRelayPick] = useState<{
+    method: ShipMethodId;
+    point: RelayChoice;
+  } | null>(null);
+  const relay = relayPick?.method === method ? relayPick.point : null;
   const [pickerOpen, setPickerOpen] = useState(false);
   // adresse — domicile (Chronopost) uniquement, revalidée serveur (lot 1)
   const [addrName, setAddrName] = useState("");
@@ -90,10 +110,79 @@ export function CheckoutView({ item }: { item: CatalogItem }) {
       addrPostal.trim() &&
       addrCity.trim()
     );
-  const shippingLabel =
-    ship.relay && relay ? `${ship.carrier} · ${relay.name}` : ship.carrier;
+  const relayLabel = ship.relay && relay ? relayLabelFor(relay) : undefined;
+  const shippingLabel = relayLabel
+    ? `${ship.carrier} · ${relayLabel}`
+    : ship.carrier;
+
+  /* Ce qui empêche de payer ET que l'acheteur peut corriger. Le bouton
+     reste atteignable (aria-disabled) : il dit ce qui manque, et un appui
+     amène au premier point à corriger. */
+  const uid = useId();
+  const ids = {
+    relay: `${uid}-relais`,
+    name: `${uid}-nom`,
+    line: `${uid}-adresse`,
+    postal: `${uid}-cp`,
+    city: `${uid}-ville`,
+    cgv: `${uid}-cgv`,
+    login: `${uid}-connexion`,
+    hint: `${uid}-manque`,
+    ship: `${uid}-livraison`,
+  };
+  const blockers: Blocker[] = [];
+  if (needsRelay)
+    blockers.push({
+      key: "relay",
+      hint: `choisis un point relais ${ship.carrier}`,
+      error: "Choisis un point relais pour continuer.",
+      target: ids.relay,
+    });
+  if (needsAddress)
+    blockers.push({
+      key: "address",
+      hint: "complète l'adresse de livraison",
+      error: "Complète l'adresse de livraison pour continuer.",
+      target:
+        (
+          [
+            [addrName, ids.name],
+            [addrLine, ids.line],
+            [addrPostal, ids.postal],
+            [addrCity, ids.city],
+          ] as const
+        ).find(([v]) => !v.trim())?.[1] ?? ids.name,
+    });
+  if (!cgvAccepted)
+    blockers.push({
+      key: "cgv",
+      hint: "accepte les conditions de vente",
+      error: "Accepte les conditions de vente pour payer.",
+      target: ids.cgv,
+    });
+  /* En paiement réel, un invité ne peut pas payer : il n'y aurait
+     personne à qui rattacher la commande, ni à qui rembourser. */
+  if (authReady && !user && paiementReel)
+    blockers.push({
+      key: "login",
+      hint: "connecte-toi",
+      error: "Connecte-toi pour acheter cette pièce.",
+      target: ids.login,
+    });
+  const [blockedKey, setBlockedKey] = useState<Blocker["key"] | null>(null);
+  // l'erreur « il manque… » s'efface d'elle-même une fois corrigée
+  const shownError =
+    error ?? blockers.find((b) => b.key === blockedKey)?.error ?? null;
 
   const alreadySold = isSold(item.id);
+
+  /* Commande enregistrée : le bouton Payer, qui avait le focus, disparaît.
+     Le titre le reprend, pour que VoiceOver lise la confirmation au lieu
+     de repartir du haut de la page. */
+  const doneTitleRef = useRef<HTMLHeadingElement>(null);
+  useEffect(() => {
+    if (step === "done") doneTitleRef.current?.focus();
+  }, [step]);
 
   /* Montants calculés par la MÊME fonction que le serveur
      (src/lib/payments.ts). Le client faisait son propre calcul —
@@ -120,25 +209,23 @@ export function CheckoutView({ item }: { item: CatalogItem }) {
 
   const pay = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (step !== "form" || soldOut || alreadySold || !authReady) return;
-    if (needsRelay) {
-      setError("Choisis un point relais pour continuer.");
+    if (
+      step !== "form" ||
+      soldOut ||
+      alreadySold ||
+      !authReady ||
+      paiementReel === null
+    )
       return;
-    }
-    if (needsAddress) {
-      setError("Complète l'adresse de livraison pour continuer.");
-      return;
-    }
     setError(null);
-    setStep("processing");
-
-    /* En paiement réel, un invité ne peut pas payer : il n'y aurait
-       personne à qui rattacher la commande, ni à qui rembourser. */
-    if (!user && paiementReel) {
-      setError("Connecte-toi pour acheter cette pièce.");
-      setStep("form");
+    const first = blockers[0];
+    if (first) {
+      setBlockedKey(first.key);
+      document.getElementById(first.target)?.focus();
       return;
     }
+    setBlockedKey(null);
+    setStep("processing");
 
     /* ---- invité : démo locale, rien n'est sauvegardé ---- */
     if (!user) {
@@ -164,7 +251,7 @@ export function CheckoutView({ item }: { item: CatalogItem }) {
     const res = await api.order(
       item.id,
       method,
-      relay?.name,
+      relayLabel,
       ship.relay
         ? undefined
         : {
@@ -228,12 +315,17 @@ export function CheckoutView({ item }: { item: CatalogItem }) {
             <Stamp>Payée</Stamp>
           </div>
 
-          <h1 className="font-display mt-6 text-center text-3xl font-bold uppercase tracking-tight text-bone">
+          <h1
+            ref={doneTitleRef}
+            tabIndex={-1}
+            className="font-display mt-6 text-center text-3xl font-bold uppercase tracking-tight text-bone"
+          >
             Commande enregistrée
           </h1>
           <p className="mt-2 text-center text-[13px] text-ash">
             Commande <span className="text-bone">{orderId}</span> ·{" "}
-            {euro(paidTotal)} · paiement simulé
+            {euro(paidTotal)}
+            {paiementReel === false && " · paiement simulé"}
           </p>
           {!serverOrder && (
             <p className="mt-1.5 text-center text-[11.5px] text-ash">
@@ -272,16 +364,18 @@ export function CheckoutView({ item }: { item: CatalogItem }) {
             <Row label={`Livraison · ${ship.carrier}`}>
               {euro(paidShipping)}
             </Row>
-            {relay && (
-              <div className="flex items-start gap-1.5 text-[11.5px] text-ash">
-                <Pin className="mt-0.5 size-3.5 shrink-0" />
-                <span>
-                  {relay.name} — {relay.address} · {relay.postal}
-                </span>
+            {relayLabel && (
+              <div className="text-[11.5px] text-ash">
+                <dt className="sr-only">Point relais</dt>
+                <dd className="flex items-start gap-1.5 break-words">
+                  <Pin className="mt-0.5 size-3.5 shrink-0" />
+                  <span className="min-w-0">{relayLabel}</span>
+                </dd>
               </div>
             )}
-            <div className="my-1 h-px bg-bone/10" />
-            <div className="flex items-center justify-between">
+            {/* filet porté par la ligne Total : un <dl> ne contient que
+                des groupes dt/dd */}
+            <div className="flex items-center justify-between border-t border-bone/10 pt-1">
               <dt className="font-semibold text-bone">Total</dt>
               <dd className="font-display text-xl font-bold tracking-tight text-bone">
                 {euro(paidTotal)}
@@ -289,12 +383,14 @@ export function CheckoutView({ item }: { item: CatalogItem }) {
             </div>
           </dl>
 
-          <div className="mt-5 flex items-center gap-2 rounded-2xl border border-bone/12 bg-bone/[0.03] px-4 py-3 text-[12.5px] text-ash">
-            <span className="grid size-7 shrink-0 place-items-center rounded-full bg-bone/10">
-              <Bag className="size-4 text-bone" />
-            </span>
-            Paiement simulé — aucun débit réel n&apos;a été effectué.
-          </div>
+          {paiementReel === false && (
+            <div className="mt-5 flex items-center gap-2 rounded-2xl border border-bone/12 bg-bone/[0.03] px-4 py-3 text-[12.5px] text-ash">
+              <span className="grid size-7 shrink-0 place-items-center rounded-full bg-bone/10">
+                <Bag className="size-4 text-bone" />
+              </span>
+              Paiement simulé — aucun débit réel n&apos;a été effectué.
+            </div>
+          )}
 
           <div className="mt-7 flex flex-col gap-3">
             <Button href="/profil" size="lg">
@@ -392,16 +488,29 @@ export function CheckoutView({ item }: { item: CatalogItem }) {
         Paiement
       </h1>
 
-      {/* Bandeau test — honnête : rien de réel n'est débité. */}
-      <div className="mt-4 flex items-center gap-2.5 rounded-xl border border-bone/20 bg-bone/[0.04] px-3.5 py-2.5">
-        <span className="rounded-md bg-bone px-1.5 py-0.5 text-[11px] font-bold uppercase tracking-wider text-ink">
-          Test
-        </span>
-        <p className="text-[11.5px] leading-tight text-ash">
-          Simulation <span className="text-bone">Stripe Connect</span> — aucun
-          paiement réel n&apos;est effectué.
-        </p>
-      </div>
+      {/* Bandeau test — honnête : seulement quand le serveur a confirmé
+          que rien de réel n'est débité (jamais en paiement réel), ou que la
+          clé Stripe est une clé de test. */}
+      {(paiementReel === false || payments.test) && (
+        <div className="mt-4 flex items-center gap-2.5 rounded-xl border border-bone/20 bg-bone/[0.04] px-3.5 py-2.5">
+          <span className="rounded-md bg-bone px-1.5 py-0.5 text-[11px] font-bold uppercase tracking-wider text-ink">
+            Test
+          </span>
+          <p className="text-[11.5px] leading-tight text-ash">
+            {paiementReel === false ? (
+              <>
+                Simulation <span className="text-bone">Stripe Connect</span> —
+                aucun paiement réel n&apos;est effectué.
+              </>
+            ) : (
+              <>
+                <span className="text-bone">Stripe</span> en mode test : paie
+                avec une carte de test Stripe.
+              </>
+            )}
+          </p>
+        </div>
+      )}
 
       <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_minmax(0,380px)]">
         {/* ---- order summary + livraison (avant le paiement) ---- */}
@@ -435,23 +544,37 @@ export function CheckoutView({ item }: { item: CatalogItem }) {
 
           {/* ---- livraison : choix du transporteur ---- */}
           <div className="mt-4 rounded-2xl border border-bone/10 p-4">
-            <p className="etiquette mb-3 text-[11px] text-ash">Livraison</p>
-            <div className="flex flex-col gap-2">
+            <p id={ids.ship} className="etiquette mb-3 text-[11px] text-ash">
+              Livraison
+            </p>
+            {/* choix unique : de vrais boutons radio (flèches, « 1 sur 3,
+                coché »), posés sur toute la carte et transparents */}
+            <div
+              role="radiogroup"
+              aria-labelledby={ids.ship}
+              className="flex flex-col gap-2"
+            >
               {SHIP_OPTIONS.map((o) => {
                 const on = method === o.id;
                 return (
-                  <button
+                  <label
                     key={o.id}
-                    type="button"
-                    onClick={() => setMethod(o.id)}
-                    aria-pressed={on}
-                    className={`flex items-center gap-3 rounded-xl border p-3 text-left transition-colors ${
+                    className={`relative flex cursor-pointer items-center gap-3 rounded-xl border p-3 text-left transition-colors ${
                       on
                         ? "border-bone bg-bone/[0.06]"
                         : "border-bone/12 bg-bone/[0.02] hover:border-bone/30"
                     }`}
                   >
+                    <input
+                      type="radio"
+                      name={ids.ship}
+                      value={o.id}
+                      checked={on}
+                      onChange={() => setMethod(o.id)}
+                      className="absolute inset-0 size-full cursor-pointer appearance-none rounded-xl"
+                    />
                     <span
+                      aria-hidden="true"
                       className={`grid size-5 shrink-0 place-items-center rounded-full border ${
                         on ? "border-bone" : "border-bone/30"
                       }`}
@@ -469,7 +592,7 @@ export function CheckoutView({ item }: { item: CatalogItem }) {
                     <span className="font-display shrink-0 text-[14px] font-bold tabular-nums text-bone">
                       {euro(o.priceEUR)}
                     </span>
-                  </button>
+                  </label>
                 );
               })}
             </div>
@@ -477,6 +600,7 @@ export function CheckoutView({ item }: { item: CatalogItem }) {
             {/* point relais — pour Mondial Relay / Point Relais */}
             {ship.relay && (
               <button
+                id={ids.relay}
                 type="button"
                 onClick={() => setPickerOpen(true)}
                 className={`mt-2 flex w-full items-center gap-3 rounded-xl border p-3 text-left transition-colors ${
@@ -492,10 +616,10 @@ export function CheckoutView({ item }: { item: CatalogItem }) {
                   {relay ? (
                     <>
                       <span className="flex items-center gap-1.5 text-[13px] font-semibold text-bone">
-                        <Check className="size-3.5" /> {relay.name}
+                        <Check className="size-3.5 shrink-0" /> {relay.name}
                       </span>
-                      <span className="block truncate text-[11.5px] text-ash">
-                        {relay.address} · {relay.postal}
+                      <span className="block break-words text-[11.5px] text-ash">
+                        {relayAddressLine(relay)}
                       </span>
                     </>
                   ) : (
@@ -516,8 +640,9 @@ export function CheckoutView({ item }: { item: CatalogItem }) {
             {!ship.relay && (
               <div className="mt-3 grid gap-3 sm:grid-cols-2">
                 <div className="sm:col-span-2">
-                  <FieldLabel>Nom complet</FieldLabel>
+                  <FieldLabel htmlFor={ids.name}>Nom complet</FieldLabel>
                   <input
+                    id={ids.name}
                     value={addrName}
                     onChange={(e) => setAddrName(e.target.value)}
                     autoComplete="name"
@@ -525,8 +650,9 @@ export function CheckoutView({ item }: { item: CatalogItem }) {
                   />
                 </div>
                 <div className="sm:col-span-2">
-                  <FieldLabel>Adresse</FieldLabel>
+                  <FieldLabel htmlFor={ids.line}>Adresse</FieldLabel>
                   <input
+                    id={ids.line}
                     value={addrLine}
                     onChange={(e) => setAddrLine(e.target.value)}
                     autoComplete="street-address"
@@ -535,8 +661,9 @@ export function CheckoutView({ item }: { item: CatalogItem }) {
                   />
                 </div>
                 <div>
-                  <FieldLabel>Code postal</FieldLabel>
+                  <FieldLabel htmlFor={ids.postal}>Code postal</FieldLabel>
                   <input
+                    id={ids.postal}
                     value={addrPostal}
                     onChange={(e) => setAddrPostal(e.target.value)}
                     autoComplete="postal-code"
@@ -545,8 +672,9 @@ export function CheckoutView({ item }: { item: CatalogItem }) {
                   />
                 </div>
                 <div>
-                  <FieldLabel>Ville</FieldLabel>
+                  <FieldLabel htmlFor={ids.city}>Ville</FieldLabel>
                   <input
+                    id={ids.city}
                     value={addrCity}
                     onChange={(e) => setAddrCity(e.target.value)}
                     autoComplete="address-level2"
@@ -562,8 +690,7 @@ export function CheckoutView({ item }: { item: CatalogItem }) {
             <Row label="Article">{euro(price)}</Row>
             <Row label="Protection acheteur">{euro(protection)}</Row>
             <Row label={`Livraison · ${ship.carrier}`}>{euro(shipping)}</Row>
-            <div className="my-1 h-px bg-bone/10" />
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between border-t border-bone/10 pt-1">
               <dt className="font-semibold text-bone">Total</dt>
               <dd className="font-display text-xl font-bold tracking-tight text-bone">
                 {euro(total)}
@@ -576,10 +703,12 @@ export function CheckoutView({ item }: { item: CatalogItem }) {
             <p className="etiquette mb-2 text-[11px] text-ash">
               Répartition · Stripe Connect
             </p>
-            <Row label={`Le vendeur reçoit`}>{euro(net)}</Row>
-            <Row label={`Commission SOLANGE (${ratePct} %)`}>
-              {euro(price - net)}
-            </Row>
+            <dl>
+              <Row label={`Le vendeur reçoit`}>{euro(net)}</Row>
+              <Row label={`Commission SOLANGE (${ratePct} %)`}>
+                {euro(price - net)}
+              </Row>
+            </dl>
           </div>
         </section>
 
@@ -614,6 +743,11 @@ export function CheckoutView({ item }: { item: CatalogItem }) {
                   suivante. Carte bancaire, Apple Pay et Google Pay acceptés.
                   SOLANGE ne voit jamais ton numéro de carte.
                 </p>
+                {/* durée de la réservation : RESERVATION_MS dans
+                    netlify/functions/orders.mts */}
+                <p className="mt-1.5 text-[11.5px] leading-snug text-ash">
+                  La pièce t&apos;est réservée 30 minutes le temps du paiement.
+                </p>
               </div>
             ) : paiementReel === false ? (
               <>
@@ -640,7 +774,7 @@ export function CheckoutView({ item }: { item: CatalogItem }) {
                       className="field pr-14 text-bone/80"
                       aria-label="Numéro de carte (démo, non modifiable)"
                     />
-                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] font-bold tracking-wide text-bone/70">
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] font-bold tracking-wide text-bone/75">
                       VISA
                     </span>
                   </div>
@@ -677,19 +811,38 @@ export function CheckoutView({ item }: { item: CatalogItem }) {
                   />
                 </Field>
               </>
+            ) : payments.failed ? (
+              /* Pas de réponse : on ne sait pas si le paiement est réel, donc
+                 on n'affirme rien et on ne laisse pas payer. */
+              <div className="mb-1 rounded-xl border border-bone/25 bg-bone/[0.05] px-3.5 py-3">
+                <p className="text-[12.5px] font-semibold leading-snug text-bone">
+                  Le paiement n&apos;a pas pu être préparé.
+                </p>
+                <p className="mt-0.5 text-[11.5px] leading-snug text-ash">
+                  Vérifie ta connexion, puis réessaie.
+                </p>
+                <button
+                  type="button"
+                  onClick={retryPaymentsMode}
+                  className="mt-2.5 flex min-h-11 w-full items-center justify-center rounded-full border border-bone/25 px-4 text-[13px] font-semibold text-bone transition-colors active:bg-bone/10"
+                >
+                  Réessayer
+                </button>
+              </div>
             ) : null}
 
-            {error && (
+            {shownError && (
               <div
                 role="alert"
                 className="mt-4 rounded-xl border border-bone/25 bg-bone/[0.05] px-3.5 py-2.5 text-[12.5px] leading-snug text-bone"
               >
-                {error}
+                {shownError}
               </div>
             )}
 
             <label className="mt-5 flex cursor-pointer items-start gap-3">
               <input
+                id={ids.cgv}
                 type="checkbox"
                 checked={cgvAccepted}
                 onChange={(e) => setCgvAccepted(e.target.checked)}
@@ -709,7 +862,7 @@ export function CheckoutView({ item }: { item: CatalogItem }) {
                     . Le paiement est encaissé par Stripe, et la part du vendeur
                     lui est versée directement.
                   </>
-                ) : (
+                ) : paiementReel === false ? (
                   <>
                     , et{" "}
                     <span className="font-semibold text-bone">
@@ -717,6 +870,8 @@ export function CheckoutView({ item }: { item: CatalogItem }) {
                     </span>{" "}
                     : aucune somme n&apos;est débitée.
                   </>
+                ) : (
+                  "."
                 )}
               </span>
             </label>
@@ -728,12 +883,13 @@ export function CheckoutView({ item }: { item: CatalogItem }) {
                 step === "processing" ||
                 soldOut ||
                 !authReady ||
-                needsRelay ||
-                needsAddress ||
-                !cgvAccepted ||
                 paiementReel === null
               }
-              className="mt-4"
+              aria-disabled={blockers.length > 0 || undefined}
+              aria-describedby={
+                blockers.length > 0 && !soldOut ? ids.hint : undefined
+              }
+              className="mt-4 aria-disabled:cursor-not-allowed aria-disabled:opacity-40"
             >
               <AnimatePresence mode="wait" initial={false}>
                 {soldOut ? (
@@ -767,34 +923,43 @@ export function CheckoutView({ item }: { item: CatalogItem }) {
                     className="flex items-center gap-2"
                   >
                     <Lock className="size-4" /> Payer {euro(total)}
-                    {paiementReel ? "" : " (simulé)"}
+                    {paiementReel === false ? " (simulé)" : ""}
                   </motion.span>
                 )}
               </AnimatePresence>
             </Button>
 
-            {needsRelay && (
-              <p className="mt-2 text-center text-[11.5px] text-ash">
-                Choisis un point relais {ship.carrier} pour continuer.
-              </p>
-            )}
-            {needsAddress && (
-              <p className="mt-2 text-center text-[11.5px] text-ash">
-                Complète l&apos;adresse de livraison pour continuer.
+            {/* ce qui manque, lu avec le bouton (aria-describedby) */}
+            {blockers.length > 0 && !soldOut && (
+              <p
+                id={ids.hint}
+                className="mt-2 text-center text-[11.5px] text-ash"
+              >
+                Pour payer, {joinFr(blockers.map((b) => b.hint))}.
               </p>
             )}
 
-            {/* Invité : démo locale + proposition de connexion. */}
+            {/* Invité : démo locale (paiement simulé) ou connexion requise. */}
             {authReady && !user && (
               <div className="mt-4 rounded-xl border border-bone/12 bg-bone/[0.03] p-3.5">
                 <p className="text-[11.5px] leading-snug text-ash">
-                  Mode invité — la commande sera une{" "}
-                  <span className="text-bone">
-                    démo locale (non sauvegardée)
-                  </span>
-                  . Connecte-toi pour l&apos;enregistrer sur ton compte.
+                  {paiementReel === false ? (
+                    <>
+                      Mode invité — la commande sera une{" "}
+                      <span className="text-bone">
+                        démo locale (non sauvegardée)
+                      </span>
+                      . Connecte-toi pour l&apos;enregistrer sur ton compte.
+                    </>
+                  ) : (
+                    <>
+                      Connecte-toi pour acheter cette pièce : la commande est
+                      rattachée à ton compte.
+                    </>
+                  )}
                 </p>
                 <button
+                  id={ids.login}
                   type="button"
                   onClick={signIn}
                   className="mt-2.5 flex min-h-11 w-full items-center justify-center rounded-full border border-bone/25 px-4 text-[13px] font-semibold text-bone transition-colors active:bg-bone/10"
@@ -804,20 +969,30 @@ export function CheckoutView({ item }: { item: CatalogItem }) {
               </div>
             )}
 
-            <p className="mt-3 flex items-center justify-center gap-1.5 text-[11px] text-ash">
-              <Lock className="size-3" /> Démo — aucune donnée bancaire
-              n&apos;est saisie ni transmise
-            </p>
+            {paiementReel === false && (
+              <p className="mt-3 flex items-center justify-center gap-1.5 text-[11px] text-ash">
+                <Lock className="size-3" /> Démo — aucune donnée bancaire
+                n&apos;est saisie ni transmise
+              </p>
+            )}
           </form>
         </section>
       </div>
 
+      {/* Paiement réel (ou pas encore confirmé simulé) : jamais de faux
+          points relais — saisie depuis le localisateur du transporteur. */}
       <RelayPicker
         open={pickerOpen}
-        onClose={() => setPickerOpen(false)}
+        onClose={() => {
+          setPickerOpen(false);
+          // retour au bouton « Choisir un point relais », choix fait ou non
+          document.getElementById(ids.relay)?.focus();
+        }}
         carrier={ship.carrier}
+        locator={ship.locator}
+        manual={paiementReel !== false}
         selectedId={relay?.id}
-        onSelect={setRelay}
+        onSelect={(point) => setRelayPick({ method, point })}
       />
     </PageShell>
   );

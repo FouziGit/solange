@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "motion/react";
 import { X } from "../chrome/icons";
@@ -12,7 +12,14 @@ import { X } from "../chrome/icons";
  * - `container="absolute"` : vit DANS une carte du feed (scrim z-30/40) ;
  *   `"fixed"` : plein viewport (z-40/50).
  * - `desktopSide` : variante FilterDrawer — rail droit à partir de md.
- * - Échap ferme ; le panneau prend le focus à l'ouverture (a11y).
+ * - Échap ferme ; le panneau prend le focus à l'ouverture, et le rend à
+ *   l'élément qui l'avait (le bouton déclencheur) à la fermeture — sauf si
+ *   l'appelant l'a déjà posé ailleurs.
+ * - Nom de la boîte de dialogue : surtitre + `title` (rendu en <h2>), via
+ *   aria-labelledby — deux feuilles « Commande » ne s'annoncent plus pareil.
+ *   `ariaLabel` le remplace quand le texte visible ne suffit pas.
+ * - Le défilement ne fuit pas vers la page ou le feed (voile en
+ *   touch-none, panneau en overscroll-contain) ; Fermer fait 44 px.
  */
 export function Sheet({
   open,
@@ -36,6 +43,8 @@ export function Sheet({
   children: React.ReactNode;
 }) {
   const panelRef = useRef<HTMLDivElement>(null);
+  // nom de la boîte : surtitre + titre (« Commande, Expédition »)
+  const labelId = useId();
   // Portal (fixed uniquement) : sort le panneau du stacking context créé par
   // les transitions de page (template.tsx) — sinon z-[70] reste sous la nav.
   const [mounted, setMounted] = useState(false);
@@ -77,10 +86,24 @@ export function Sheet({
       }
     };
     document.addEventListener("keydown", onKey);
+    /* l'élément qui avait le focus (le déclencheur) le récupère à la
+       fermeture : sinon il retombe sur <body> et VoiceOver repart du haut */
+    const prev =
+      document.activeElement instanceof HTMLElement
+        ? document.activeElement
+        : null;
+    const panel = panelRef.current;
     // le focus initial se pose UNE fois, à l'ouverture — jamais pendant
     // que la personne écrit
-    panelRef.current?.focus({ preventScroll: true });
-    return () => document.removeEventListener("keydown", onKey);
+    panel?.focus({ preventScroll: true });
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      const active = document.activeElement;
+      const lost =
+        !active || active === document.body || !!panel?.contains(active);
+      if (lost && prev && prev !== document.body && prev.isConnected)
+        prev.focus({ preventScroll: true });
+    };
   }, [open]);
 
   /* fixed = plein viewport, AU-DESSUS de la tab bar (z-50) et du FAB */
@@ -104,7 +127,7 @@ export function Sheet({
                `fixed inset-0`, il intercepterait TOUS les clics de la page.
                Vérifié en prod : le voile finit bien à `opacity: 0`, mais il
                reste dans le DOM — donc on le neutralise explicitement. */
-            className={`${pos} inset-0 ${zScrim} bg-ink/70 backdrop-blur-[2px] ${
+            className={`${pos} inset-0 ${zScrim} touch-none bg-ink/70 backdrop-blur-[2px] ${
               open ? "" : "pointer-events-none"
             }`}
           />
@@ -112,7 +135,10 @@ export function Sheet({
             ref={panelRef}
             role="dialog"
             aria-modal="true"
-            aria-label={ariaLabel ?? eyebrow}
+            aria-label={ariaLabel}
+            aria-labelledby={
+              ariaLabel ? undefined : `${labelId}-surtitre ${labelId}-titre`
+            }
             /* une fois fermé, le panneau résiduel ne doit ni capter un clic
                ni être annoncé comme une boîte de dialogue ouverte */
             aria-hidden={open ? undefined : true}
@@ -125,7 +151,7 @@ export function Sheet({
             style={{ maxHeight: desktopSide ? undefined : maxHeight }}
             className={`${pos} inset-x-0 bottom-0 ${zPanel} ${
               open ? "" : "pointer-events-none"
-            } flex flex-col overflow-hidden rounded-t-stage border-t border-bone/15 bg-coal/95 outline-none backdrop-blur-2xl ${
+            } flex flex-col overflow-hidden overscroll-contain rounded-t-stage border-t border-bone/15 bg-coal/95 outline-none backdrop-blur-2xl ${
               desktopSide
                 ? "md:inset-y-0 md:left-auto md:right-0 md:max-h-none md:w-[400px] md:rounded-none md:rounded-l-stage md:border-l md:border-t-0"
                 : ""
@@ -134,20 +160,35 @@ export function Sheet({
             <div
               className={`flex items-center justify-between px-5 pb-2 pt-4 ${
                 desktopSide ? "md:pt-12" : ""
-              }`}
+              } ${container === "absolute" ? "touch-none" : ""}`}
             >
               <div>
-                <p className="eyebrow text-sm text-bone">{eyebrow}</p>
-                <p className="font-display text-xl font-bold tracking-mega text-bone">
-                  {title}
+                <p
+                  id={`${labelId}-surtitre`}
+                  className="eyebrow text-sm text-bone"
+                >
+                  {eyebrow}
                 </p>
+                <h2
+                  id={`${labelId}-titre`}
+                  className="font-display text-xl font-bold tracking-mega text-bone"
+                >
+                  {title}
+                </h2>
               </div>
+              {/* 44 px de zone tactile (HIG) autour du rond visible de 36 px */}
               <button
+                type="button"
                 onClick={onClose}
-                className="grid size-9 place-items-center rounded-full bg-bone/10 text-bone"
+                className="-mr-1 grid size-11 shrink-0 place-items-center rounded-full text-bone"
                 aria-label="Fermer"
               >
-                <X className="size-5" />
+                <span
+                  aria-hidden="true"
+                  className="grid size-9 place-items-center rounded-full bg-bone/10"
+                >
+                  <X className="size-5" />
+                </span>
               </button>
             </div>
 

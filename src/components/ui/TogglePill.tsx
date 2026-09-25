@@ -8,10 +8,18 @@ import { cn } from "@/lib/utils";
  * rond = organique (DA §4) : suivre quelqu'un est un geste social, pas un
  * achat. off = bloc renversé (l'invite), on = filet + texte posé.
  * Remplace les 7 implémentations divergentes relevées à l'inventaire (§2).
+ *
+ * État annoncé par UN seul canal, jamais les deux (« Suivi, sélectionné ») :
+ * - libellés différents (Suivre/Suivi) : le libellé dit l'état, pas
+ *   d'aria-pressed ;
+ * - libellé stable (labelOn === labelOff, ou aria-label fourni) :
+ *   aria-pressed ;
+ * - `switchRole` : role="switch" + aria-checked, avec un aria-label stable.
  */
 const SIZE = {
-  /* contexte dense (rangées, overlay feed) — la rangée hôte reste ≥ 44px */
-  sm: "min-h-9 px-4 text-[12px]",
+  /* contexte dense (rangées, overlay feed) : 44 px au doigt (HIG), 36 px
+     seulement avec une souris */
+  sm: "min-h-11 px-4 text-[12px] pointer-fine:min-h-9",
   md: "min-h-11 px-5 text-[13px]",
 } as const;
 
@@ -38,6 +46,7 @@ export function TogglePill({
   /** role="switch" (réglage marche/arrêt) au lieu du toggle pressé. */
   switchRole?: boolean;
 } & React.ButtonHTMLAttributes<HTMLButtonElement>) {
+  const stableName = labelOn === labelOff || rest["aria-label"] !== undefined;
   return (
     <button
       type="button"
@@ -45,7 +54,9 @@ export function TogglePill({
       data-cursor="link"
       {...(switchRole
         ? { role: "switch", "aria-checked": on }
-        : { "aria-pressed": on })}
+        : stableName
+          ? { "aria-pressed": on }
+          : {})}
       className={cn(
         "inline-flex shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-full font-semibold transition-colors active:scale-95 disabled:cursor-not-allowed disabled:opacity-40",
         SIZE[size],

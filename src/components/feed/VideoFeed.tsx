@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { looks } from "@/lib/mock";
 import { useStore } from "@/lib/store";
+import { announce } from "@/lib/announce";
 import type { ApiPost } from "@/lib/api";
 import { FeedCard } from "./FeedCard";
 import { MemberPostCard } from "./MemberPostCard";
@@ -52,6 +53,11 @@ export function VideoFeed() {
     void refreshPosts();
   }, [refreshPosts]);
 
+  // la puce d'échec apparaît sans prendre le focus : on la dit aussi
+  useEffect(() => {
+    if (postsError) announce("Les publications n'ont pas chargé.");
+  }, [postsError]);
+
   useEffect(() => {
     const root = containerRef.current;
     if (!root) return;
@@ -80,40 +86,50 @@ export function VideoFeed() {
         ref={containerRef}
         className="feed-scroll h-[100dvh] overflow-y-auto overflow-x-hidden"
       >
-        {visiblePosts.map((post, i) => (
-          <MemberPostCard
-            key={post.id}
-            post={post}
-            index={i}
-            active={i === active}
-            inView={Math.abs(i - active) <= 1}
-          />
-        ))}
-
-        {visibleLooks.map((look, i) => {
-          const idx = visiblePosts.length + i;
-          return (
-            <FeedCard
-              key={look.id}
-              look={look}
-              index={idx}
-              active={idx === active}
-              inView={Math.abs(idx - active) <= 1}
+        {/* role="feed" : chaque publication est un <article> titré, avec sa
+            position (« 3 sur 12 ») — le marqueur de fin reste hors du fil */}
+        <div role="feed" aria-label="Publications">
+          {visiblePosts.map((post, i) => (
+            <MemberPostCard
+              key={post.id}
+              post={post}
+              index={i}
+              total={total}
+              active={i === active}
+              inView={Math.abs(i - active) <= 1}
             />
-          );
-        })}
+          ))}
+
+          {visibleLooks.map((look, i) => {
+            const idx = visiblePosts.length + i;
+            return (
+              <FeedCard
+                key={look.id}
+                look={look}
+                index={idx}
+                total={total}
+                active={idx === active}
+                inView={Math.abs(idx - active) <= 1}
+              />
+            );
+          })}
+        </div>
 
         {/* end-of-feed marker after the last look */}
         <div className="feed-snap flex h-[60dvh] flex-col items-center justify-center gap-3 px-10 text-center">
-          <span className="etiquette text-[11px] text-bone/60">Fin du fil</span>
-          <p className="max-w-[24ch] text-[12.5px] text-ash/80">
+          <span className="etiquette text-[11px] text-ash">Fin du fil</span>
+          <p className="max-w-[24ch] text-[12.5px] text-ash">
             Tu as tout vu. Remonte pour revoir les looks.
           </p>
         </div>
       </div>
 
-      {/* desktop pagination rail — publications membres + looks */}
-      <div className="fixed right-7 top-1/2 z-40 hidden -translate-y-1/2 flex-col items-center gap-2.5 md:flex">
+      {/* desktop pagination rail — publications membres + looks (visuel
+          seul : la position est dans chaque article) */}
+      <div
+        aria-hidden="true"
+        className="fixed right-7 top-1/2 z-40 hidden -translate-y-1/2 flex-col items-center gap-2.5 md:flex"
+      >
         {[
           ...visiblePosts.map((p) => p.id),
           ...visibleLooks.map((l) => l.id),
@@ -131,8 +147,6 @@ export function VideoFeed() {
           l'annonce en chip discrète, le fil reste complet avec les looks */}
       {postsError && (
         <div
-          role="status"
-          aria-live="polite"
           className="pointer-events-none fixed inset-x-0 z-30 flex justify-center"
           style={{ top: "calc(env(safe-area-inset-top) + 7rem)" }}
         >
@@ -140,7 +154,7 @@ export function VideoFeed() {
             type="button"
             onClick={() => void refreshPosts()}
             data-cursor="link"
-            className="pointer-events-auto glass rounded-full px-4 py-2 text-[12px] font-medium text-bone active:scale-95"
+            className="pointer-events-auto glass min-h-11 rounded-full px-4 py-2 text-[12px] font-medium text-bone active:scale-95"
           >
             Les publications n&apos;ont pas chargé · Réessayer
           </button>
@@ -154,6 +168,7 @@ export function VideoFeed() {
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 8 }}
+            aria-hidden="true"
             className="pointer-events-none fixed bottom-8 left-1/2 z-40 hidden -translate-x-1/2 flex-col items-center gap-1 md:flex"
           >
             <motion.div
@@ -166,7 +181,7 @@ export function VideoFeed() {
             >
               <ChevronUp className="size-5 text-bone/70" />
             </motion.div>
-            <span className="etiquette text-[11px] text-bone/60">défile</span>
+            <span className="etiquette text-[11px] text-ash">défile</span>
           </motion.div>
         )}
       </AnimatePresence>

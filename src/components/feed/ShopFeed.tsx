@@ -29,15 +29,18 @@ export function ShopFeed() {
 
   return (
     <div className="feed-scroll h-[100dvh] overflow-y-auto overflow-x-hidden">
-      {feed.map((item, i) => (
-        <ShopCard key={item.id} item={item} index={i} />
-      ))}
+      {/* même structure que le fil Looks : un <article> titré par pièce */}
+      <div role="feed" aria-label="Pièces en vente">
+        {feed.map((item, i) => (
+          <ShopCard key={item.id} item={item} index={i} total={feed.length} />
+        ))}
+      </div>
 
       <div className="feed-snap flex h-[60dvh] flex-col items-center justify-center gap-3 px-10 text-center">
-        <span className="etiquette text-[11px] text-bone/60">
+        <span className="etiquette text-[11px] text-ash">
           Fin de la sélection
         </span>
-        <p className="max-w-[26ch] text-[12.5px] text-ash/80">
+        <p className="max-w-[26ch] text-[12.5px] text-ash">
           Tu as tout vu. Remonte, ou explore le Marché complet.
         </p>
       </div>

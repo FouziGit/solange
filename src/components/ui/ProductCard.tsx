@@ -93,6 +93,7 @@ export function ProductCard({
           seed={item.seed}
           image={item.image ?? imgItem(item.id)}
           brand={item.brand}
+          alt=""
           eager={index < 2}
           className="transition-transform duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-[1.06]"
         />
@@ -109,7 +110,7 @@ export function ProductCard({
           type="button"
           onClick={onSave}
           data-cursor="link"
-          aria-label="Enregistrer"
+          aria-label={`Garder ${item.brand} ${item.name}`}
           aria-pressed={saved}
           className="absolute right-2.5 top-2.5 z-10 grid size-8 place-items-center rounded-full glass text-bone transition-transform before:absolute before:-inset-2 before:content-[''] active:scale-90"
         >
@@ -130,9 +131,11 @@ export function ProductCard({
           </span>
         )}
 
-        {/* état vendu — overlay sombre discret, la carte reste lisible */}
+        {/* état vendu — overlay sombre discret, la carte reste lisible ;
+            theme-dark : en thème clair, text-bone serait de l'encre sombre
+            sur le voile noir */}
         {sold && (
-          <span className="pointer-events-none absolute inset-0 grid place-items-center bg-black/55">
+          <span className="theme-dark pointer-events-none absolute inset-0 grid place-items-center bg-black/55">
             <span className="border border-bone/60 px-3 py-1 text-[11px] font-semibold uppercase tracking-widest text-bone">
               Vendu
             </span>
@@ -182,14 +185,14 @@ export function ProductCard({
           {sold ? (
             <span
               aria-disabled="true"
-              className="mt-2 flex min-h-11 cursor-not-allowed items-center justify-center border border-bone/15 text-[12px] font-semibold text-bone/40"
+              className="mt-2 flex min-h-11 cursor-not-allowed items-center justify-center border border-bone/15 text-[12px] font-semibold text-ash"
             >
               Vendu
             </span>
           ) : item.reserved ? (
             <span
               aria-disabled="true"
-              className="mt-2 flex min-h-11 items-center justify-center border border-bone/15 text-[12px] font-semibold text-bone/50"
+              className="mt-2 flex min-h-11 items-center justify-center border border-bone/15 text-[12px] font-semibold text-ash"
             >
               Paiement en cours
             </span>
@@ -225,7 +228,7 @@ export function ProductCard({
         <Link
           href={`/article/${item.id}`}
           data-cursor="link"
-          aria-label={`${item.brand} — ${item.name}`}
+          aria-label={`${item.brand} — ${item.name}${sold ? ", vendu" : ""}`}
           className="block"
         >
           {card}

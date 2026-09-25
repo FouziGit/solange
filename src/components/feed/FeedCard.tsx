@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import {
   AnimatePresence,
   motion,
@@ -13,12 +13,18 @@ import { imgItem, imgLook, videoLook, videoPoster } from "@/lib/img";
 import { useStore } from "@/lib/store";
 import { KenBurnsMedia } from "./KenBurnsMedia";
 import { CarouselMedia } from "./CarouselMedia";
+import {
+  intentOnLeave,
+  shouldPlay,
+  useReduceForMarkup,
+  type PlayIntent,
+} from "./MemberVideo";
 import { Avatar } from "../chrome/Avatar";
 import { TogglePill } from "../ui/TogglePill";
 import { ActionRail } from "./ActionRail";
 import { CommentSheet } from "./CommentSheet";
 import { ShopTheLook } from "./ShopTheLook";
-import { Heart, Play, Mute, Volume } from "../chrome/icons";
+import { Heart, Play } from "../chrome/icons";
 
 type Burst = { id: number; x: number; y: number };
 
@@ -39,11 +45,14 @@ export function FeedCard({
   look,
   active,
   index,
+  total,
   inView,
 }: {
   look: Look;
   active: boolean;
   index: number;
+  /** Nombre de publications du fil (aria-setsize). */
+  total: number;
   inView: boolean;
 }) {
   const reduce = useReducedMotion();
@@ -71,8 +80,7 @@ export function FeedCard({
   const bridgeBrand =
     look.products[0]?.brand ?? look.brandTags?.[0] ?? undefined;
 
-  const [paused, setPaused] = useState(false);
-  const [muted, setMuted] = useState(true);
+  const headingId = useId();
   const [commentsOpen, setCommentsOpen] = useState(false);
   const [bursts, setBursts] = useState<Burst[]>([]);
 
@@ -84,6 +92,38 @@ export function FeedCard({
   // Multi-image posts render an Instagram-style swipeable carousel instead of
   // the single video/photo hero.
   const hasGallery = (look.gallery?.length ?? 0) > 1;
+
+  /* Lecture / pause. Un carrousel ne bouge pas tout seul, et une photo
+     sous « Réduire les animations » non plus (la dérive est coupée en
+     CSS) : rien à mettre en pause. Ailleurs, la règle de MemberVideo —
+     pas de lecture AUTO sous « Réduire les animations », mais lecture à
+     la demande. */
+  const reduceMarkup = useReduceForMarkup();
+  const pausable = !hasGallery && !(isPost && reduceMarkup);
+  const [intent, setIntent] = useState<PlayIntent>("auto");
+  const [wasActive, setWasActive] = useState(active);
+  if (wasActive !== active) {
+    setWasActive(active);
+    if (!active) setIntent(intentOnLeave(intent));
+  }
+  const playing = pausable
+    ? shouldPlay({
+        active,
+        intent,
+        reduce: reduceMarkup && !isPost,
+        saveData: false,
+      })
+    : active;
+  const paused = active && !playing;
+  const togglePlay = () => setIntent(playing ? "pause" : "play");
+  const mediaLabel = isPost
+    ? playing
+      ? "Mettre l'animation en pause"
+      : "Reprendre l'animation"
+    : playing
+      ? "Mettre la vidéo en pause"
+      : "Lire la vidéo";
+
   const openShop = (id: string | null) => {
     setHighlightId(id);
     setShopOpen(true);
@@ -111,7 +151,12 @@ export function FeedCard({
     setTimeout(() => setBursts((b) => b.filter((h) => h.id !== id)), 800);
   };
 
-  const onMediaClick = (e: React.MouseEvent<HTMLDivElement>) => {
+  const onMediaClick = (e: React.MouseEvent<HTMLButtonElement>) => {
+    // clavier (Entrée, Espace) : pas de double-tap à attendre
+    if (e.detail === 0) {
+      togglePlay();
+      return;
+    }
     const rect = e.currentTarget.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
@@ -124,16 +169,24 @@ export function FeedCard({
     } else {
       clickTimer.current = setTimeout(() => {
         clickTimer.current = null;
-        setPaused((p) => !p);
+        togglePlay();
       }, 230);
     }
   };
 
   return (
-    <section
+    <article
       data-index={index}
+      aria-labelledby={headingId}
+      aria-posinset={index + 1}
+      aria-setsize={total}
       className="feed-snap relative flex h-[100dvh] w-full items-center justify-center md:py-[3vh]"
     >
+      {/* repère du rotor, présent même hors fenêtre : la liste des titres
+          compte toutes les publications, pas seulement les 3 montées */}
+      <h2 id={headingId} className="sr-only">
+        Publication {index + 1} sur {total} · @{look.creator.handle}
+      </h2>
       <motion.div
         animate={{
           scale: reduce ? 1 : active ? 1 : 0.95,
@@ -170,21 +223,9 @@ export function FeedCard({
           </div>
         ) : (
           <>
-            {/* media + tap layer */}
-            <div
-              data-cursor="media"
-              role="button"
-              tabIndex={0}
-              aria-label={paused ? "Reprendre la vidéo" : "Mettre en pause"}
-              onClick={onMediaClick}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" || e.key === " ") {
-                  e.preventDefault();
-                  setPaused((p) => !p);
-                }
-              }}
-              className="absolute inset-0"
-            >
+            {/* média — le carrousel et l'alt de l'image restent atteignables :
+                ils ne sont plus les enfants (présentationnels) d'un bouton */}
+            <div className="absolute inset-0">
               {hasGallery ? (
                 <CarouselMedia
                   images={look.gallery!}
@@ -210,9 +251,22 @@ export function FeedCard({
                   video={isPost ? undefined : videoLook(look.id)}
                   poster={isPost ? undefined : videoPoster(look.id)}
                   inView={inView}
+                  userStarted={intent === "play"}
                 />
               )}
             </div>
+
+            {/* lecture / pause (double-tap = j'aime) : un vrai bouton posé
+                SUR le média, sous le rail et la légende */}
+            {pausable && (
+              <button
+                type="button"
+                data-cursor="media"
+                aria-label={mediaLabel}
+                onClick={onMediaClick}
+                className="absolute inset-0 focus-visible:outline-offset-[-4px]!"
+              />
+            )}
 
             {/* Pas de pins sur le média (ils chevauchaient l'en-tête) : les
                 pièces du look s'ouvrent via le bouton cintre du rail. */}
@@ -265,14 +319,14 @@ export function FeedCard({
                 delay: active ? 0.18 : 0,
               }}
               style={{ bottom: "calc(var(--tabbar-clearance) + 4.5rem)" }}
-              className="absolute right-3 z-20 md:!bottom-40"
+              className="absolute right-[max(0.75rem,env(safe-area-inset-right))] z-20 md:!bottom-40 md:right-3"
             >
+              {/* pas de Partager : un look n'a pas encore d'adresse à lui */}
               <ActionRail
                 liked={liked}
                 saved={saved}
                 likes={look.likes}
                 comments={look.comments}
-                shares={look.shares}
                 onLike={() => toggleLike(look.id)}
                 onSave={() => toggleSave(look.id)}
                 onComment={() => setCommentsOpen(true)}
@@ -291,7 +345,7 @@ export function FeedCard({
               style={{
                 paddingBottom: "calc(var(--tabbar-clearance) + 1rem)",
               }}
-              className="absolute inset-x-0 bottom-0 z-20 space-y-3 p-4 pr-20 md:!pb-9"
+              className="absolute inset-x-0 bottom-0 z-20 space-y-3 p-4 pl-[max(1rem,env(safe-area-inset-left))] pr-[calc(5rem+env(safe-area-inset-right))] md:!pb-9 md:pl-4 md:pr-20"
             >
               {/* Créateur — rangée compacte au-dessus de la légende, sur
                   TOUTES les tailles. Rien ne flotte plus en haut : le média
@@ -305,6 +359,7 @@ export function FeedCard({
                   <Avatar
                     name={look.creator.name}
                     seed={look.creator.seed}
+                    decorative
                     className="size-9 shrink-0 text-sm ring-1 ring-bone/25"
                   />
                   <span className="truncate text-[14px] font-semibold text-bone">
@@ -318,18 +373,8 @@ export function FeedCard({
                   labelOff="Suivre"
                   size="sm"
                 />
-                <button
-                  onClick={() => setMuted((m) => !m)}
-                  className="ml-auto grid size-9 shrink-0 place-items-center rounded-full glass text-bone active:scale-90"
-                  aria-label={muted ? "Activer le son" : "Couper le son"}
-                  aria-pressed={!muted}
-                >
-                  {muted ? (
-                    <Mute className="size-4" />
-                  ) : (
-                    <Volume className="size-4" />
-                  )}
-                </button>
+                {/* Pas de bouton son : les clips des looks n'ont aucune piste
+                    audio (ffprobe), il annonçait un son qui n'existe pas. */}
               </motion.div>
 
               <motion.div variants={item} className="max-w-[34ch]">
@@ -362,7 +407,7 @@ export function FeedCard({
                   {look.brandTags.map((b) => (
                     <span
                       key={b}
-                      className="border border-bone/20 px-2.5 py-1 text-[11px] font-medium text-bone/70"
+                      className="border border-bone/20 px-2.5 py-1 text-[11px] font-medium text-bone/75"
                     >
                       #{b}
                     </span>
@@ -441,6 +486,6 @@ export function FeedCard({
           </>
         )}
       </motion.div>
-    </section>
+    </article>
   );
 }

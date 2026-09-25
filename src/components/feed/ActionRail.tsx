@@ -18,10 +18,10 @@ export function ActionRail({
   saved,
   likes,
   comments,
-  shares,
   onLike,
   onSave,
   onComment,
+  onShare,
   onShop,
   shopCount,
   creatorSeed,
@@ -32,10 +32,11 @@ export function ActionRail({
   saved: boolean;
   likes: number;
   comments: number;
-  shares: number;
   onLike: () => void;
   onSave: () => void;
   onComment?: () => void;
+  /** Partager n'apparaît que branché : un bouton inerte ne sert à personne. */
+  onShare?: () => void;
   /** Opens the Shop-the-look drawer. When set, a cart bubble tops the rail. */
   onShop?: () => void;
   shopCount?: number;
@@ -48,7 +49,9 @@ export function ActionRail({
   const spinning = active && !reduce;
 
   return (
-    <div className="flex flex-col items-center gap-5">
+    /* écran court (iPhone SE, zoom) : le rail resserré ne sort plus de la
+       carte et ne passe plus sous la cloche */
+    <div className="flex flex-col items-center gap-5 [@media(max-height:700px)]:gap-2">
       {/* Pièces du look — cintre, ouvre le tiroir Shop-the-look. */}
       {onShop && (
         <RailAction
@@ -57,8 +60,8 @@ export function ActionRail({
               ? `${shopCount} pièce${shopCount > 1 ? "s" : ""}`
               : "Shop"
           }
+          hint="à shopper"
           onClick={onShop}
-          ariaLabel="Voir les pièces à shopper"
         >
           <Hanger className="size-6 text-bone" />
         </RailAction>
@@ -66,9 +69,9 @@ export function ActionRail({
 
       <RailAction
         label={compact(likes + (liked ? 1 : 0))}
+        hint="j'aime"
         onClick={onLike}
         pressed={liked}
-        ariaLabel={liked ? "Retirer le j'aime" : "J'aime"}
       >
         <motion.span
           key={liked ? "on" : "off"}
@@ -82,23 +85,21 @@ export function ActionRail({
 
       <RailAction
         label={compact(comments)}
+        hint="commentaires"
         onClick={onComment}
-        ariaLabel="Commentaires"
       >
         <Comment className="size-6 text-bone" />
       </RailAction>
 
-      <RailAction label={compact(shares)} ariaLabel="Partager">
-        <Share className="size-[22px] text-bone" />
-      </RailAction>
+      {onShare && (
+        <RailAction label="Partager" onClick={onShare}>
+          <Share className="size-[22px] text-bone" />
+        </RailAction>
+      )}
 
-      <RailAction
-        label={saved ? "Enregistré" : "Garder"}
-        onClick={onSave}
-        accent
-        pressed={saved}
-        ariaLabel={saved ? "Retirer des enregistrements" : "Enregistrer"}
-      >
+      {/* libellé fixe : l'état « gardé » passe par aria-pressed et le
+          signet plein, jamais par un second libellé */}
+      <RailAction label="Garder" onClick={onSave} accent pressed={saved}>
         <Bookmark filled={saved} className="size-6 text-bone" />
       </RailAction>
 

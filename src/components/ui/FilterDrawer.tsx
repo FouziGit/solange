@@ -16,8 +16,8 @@ export type Filters = {
 
 const SORTS: { key: SortKey; label: string }[] = [
   { key: "recent", label: "Récent" },
-  { key: "price-asc", label: "Prix ↑" },
-  { key: "price-desc", label: "Prix ↓" },
+  { key: "price-asc", label: "Prix croissant" },
+  { key: "price-desc", label: "Prix décroissant" },
   { key: "popular", label: "Populaire" },
 ];
 
@@ -81,7 +81,7 @@ export function FilterDrawer({
           <legend className="etiquette mb-2.5 block text-[11px] text-ash">
             Trier par
           </legend>
-          <div className="grid grid-cols-4 gap-1.5">
+          <div className="grid grid-cols-2 gap-1.5">
             {SORTS.map((s) => {
               const on = value.sort === s.key;
               return (
@@ -91,7 +91,7 @@ export function FilterDrawer({
                   onClick={() => set("sort", s.key)}
                   aria-pressed={on}
                   data-cursor="link"
-                  className={`rounded-full border py-1.5 text-[12px] font-medium transition-colors ${
+                  className={`min-h-11 rounded-full border px-3 text-[12px] font-medium transition-colors ${
                     on
                       ? "border-bone bg-bone text-ink"
                       : "border-bone/20 text-bone/70 hover:border-bone/40 hover:text-bone"

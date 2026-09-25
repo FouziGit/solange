@@ -223,7 +223,7 @@ export default function FilPage() {
               <h2 className="font-display text-[17px] font-bold leading-snug tracking-tight text-bone">
                 {state.thread.title}
                 {state.thread.pinned && (
-                  <span className="etiquette ml-2 border border-bone/25 px-1.5 py-0.5 align-middle text-[10px] font-semibold text-bone/70">
+                  <span className="etiquette ml-2 border border-bone/25 px-1.5 py-0.5 align-middle text-[11px] font-semibold text-bone/70">
                     Épinglé
                   </span>
                 )}
@@ -289,9 +289,11 @@ export default function FilPage() {
           <ol className="mt-4 flex flex-col gap-4">
             {state.replies.map((r) => (
               <li key={r.id} className="flex items-start gap-3">
+                {/* @pseudo écrit juste à côté : l'avatar n'ajoute rien */}
                 <Avatar
                   name={r.authorHandle}
                   seed={r.authorHandle}
+                  decorative
                   className="size-8 shrink-0 text-xs"
                 />
                 <div className="min-w-0 flex-1">

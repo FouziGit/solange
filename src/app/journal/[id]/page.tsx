@@ -90,7 +90,7 @@ export default async function JournalArticlePage({
             {KIND_LABEL[article.kind]}
             {article.brand ? ` — ${article.brand}` : ""}
           </span>
-          <span className="etiquette text-[11px] text-bone/40">
+          <span className="etiquette text-[11px] text-ash">
             Journal · {folio(index)}
           </span>
         </div>
@@ -104,10 +104,10 @@ export default async function JournalArticlePage({
         </p>
 
         <div className="mt-6 flex items-center gap-3 border-b border-bone/15 pb-4">
-          <span className="etiquette text-[11px] text-bone/55">
+          <span className="etiquette text-[11px] text-ash">
             {article.readingMin} min de lecture
           </span>
-          <span className="etiquette text-[11px] text-bone/55">
+          <span className="etiquette text-[11px] text-ash">
             {frDate(article.date)}
           </span>
         </div>
@@ -127,12 +127,10 @@ export default async function JournalArticlePage({
           />
         </div>
         <figcaption className="mt-2 flex items-center justify-between">
-          <span className="text-[12px] text-bone/40">
+          <span className="text-[12px] text-ash">
             {article.brand ?? KIND_LABEL[article.kind]} — Archive Solange
           </span>
-          <span className="etiquette text-[11px] text-bone/30">
-            {folio(index)}
-          </span>
+          <span className="etiquette text-[11px] text-ash">{folio(index)}</span>
         </figcaption>
       </figure>
 
@@ -158,8 +156,8 @@ export default async function JournalArticlePage({
       {pieces.length > 0 && (
         <section className="mx-auto mt-14 max-w-4xl">
           <div className="flex items-baseline justify-between border-t border-bone/20 pt-3">
-            <h2 className="eyebrow text-sm text-bone/55">Pièces citées</h2>
-            <span className="etiquette text-[11px] text-bone/40">
+            <h2 className="eyebrow text-sm text-ash">Pièces citées</h2>
+            <span className="etiquette text-[11px] text-ash">
               {pieces.length} pièce{pieces.length > 1 ? "s" : ""}
             </span>
           </div>
@@ -189,11 +187,9 @@ export default async function JournalArticlePage({
               <p className="truncate text-sm font-medium text-bone">
                 {creator.name}
               </p>
-              <p className="mt-0.5 text-[12px] text-bone/50">
-                @{creator.handle}
-              </p>
+              <p className="mt-0.5 text-[12px] text-ash">@{creator.handle}</p>
             </div>
-            <span className="etiquette hidden text-[11px] text-bone/55 md:inline">
+            <span className="etiquette hidden text-[11px] text-ash md:inline">
               Voir le profil
             </span>
             <ChevronRight className="size-4 shrink-0 text-bone/60" />
@@ -203,7 +199,7 @@ export default async function JournalArticlePage({
 
       {/* closing folio */}
       <div className="mt-14 flex items-center justify-center gap-4 border-t border-bone/15 pt-6">
-        <span className="etiquette text-[11px] text-bone/35">
+        <span className="etiquette text-[11px] text-ash">
           {folio(index)} — Journal Solange
         </span>
       </div>

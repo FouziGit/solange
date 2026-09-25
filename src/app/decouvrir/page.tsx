@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { PageShell } from "@/components/ui/PageShell";
@@ -19,6 +19,8 @@ import { categories, conditions } from "@/lib/taxonomie";
 import { catalogSizes, filterCatalog, searchAll } from "@/lib/data";
 import { useStore } from "@/lib/store";
 import { cn, compact, euro, gradientFor } from "@/lib/utils";
+import { announce } from "@/lib/announce";
+import { filtresLabel, resultatsMarche } from "@/lib/marche";
 import { imgLook } from "@/lib/img";
 import { Photo } from "@/components/ui/Photo";
 import { Search, Sliders, Verified } from "@/components/chrome/icons";
@@ -138,6 +140,26 @@ function DecouvrirInner() {
     contenu: hasQuery ? results.content.length : null,
   };
 
+  /* Bilan lu par VoiceOver quand la recherche, la catégorie ou un filtre
+     change — après une courte pause de frappe, pas à chaque lettre. Le
+     chargement des annonces membres, lui, n'annonce rien. */
+  const resultMsg = resultatsMarche({
+    pieces: allItems.length,
+    profiles: counts.profils,
+    content: counts.contenu,
+    invertedRange,
+  });
+  const criteria = JSON.stringify([q.trim(), cat, filters]);
+  const announcedCriteria = useRef(criteria);
+  useEffect(() => {
+    if (announcedCriteria.current === criteria) return;
+    const t = window.setTimeout(() => {
+      announcedCriteria.current = criteria;
+      announce(resultMsg);
+    }, 400);
+    return () => window.clearTimeout(t);
+  }, [criteria, resultMsg]);
+
   return (
     <PageShell>
       <PageHeader
@@ -161,24 +183,28 @@ function DecouvrirInner() {
           onBlur={() => setFocused(false)}
           placeholder="Rechercher une marque, un profil, un contenu…"
           aria-label="Rechercher dans SOLANGE"
-          className="w-full bg-transparent text-sm text-bone outline-none placeholder:text-ash"
+          className="w-full bg-transparent text-base text-bone outline-none placeholder:text-ash md:text-sm"
         />
+        {/* 44 px de zone tactile (HIG) autour du rond visible de 32 px */}
         <button
+          type="button"
           onClick={() => setDrawer(true)}
-          className="relative grid size-8 shrink-0 place-items-center rounded-full bg-bone/10 text-bone transition-colors hover:bg-bone/20"
-          aria-label="Filtres avancés (pièces)"
+          className="group -my-1.5 -mr-1.5 grid size-11 shrink-0 place-items-center rounded-full text-bone"
+          aria-label={filtresLabel(activeCount)}
           aria-haspopup="dialog"
           aria-expanded={drawer}
         >
-          <Sliders className="size-4" />
-          {activeCount > 0 && (
-            <span
-              className="absolute -right-0.5 -top-0.5 grid size-4 place-items-center rounded-full bg-bone text-[11px] font-bold text-ink"
-              aria-hidden="true"
-            >
-              {activeCount}
-            </span>
-          )}
+          <span className="relative grid size-8 place-items-center rounded-full bg-bone/10 transition-colors group-hover:bg-bone/20">
+            <Sliders className="size-4" />
+            {activeCount > 0 && (
+              <span
+                className="absolute -right-0.5 -top-0.5 grid size-4 place-items-center rounded-full bg-bone text-[11px] font-bold text-ink"
+                aria-hidden="true"
+              >
+                {activeCount}
+              </span>
+            )}
+          </span>
         </button>
       </div>
 
@@ -275,18 +301,17 @@ function DecouvrirInner() {
         aria-labelledby="tab-pieces"
         hidden={tab !== "pieces"}
       >
-        {/* categories */}
+        {/* categories — de simples boutons pressés, pas des onglets : aucun
+            panneau ne leur correspond */}
         <div
-          role="tablist"
+          role="group"
           aria-label="Catégories"
           className="hscroll -mx-5 mt-4 flex gap-2 px-5 pb-1 md:mx-0 md:px-0"
         >
           {categories.map((c) => (
-            <span key={c} role="tab" aria-selected={c === cat}>
-              <Chip active={c === cat} onClick={() => setCat(c)}>
-                {c}
-              </Chip>
-            </span>
+            <Chip key={c} active={c === cat} onClick={() => setCat(c)}>
+              {c}
+            </Chip>
           ))}
         </div>
 
@@ -358,6 +383,7 @@ function DecouvrirInner() {
                     <Avatar
                       name={c.name}
                       seed={c.seed}
+                      decorative
                       className="size-11 shrink-0 text-lg"
                     />
                     <span className="min-w-0">

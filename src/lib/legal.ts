@@ -53,7 +53,7 @@ export const LEGAL_DOCS: LegalDoc[] = [
     href: "/cgv",
     title: "Conditions générales de vente",
     summary:
-      "Les ventes entre membres. Les paiements sont simulés aujourd'hui.",
+      "Les ventes entre membres : prix, commission, paiement, livraison et recours.",
   },
   {
     slug: "confidentialite",
@@ -104,4 +104,21 @@ export function hasPlaceholders(texte: string): boolean {
     texte qui n'est jamais entré en vigueur. */
 export function hasEffectiveDate(valeur: string | undefined): boolean {
   return !!valeur && !valeur.includes("[") && valeur.trim().length > 0;
+}
+
+/** Ce que l'interface peut dire du paiement, d'après /api/payments/config
+    (voir src/lib/use-payments-mode.ts). « simulé » seulement quand le
+    serveur a répondu que le paiement réel est coupé ; tant qu'il n'a pas
+    répondu (chargement, hors ligne), rien : annoncer « aucune somme
+    débitée » à quelqu'un qui va payer pour de vrai est pire que se taire.
+    Une clé de test compte comme « stripe » : le parcours passe bien par
+    Stripe. */
+export type PaymentsClaim = "simule" | "stripe" | null;
+
+export function paymentsClaim(mode: {
+  ready: boolean;
+  live: boolean;
+}): PaymentsClaim {
+  if (!mode.ready) return null;
+  return mode.live ? "stripe" : "simule";
 }

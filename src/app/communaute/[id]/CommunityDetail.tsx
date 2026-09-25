@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 import Link from "next/link";
 import { type Community } from "@/lib/mock";
 import { api, type ApiThread } from "@/lib/api";
@@ -16,6 +16,7 @@ import { Avatar } from "@/components/chrome/Avatar";
 import { Verified, Users, Comment, Check } from "@/components/chrome/icons";
 import { compact } from "@/lib/utils";
 import { track } from "@/lib/track";
+import { announce } from "@/lib/announce";
 
 /**
  * Fiche d'un cercle (lot 2) — les fils sont RÉELS : publiés par les
@@ -40,6 +41,7 @@ export function CommunityDetail({ community: c }: { community: Community }) {
   const [composeError, setComposeError] = useState<string | null>(null);
 
   const seenSent = useRef(false);
+  const uid = useId();
 
   const load = useCallback(
     async (quiet = false) => {
@@ -87,6 +89,7 @@ export function CommunityDetail({ community: c }: { community: Community }) {
     setBusy(false);
     if (res.ok) {
       track("circle_thread", { circle: c.id });
+      announce(`Fil « ${tt} » publié.`);
       setComposeOpen(false);
       setTitle("");
       setText("");
@@ -103,7 +106,12 @@ export function CommunityDetail({ community: c }: { community: Community }) {
       <PageHeader back="/communaute" eyebrow="Cercle" title={c.name} />
 
       <div className="flex items-start gap-4">
-        <Avatar name={c.name} seed={c.seed} className="size-16 shrink-0" />
+        <Avatar
+          name={c.name}
+          seed={c.seed}
+          decorative
+          className="size-16 shrink-0"
+        />
         <div className="min-w-0 flex-1">
           <p className="text-[14px] text-bone/90">{c.tagline}</p>
           <div className="mt-2 flex items-center gap-4 text-[12px] text-ash">
@@ -145,7 +153,12 @@ export function CommunityDetail({ community: c }: { community: Community }) {
       </div>
 
       <div className="mt-6 flex items-center gap-2.5 border-t border-bone/10 pt-5">
-        <Avatar name={c.host.name} seed={c.host.seed} className="size-9" />
+        <Avatar
+          name={c.host.name}
+          seed={c.host.seed}
+          decorative
+          className="size-9"
+        />
         <div className="min-w-0 leading-tight">
           <p className="flex items-center gap-1 truncate text-[13px] font-semibold text-bone">
             {c.host.name}
@@ -153,13 +166,13 @@ export function CommunityDetail({ community: c }: { community: Community }) {
               <Verified className="size-3.5 shrink-0 text-bone" />
             )}
           </p>
-          <p className="etiquette text-[10px] text-ash">Animé par</p>
+          <p className="etiquette text-[11px] text-ash">Animé par</p>
         </div>
       </div>
 
       {/* ---- fils réels ---- */}
       <div className="mt-8 flex items-center justify-between">
-        <p className="etiquette text-[11px] text-bone/50">Fils</p>
+        <p className="etiquette text-[11px] text-ash">Fils</p>
         {joined && state.kind === "ready" && state.threads.length > 0 && (
           <Button size="sm" onClick={() => setComposeOpen(true)}>
             Ouvrir un fil
@@ -234,7 +247,7 @@ export function CommunityDetail({ community: c }: { community: Community }) {
                   <p className="flex items-center gap-2 text-[13.5px] font-semibold text-bone">
                     <span className="truncate">{t.title}</span>
                     {t.pinned && (
-                      <span className="etiquette shrink-0 border border-bone/25 px-1.5 py-0.5 text-[10px] text-bone/70">
+                      <span className="etiquette shrink-0 border border-bone/25 px-1.5 py-0.5 text-[11px] text-bone/70">
                         Épinglé
                       </span>
                     )}
@@ -250,7 +263,7 @@ export function CommunityDetail({ community: c }: { community: Community }) {
                       {t.text}
                     </p>
                   )}
-                  <p className="mt-1.5 flex items-center gap-2 text-[11px] text-ash/80">
+                  <p className="mt-1.5 flex items-center gap-2 text-[11px] text-ash">
                     <span>@{t.authorHandle}</span>
                     <span className="size-0.5 rounded-full bg-ash" />
                     <span>
@@ -287,8 +300,9 @@ export function CommunityDetail({ community: c }: { community: Community }) {
       >
         <div className="flex flex-col gap-4 px-5 py-4 pb-8">
           <div>
-            <FieldLabel>Titre</FieldLabel>
+            <FieldLabel htmlFor={`${uid}-titre`}>Titre</FieldLabel>
             <input
+              id={`${uid}-titre`}
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               maxLength={80}
@@ -297,8 +311,9 @@ export function CommunityDetail({ community: c }: { community: Community }) {
             />
           </div>
           <div>
-            <FieldLabel>Texte (facultatif)</FieldLabel>
+            <FieldLabel htmlFor={`${uid}-texte`}>Texte (facultatif)</FieldLabel>
             <textarea
+              id={`${uid}-texte`}
               value={text}
               onChange={(e) => setText(e.target.value)}
               rows={4}

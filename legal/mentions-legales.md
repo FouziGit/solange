@@ -60,10 +60,11 @@ directement entre les membres. Le rôle exact de SOLANGE, ses obligations
 et ses limites sont décrits dans les [conditions générales
 d'utilisation](/cgu) et les [conditions générales de vente](/cgv).
 
-**Le service fonctionne actuellement en version d'essai. Les paiements y
-sont simulés : aucune somme n'est débitée, aucune donnée bancaire n'est
-collectée et aucune vente n'est réellement conclue.** Ce point est détaillé
-à l'article 2 des conditions générales de vente.
+**Les paiements sont réels depuis le 24 septembre 2026 : ils se font par
+carte bancaire, via Stripe, et une commande payée conclut une vente entre
+l'acheteur et le vendeur.** La carte est saisie sur la page de Stripe :
+SOLANGE n'a jamais accès à son numéro. Le fonctionnement du paiement est
+détaillé à l'article 12 des conditions générales de vente.
 
 ## 5. Propriété intellectuelle
 
