@@ -20,7 +20,7 @@ export default async (req: Request) => {
   if (!sameOrigin(req)) return bad("Origine refusée", 403);
   const user = await currentUser(req);
   if (!user) return bad("Connexion requise", 401);
-  const blocked = assertCanWrite(user);
+  const blocked = await assertCanWrite(user);
   if (blocked) return blocked;
 
   const b = await readJson<{ kind?: string; id?: string; on?: boolean }>(req);

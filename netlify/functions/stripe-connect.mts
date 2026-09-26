@@ -66,7 +66,7 @@ export default async (req: Request) => {
 
   if (req.method !== "POST") return bad("Méthode non autorisée", 405);
   if (!sameOrigin(req)) return bad("Origine refusée", 403);
-  const blocked = assertCanWrite(user);
+  const blocked = await assertCanWrite(user);
   if (blocked) return blocked;
   if (!(await rateLimit(`connect:${user.id}`, 20, 3_600_000)))
     return bad("Trop de tentatives — réessaie dans un moment", 429);
