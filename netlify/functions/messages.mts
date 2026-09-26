@@ -20,7 +20,15 @@ import {
   rateLimit,
 } from "./_shared/core.mts";
 import { SEED_CATALOG } from "./_shared/seed-catalog.mts";
+import { CONV_BUYER, CONV_SELLER, withMembers } from "./_shared/members.mts";
+import { resolveHandle } from "./_shared/users.mts";
 import { userSettings } from "./settings.mts";
+import {
+  isBlockedBy,
+  normalizeHandle,
+  publicHandleTarget,
+  type HandleAlias,
+} from "../../src/lib/handle.ts";
 
 type Conv = {
   id: string;
@@ -56,7 +64,7 @@ export default async (req: Request) => {
     if (!user) return json({ conversations: [] });
     const ids =
       ((await msgs.get(`u:${user.id}`, { type: "json" })) as string[]) ?? [];
-    const conversations: unknown[] = [];
+    const conversations: (Conv & { role: "buyer" | "seller" })[] = [];
     for (const cid of ids.slice(-30).reverse()) {
       const c = (await msgs.get(`c:${cid}`, { type: "json" })) as Conv | null;
       if (c)
@@ -65,7 +73,13 @@ export default async (req: Request) => {
           role: c.buyerId === user.id ? "buyer" : "seller",
         });
     }
-    return json({ conversations });
+    // handles et photos des deux parties relus sur leurs comptes
+    return json({
+      conversations: await withMembers(conversations, [
+        CONV_BUYER,
+        CONV_SELLER,
+      ]),
+    });
   }
 
   if (req.method !== "POST") return bad("Méthode non autorisée", 405);
@@ -88,6 +102,10 @@ export default async (req: Request) => {
 
   let convId = (b?.convId ?? "").trim();
   let conv: Conv | null = null;
+  /* Index de conversation des participants : posés seulement après le
+     contrôle de blocage, pour qu'un expéditeur bloqué ne dépose rien chez
+     son destinataire. */
+  const newIndexes: string[] = [];
 
   if (convId) {
     conv = (await msgs.get(`c:${convId}`, { type: "json" })) as Conv | null;
@@ -95,25 +113,19 @@ export default async (req: Request) => {
       return bad("Conversation inconnue", 404);
   } else if (b?.toHandle) {
     // ---- message direct (sans annonce) ----
-    const handle = b.toHandle.trim().toLowerCase();
-    const users = store("users");
-    const targetId = (await users.get(`handle:${handle}`, {
-      type: "text",
-    })) as string | null;
+    const handle = normalizeHandle(b.toHandle).slice(0, 30);
+    const targetId = await resolveHandle(handle);
     if (!targetId) return bad("Membre introuvable", 404);
     if (targetId === user.id) return bad("C'est toi", 403);
-    const target = (await users.get(`u:${targetId}`, { type: "json" })) as {
-      handle: string;
-    } | null;
-    if (!target) return bad("Membre introuvable", 404);
+    const target = (await store("users").get(`u:${targetId}`, {
+      type: "json",
+    })) as { handle: string; handleHistory?: HandleAlias[] } | null;
+    /* Un ancien handle sans renvoi choisi ne mène à personne en public :
+       même réponse qu'un handle inconnu. */
+    if (!target || publicHandleTarget(target, handle, Date.now()) === "hidden")
+      return bad("Membre introuvable", 404);
     const settings = await userSettings(targetId);
     if (!settings.dmOpen)
-      return bad("Ce membre n'accepte pas les messages directs", 403);
-    // le destinataire a bloqué l'expéditeur → même refus discret
-    const tSocial = (await store("social").get(`s:${targetId}`, {
-      type: "json",
-    })) as { blocked?: string[] } | null;
-    if (tSocial?.blocked?.includes(user.handle))
       return bad("Ce membre n'accepte pas les messages directs", 403);
 
     convId = `dm:${[user.id, targetId].sort().join(":")}`;
@@ -133,8 +145,7 @@ export default async (req: Request) => {
       messages: [],
       createdAt: Date.now(),
     };
-    await pushIndex(user.id, convId);
-    await pushIndex(targetId, convId);
+    newIndexes.push(user.id, targetId);
   } else {
     const pid = (b?.productId ?? "").trim();
     if (!pid) return bad("Article manquant");
@@ -169,15 +180,28 @@ export default async (req: Request) => {
       messages: [],
       createdAt: Date.now(),
     };
-    await pushIndex(user.id, convId);
-    if (sellerId) await pushIndex(sellerId, convId);
+    newIndexes.push(user.id);
+    if (sellerId) newIndexes.push(sellerId);
   }
 
   if (conv.messages.length > 500) return bad("Conversation pleine", 429);
+
+  const recipientId = user.id === conv.buyerId ? conv.sellerId : conv.buyerId;
+  /* Le destinataire a bloqué l'expéditeur, sous son handle actuel ou un
+     ancien : même refus discret, quelle que soit la porte d'entrée
+     (conversation déjà ouverte, message direct ou annonce). */
+  if (recipientId) {
+    const rSocial = (await store("social").get(`s:${recipientId}`, {
+      type: "json",
+    })) as { blocked?: string[] } | null;
+    if (isBlockedBy(rSocial?.blocked, user))
+      return bad("Ce membre n'accepte pas les messages directs", 403);
+  }
+
+  for (const uid of newIndexes) await pushIndex(uid, convId);
   conv.messages.push({ id: newId("m"), fromId: user.id, text, at: Date.now() });
 
   // Notifie l'autre participant réel par email, au plus 1 fois par heure.
-  const recipientId = user.id === conv.buyerId ? conv.sellerId : conv.buyerId;
   if (recipientId)
     await pushNotif(recipientId, {
       type: "message",

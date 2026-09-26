@@ -111,10 +111,10 @@ se retourne contre lui.]
 
 ## 4. Ce qui peut être décidé sur un contenu
 
-| Mesure                | Effet                                                                       |
-| --------------------- | --------------------------------------------------------------------------- |
-| Classement sans suite | le signalement n'est pas fondé, rien ne change                              |
-| Masquage              | le contenu n'est plus visible des autres membres. Son auteur en est informé |
+| Mesure                | Effet                                                                                                                                                                                                                                       |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Classement sans suite | le signalement n'est pas fondé, rien ne change                                                                                                                                                                                              |
+| Masquage              | le contenu n'est plus visible des autres membres. Son auteur en est informé. S'il s'agit de votre photo de profil, vous ne pouvez pas en publier une autre tant que la mesure n'est pas levée ; vous pouvez en revanche toujours la retirer |
 
 ## 5. Ce qui peut être décidé sur un compte
 
@@ -127,12 +127,12 @@ se retourne contre lui.]
 **Ce que vous recevez aujourd'hui, mesure par mesure.** Nous décrivons
 l'état réel du service, qui n'est pas encore celui que nous visons :
 
-| Mesure                | Ce que vous recevez aujourd'hui                                                             |
-| --------------------- | ------------------------------------------------------------------------------------------- |
-| Masquage d'un contenu | une notification dans le service, sans motif détaillé                                       |
-| Avertissement         | une notification dans le service **et** un courriel, avec le motif rédigé par le modérateur |
-| Suspension            | une notification dans le service indiquant la durée, sans motif détaillé                    |
-| Bannissement          | **rien à ce jour** : la fermeture du compte vous déconnecte sans message                    |
+| Mesure                | Ce que vous recevez aujourd'hui                                                                                                      |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| Masquage d'un contenu | une notification dans le service, sans motif détaillé. Pour une photo de profil, l'écran de modification de la photo l'indique aussi |
+| Avertissement         | une notification dans le service **et** un courriel, avec le motif rédigé par le modérateur                                          |
+| Suspension            | une notification dans le service indiquant la durée, sans motif détaillé                                                             |
+| Bannissement          | **rien à ce jour** : la fermeture du compte vous déconnecte sans message                                                             |
 
 Les deux dernières lignes ne sont pas satisfaisantes, et nous ne le
 cachons pas : une mesure sans exposé des motifs est difficile à

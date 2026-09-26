@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   canWrite,
+  countPriorReports,
   isAdmin,
   writeBlockedMessage,
   type ModeratedUser,
@@ -105,5 +106,61 @@ describe("writeBlockedMessage", () => {
     expect(writeBlockedMessage({ allowed: false, reason: "banned" })).toBe(
       "Ce compte ne peut plus publier sur SOLANGE.",
     );
+  });
+});
+
+describe("countPriorReports — changer d'identifiant n'efface pas la récidive", () => {
+  const cible = {
+    id: "u_0123456789ab",
+    handles: new Set(["lou.mercier", "jean.dupont"]),
+  };
+  const r = (
+    targetType: string,
+    targetId: string,
+    targetUserId?: string | null,
+  ) => ({ targetType, targetId, targetUserId });
+
+  it("compte par id, même quand le handle signalé n'existe plus", () => {
+    expect(
+      countPriorReports([r("user", "ancien.inconnu", "u_0123456789ab")], cible),
+    ).toBe(1);
+  });
+
+  it("compte les signalements faits sous l'ancien handle", () => {
+    expect(countPriorReports([r("user", "jean.dupont")], cible)).toBe(1);
+    expect(countPriorReports([r("message", "jean.dupont", null)], cible)).toBe(
+      1,
+    );
+  });
+
+  it("la casse du signalement ne fait pas perdre la trace", () => {
+    expect(countPriorReports([r("user", "Jean.Dupont")], cible)).toBe(1);
+  });
+
+  it("ignore les contenus : pièce, publication, fil", () => {
+    const contenus = [
+      r("product", "jean.dupont", "u_0123456789ab"),
+      r("post", "jean.dupont", "u_0123456789ab"),
+      r("thread", "lou.mercier", "u_0123456789ab"),
+    ];
+    expect(countPriorReports(contenus, cible)).toBe(0);
+  });
+
+  it("ne compte pas un autre membre, ni un signalement sans id quand la cible n'en a pas", () => {
+    const autres = [r("user", "quelquun", "u_ffffffffffff"), r("user", "x")];
+    expect(countPriorReports(autres, cible)).toBe(0);
+    expect(
+      countPriorReports([r("user", "quelquun")], { handles: new Set(["lou"]) }),
+    ).toBe(0);
+  });
+
+  it("additionne sur toute la liste", () => {
+    const liste = [
+      r("user", "lou.mercier", "u_0123456789ab"),
+      r("user", "jean.dupont"),
+      r("message", "LOU.MERCIER"),
+      r("post", "p_1"),
+    ];
+    expect(countPriorReports(liste, cible)).toBe(3);
   });
 });

@@ -28,6 +28,7 @@ import {
   APP_URL,
 } from "./_shared/core.mts";
 import { stripe } from "./_shared/stripe.mts";
+import { updateUser } from "./_shared/users.mts";
 import { sellerPayable } from "../../src/lib/payments.ts";
 
 export default async (req: Request) => {
@@ -52,7 +53,7 @@ export default async (req: Request) => {
     const payable = sellerPayable(acct);
     // cache du dernier état connu : /api/orders le lit sans rappeler Stripe
     if (rec.stripePayable !== payable)
-      await users.setJSON(`u:${user.id}`, { ...rec, stripePayable: payable });
+      await updateUser(user.id, (r) => ({ ...r, stripePayable: payable }));
     return json({
       enabled: true,
       status: payable
@@ -108,11 +109,15 @@ export default async (req: Request) => {
       { idempotencyKey: `connect-account-${user.id}` },
     );
     id = acct.id;
-    await users.setJSON(`u:${user.id}`, {
-      ...rec,
-      stripeAccountId: id,
+    /* Sans cet enregistrement, le compte Stripe serait perdu pour nous. La
+       clé d'idempotence rend le même compte si le membre réessaie. */
+    const saved = await updateUser(user.id, (r) => ({
+      ...r,
+      stripeAccountId: acct.id,
       stripePayable: false,
-    });
+    }));
+    if (!saved.ok)
+      return bad("Ton compte vient d'être modifié. Réessaie.", 409);
   }
 
   // Lien à usage unique, jamais stocké ni envoyé par e-mail (doc Stripe).

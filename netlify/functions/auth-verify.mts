@@ -16,23 +16,19 @@ import {
   sameOrigin,
   readJson,
   type SessionUser,
+  type UserRecord,
 } from "./_shared/core.mts";
+import { profileFields, updateUser } from "./_shared/users.mts";
 import {
   acceptancePayloadIsValid,
   buildConsent,
 } from "../../src/lib/legal-consent.ts";
 import { LEGAL_VERSION } from "../../src/lib/legal.ts";
 import { handleCandidates } from "../../src/lib/guards.ts";
-
-function handleFrom(email: string): string {
-  const base =
-    email
-      .split("@")[0]
-      .toLowerCase()
-      .replace(/[^a-z0-9._-]/g, "")
-      .slice(0, 20) || "membre";
-  return base;
-}
+import {
+  RESERVED_HANDLES,
+  handleBaseFromEmail,
+} from "../../src/lib/handle.ts";
 
 export default async (req: Request) => {
   if (req.method !== "POST") return bad("Méthode non autorisée", 405);
@@ -81,15 +77,19 @@ export default async (req: Request) => {
 
   if (!userId) {
     userId = newId("u");
-    const base = handleFrom(email);
+    const base = handleBaseFromEmail(email);
     /* Réservation du pseudo par ÉCRITURE CONDITIONNELLE, pas par « je lis
        puis j'écris ». L'ancienne boucle abandonnait après six essais et
        écrivait quand même : elle réattribuait alors un pseudo déjà pris, et
        l'index `handle:` du membre précédent pointait vers le nouveau compte.
        `onlyIfNew` fait trancher le stockage : si la clé existe déjà,
        l'écriture ne passe pas et on essaie la suivante. Le dernier recours
-       est l'identifiant du compte, unique par construction. */
-    const candidats = handleCandidates(base, userId);
+       est l'identifiant du compte, unique par construction. Les handles
+       réservés (démo, équipe) sont écartés : `neige-7` ne devient pas
+       `neige-77`, le portrait d'un créateur de démonstration. */
+    const candidats = handleCandidates(base, userId).filter(
+      (c) => !RESERVED_HANDLES.has(c),
+    );
     let handle = "";
     for (const c of candidats) {
       const res = await users.set(`handle:${c}`, userId, { onlyIfNew: true });
@@ -115,17 +115,19 @@ export default async (req: Request) => {
     // `handle:` est déjà posé par la réservation conditionnelle ci-dessus.
   }
 
-  const user = (await users.get(`u:${userId}`, {
+  let user = (await users.get(`u:${userId}`, {
     type: "json",
-  })) as SessionUser;
+  })) as UserRecord;
 
   // Compte existant : on enregistre (ou rafraîchit) la preuve, puisque
-  // l'acceptation vient d'être recueillie à l'écran.
+  // l'acceptation vient d'être recueillie à l'écran. Si l'écriture échoue,
+  // la connexion passe quand même : /api/me redemandera l'acceptation.
   if (user.legal?.version !== LEGAL_VERSION) {
-    await users.setJSON(`u:${userId}`, {
-      ...user,
+    const u = await updateUser(userId, (r) => ({
+      ...r,
       legal: buildConsent(Date.now()),
-    });
+    }));
+    if (u.ok) user = u.rec;
   }
   return json(
     {
@@ -135,6 +137,7 @@ export default async (req: Request) => {
         handle: user.handle,
         name: user.name,
         email: user.email,
+        ...profileFields(user),
       },
     },
     200,

@@ -136,6 +136,9 @@ export type CatalogItem = Item & {
   seed: string;
   category: (typeof categories)[number];
   seller: string;
+  /** Annonce d'un membre : son compte et sa photo. Absents en démo. */
+  sellerId?: string | null;
+  sellerAvatar?: string | null;
   likes: number;
   span?: boolean; // tall tile in the masonry
 };

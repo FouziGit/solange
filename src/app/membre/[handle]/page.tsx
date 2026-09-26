@@ -6,16 +6,18 @@ import { Button } from "@/components/ui/Button";
    Membre réel : api.profile(handle) (annonces + posts serveur).
    Handles du mock (créateurs du feed + vitrine) : profil DÉMO
    construit depuis src/lib/mock, avec bandeau explicite.
+   Arrivé par un ancien @ encore renvoyé : on passe au profil canonique.
    ============================================================ */
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { motion } from "motion/react";
 import { api, type PublicProfile } from "@/lib/api";
 import { catalog, looks, me } from "@/lib/mock";
 import { imgItem, imgLook } from "@/lib/img";
-import { EASE, compact, gradientFor, initials } from "@/lib/utils";
+import { EASE, compact, gradientFor } from "@/lib/utils";
+import { normalizeHandle, profileRedirect } from "@/lib/handle";
 import { useStore } from "@/lib/store";
 import { PageShell } from "@/components/ui/PageShell";
 import { ReportSheet } from "@/components/ui/ReportSheet";
@@ -27,6 +29,7 @@ import {
 import { TogglePill } from "@/components/ui/TogglePill";
 import { Skeleton, SkeletonTile } from "@/components/ui/Skeleton";
 import { Photo } from "@/components/ui/Photo";
+import { Avatar } from "@/components/chrome/Avatar";
 import { Verified } from "@/components/chrome/icons";
 
 /* ---------- affichage normalisé (serveur ou démo) ---------- */
@@ -44,9 +47,13 @@ type PostTile = {
 type Profile = {
   demo: boolean;
   dmOpen: boolean;
+  /** Compte du membre ; absent en démo. */
+  id?: string;
   handle: string;
   name: string;
   seed: string;
+  /** Photo du membre ; undefined en démo. */
+  avatar?: string | null;
   verified: boolean;
   followers: number | null;
   products: DisplayItem[];
@@ -108,9 +115,11 @@ function serverProfile(data: PublicProfile): Profile {
   return {
     demo: false,
     dmOpen: data.dmOpen ?? true,
+    id: data.user.id,
     handle: data.user.handle,
     name: data.user.name || data.user.handle,
-    seed: data.user.handle,
+    seed: data.user.id ?? data.user.handle,
+    avatar: data.user.avatar ?? null,
     verified: false,
     followers: null,
     products: data.products.map(toDisplayItem),
@@ -153,12 +162,15 @@ function PostThumb({ post, index }: { post: PostTile; index: number }) {
 export default function MembrePage() {
   const params = useParams<{ handle: string }>();
   const raw = typeof params?.handle === "string" ? params.handle : "";
-  let handle = raw;
+  let decoded = raw;
   try {
-    handle = decodeURIComponent(raw);
+    decoded = decodeURIComponent(raw);
   } catch {
     // paramètre mal encodé — on garde la valeur brute
   }
+  // « @Lou.Mercier » et « lou.mercier » désignent le même membre
+  const handle = normalizeHandle(decoded);
+  const router = useRouter();
 
   const { user, isFollowing, toggleFollow, isBlocked, toggleBlock } =
     useStore();
@@ -169,6 +181,13 @@ export default function MembrePage() {
     setState({ kind: "loading" });
     const res = await api.profile(handle);
     if (res.ok) {
+      /* ancien @ dont le renvoi est actif : le serveur répond avec le
+         handle actuel, l'adresse le suit (sans entrée d'historique) */
+      const canonical = profileRedirect(handle, res.data.user.handle);
+      if (canonical) {
+        router.replace(canonical);
+        return;
+      }
       setState({ kind: "ready", profile: serverProfile(res.data) });
       return;
     }
@@ -180,7 +199,7 @@ export default function MembrePage() {
     }
     if (res.status === 404) setState({ kind: "notfound" });
     else setState({ kind: "error", message: res.error });
-  }, [handle]);
+  }, [handle, router]);
 
   useEffect(() => {
     // chargement différé d'un tick — pas de setState synchrone en effet
@@ -190,9 +209,15 @@ export default function MembrePage() {
     });
   }, [handle, load]);
 
-  const following = isFollowing(handle);
-  const blocked = isBlocked(handle);
-  const isSelf = user !== null && user.handle === handle;
+  /* suivis, blocages, signalement et DM visent le handle canonique renvoyé
+     par le serveur, pas celui de l'adresse */
+  const target = state.kind === "ready" ? state.profile.handle : handle;
+  const profileId = state.kind === "ready" ? state.profile.id : undefined;
+  const following = isFollowing(target);
+  const blocked = isBlocked(target);
+  const isSelf =
+    user !== null &&
+    (profileId ? profileId === user.id : user.handle === target);
 
   const [reportOpen, setReportOpen] = useState(false);
   const report = () => {
@@ -206,8 +231,8 @@ export default function MembrePage() {
         open={reportOpen}
         onClose={() => setReportOpen(false)}
         targetType="user"
-        targetId={handle}
-        targetLabel={`@${handle}`}
+        targetId={target}
+        targetLabel={`@${target}`}
       />
       {state.kind === "loading" && (
         <div aria-busy="true" aria-label="Chargement du profil">
@@ -276,17 +301,13 @@ export default function MembrePage() {
           <div className="flex flex-col items-center text-center md:flex-row md:items-end md:text-left">
             <div className="relative">
               <span className="absolute -inset-1 rounded-full bg-gradient-to-tr from-bone/40 to-bone/10 blur-[2px]" />
-              <span
-                role="img"
-                aria-label={state.profile.name}
-                className="relative grid size-24 place-items-center rounded-full ring-2 ring-ink md:size-28"
-                style={{ background: gradientFor(state.profile.seed) }}
-              >
-                {/* gradientFor est toujours sombre : initiales en theme-dark */}
-                <span className="theme-dark font-display text-3xl font-bold tracking-wide text-bone/85 md:text-4xl">
-                  {initials(state.profile.name || state.profile.handle)}
-                </span>
-              </span>
+              {/* initiales à 0,42 em : 30 px puis 35 px, comme avant */}
+              <Avatar
+                name={state.profile.name}
+                seed={state.profile.seed}
+                src={state.profile.avatar ?? null}
+                className="size-24 text-[4.5rem] ring-2 ring-ink md:size-28 md:text-[5.25rem]"
+              />
             </div>
 
             <div className="mt-4 md:ml-7 md:mt-0 md:flex-1">
@@ -315,7 +336,7 @@ export default function MembrePage() {
             <div className="mt-5 flex items-center gap-2 md:mt-0">
               <TogglePill
                 on={following}
-                onToggle={() => toggleFollow(handle)}
+                onToggle={() => toggleFollow(target)}
                 labelOn={isSelf ? "C'est toi" : "Suivi"}
                 labelOff={isSelf ? "C'est toi" : "Suivre"}
                 disabled={isSelf}
@@ -325,7 +346,7 @@ export default function MembrePage() {
               {/* DM — seulement si le membre accepte les messages directs */}
               {!isSelf && state.profile.dmOpen && (
                 <Link
-                  href={`/messages?to=${encodeURIComponent(handle)}`}
+                  href={`/messages?to=${encodeURIComponent(target)}`}
                   data-cursor="link"
                   className="inline-flex min-h-11 items-center rounded-full border border-bone/25 px-5 text-sm font-semibold text-bone transition-colors hover:border-bone/60"
                 >
@@ -372,7 +393,7 @@ export default function MembrePage() {
                         type="button"
                         role="menuitem"
                         onClick={() => {
-                          toggleBlock(handle);
+                          toggleBlock(target);
                           setMenuOpen(false);
                         }}
                         className="flex min-h-11 w-full items-center px-4 text-left text-[13px] text-bone transition-colors hover:bg-bone/10"
@@ -401,7 +422,7 @@ export default function MembrePage() {
               </p>
               <button
                 type="button"
-                onClick={() => toggleBlock(handle)}
+                onClick={() => toggleBlock(target)}
                 data-cursor="link"
                 className="mt-5 inline-flex min-h-11 items-center rounded-full border border-bone/25 px-5 text-sm font-semibold text-bone transition-colors hover:bg-bone/10"
               >

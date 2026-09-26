@@ -12,7 +12,7 @@ import {
   type Message,
   type Conversation,
 } from "@/lib/mock";
-import { api, type ApiConversation } from "@/lib/api";
+import { api, type ApiConversation, type PublicMember } from "@/lib/api";
 import { ReportSheet } from "@/components/ui/ReportSheet";
 import { useStore } from "@/lib/store";
 import { EASE, euro } from "@/lib/utils";
@@ -23,6 +23,13 @@ import {
   searchResultsLabel,
   speakerPrefix,
 } from "@/lib/conversation-search";
+import { normalizeHandle } from "@/lib/handle";
+import {
+  authorAvatar,
+  conversationPeer,
+  hasProfile,
+  memberFor,
+} from "@/lib/member-display";
 import {
   Verified,
   Search,
@@ -34,16 +41,36 @@ import {
 /** Champs communs CatalogItem / ApiProduct dont le fil a besoin. */
 type ThreadItem = Pick<
   CatalogItem,
-  "id" | "brand" | "name" | "priceEUR" | "seed" | "seller"
+  | "id"
+  | "brand"
+  | "name"
+  | "priceEUR"
+  | "seed"
+  | "seller"
+  | "sellerId"
+  | "sellerAvatar"
 >;
 
-/** Fil synthétique quand aucun fil n'existe encore avec ce vendeur. */
-function syntheticConv(item: ThreadItem): Conversation {
+/** Un fil à l'écran : l'interlocuteur porte son compte et sa photo.
+    `avatar` undefined : fil de démonstration (portrait de démo possible). */
+type Conv = Conversation & {
+  avatar?: string | null;
+  otherId?: string | null;
+};
+
+/** Fil synthétique quand aucun fil n'existe encore avec ce vendeur. Pièce
+    d'un membre : son compte et sa photo ; pièce de démo : comme avant. */
+function syntheticConv(item: ThreadItem): Conv {
+  const seller = item.sellerId
+    ? authorAvatar(item.sellerId, item.seller, item.sellerAvatar)
+    : null;
   return {
     id: `conv-${item.id}`,
     name: item.seller,
     handle: item.seller,
-    seed: item.seed,
+    seed: seller?.seed ?? item.seed,
+    avatar: seller?.src,
+    otherId: item.sellerId,
     itemBrand: item.brand,
     itemName: item.name,
     itemSeed: item.seed,
@@ -62,8 +89,8 @@ function syntheticConv(item: ThreadItem): Conversation {
  */
 function threadForItem(
   item: ThreadItem | undefined,
-  convs: readonly Conversation[],
-): Conversation | undefined {
+  convs: readonly Conv[],
+): Conv | undefined {
   if (!item) return undefined;
   return (
     convs.find((c) => c.handle === item.seller && c.itemSeed === item.seed) ??
@@ -75,14 +102,18 @@ function threadForItem(
 /** Conversation serveur (GET /api/messages) → shape UI. Bilatéral : côté
     vendeur, l'interlocuteur affiché est l'ACHETEUR ; « me » = mes messages
     (fromId === myId), quel que soit mon rôle dans le fil. */
-function toConversation(c: ApiConversation, myId: string): Conversation {
-  const other = c.role === "seller" ? c.buyerHandle : c.sellerHandle;
+function toConversation(c: ApiConversation, myId: string): Conv {
+  const peer = conversationPeer(c);
+  const other = peer.handle;
+  const face = authorAvatar(peer.id, peer.handle, peer.avatar);
   const dm = c.kind === "dm";
   return {
     id: c.id,
     name: dm ? other : c.role === "seller" ? `@${other} · acheteur` : other,
     handle: other,
-    seed: other,
+    seed: face.seed,
+    avatar: face.src,
+    otherId: peer.id,
     itemBrand: c.itemBrand,
     itemName: c.itemName,
     itemSeed: "",
@@ -97,13 +128,18 @@ function toConversation(c: ApiConversation, myId: string): Conversation {
   };
 }
 
-/** Fil DM synthétique (?to=handle) tant qu'aucun fil serveur n'existe. */
-function dmConv(handle: string): Conversation {
+/** Fil DM synthétique (?to=handle) tant qu'aucun fil serveur n'existe.
+    `key` : le handle demandé (id stable du fil) ; `m` : le membre résolu,
+    avec son handle actuel et sa photo, dès que /api/members a répondu. */
+function dmConv(key: string, m: PublicMember | null): Conv {
+  const handle = m?.handle ?? key;
   return {
-    id: `dm-${handle}`,
+    id: `dm-${key}`,
     name: handle,
     handle,
-    seed: handle,
+    seed: m?.id ?? key,
+    avatar: m?.avatar ?? null,
+    otherId: m?.id ?? null,
     itemBrand: "Message",
     itemName: "direct",
     itemSeed: "",
@@ -127,6 +163,8 @@ function MessagesInner() {
   const params = useSearchParams();
   const itemId = params.get("item");
   const toHandle = params.get("to");
+  // handle demandé par ?to=, sous sa forme canonique (clé du fil synthétique)
+  const toKey = toHandle ? normalizeHandle(toHandle) : "";
   const { user, serverProducts, isBlocked, toggleBlock } = useStore();
 
   // Pièce visée : catalogue mock d'abord, sinon annonce membre (serveur).
@@ -135,7 +173,7 @@ function MessagesInner() {
     : undefined;
 
   // Conversations serveur du membre connecté, fusionnées AVANT les mock.
-  const [serverConvs, setServerConvs] = useState<Conversation[]>([]);
+  const [serverConvs, setServerConvs] = useState<Conv[]>([]);
   // échec de chargement des fils serveur : annoncé dans la liste (lot 0),
   // retry incrémente la clé pour relancer l'effet
   const [convError, setConvError] = useState<string | null>(null);
@@ -160,8 +198,35 @@ function MessagesInner() {
     };
   }, [user, convRetry]);
 
+  /* ?to= : le membre visé, par /api/members — photo et handle actuel (un
+     ancien @ encore renvoyé mène au bon fil). Absent de la réponse : il
+     n'existe pas ou plus, on le dit au lieu d'ouvrir un fil mort. Hors
+     ligne : on garde le fil demandé, l'envoi dira ce qu'il en est. */
+  const [dmLookup, setDmLookup] = useState<{
+    key: string;
+    member: PublicMember | null;
+    found: boolean;
+  } | null>(null);
+  useEffect(() => {
+    if (!toKey) return;
+    let alive = true;
+    void api.members([toKey]).then((res) => {
+      if (!alive) return;
+      const member = res.ok ? memberFor(res.data.members, toKey) : null;
+      setDmLookup({ key: toKey, member, found: !res.ok || member !== null });
+      if (res.ok && !member) announce("Membre introuvable");
+    });
+    return () => {
+      alive = false;
+    };
+  }, [toKey]);
+  const dmTarget = dmLookup?.key === toKey ? dmLookup : null;
+  const dmMember = dmTarget?.member ?? null;
+  const dmHandle = dmMember?.handle ?? toKey;
+  const dmMissing = dmTarget !== null && !dmTarget.found;
+
   const allConvs = useMemo(() => {
-    const merged: Conversation[] = [];
+    const merged: Conv[] = [];
     const seen = new Set<string>();
     for (const c of [...serverConvs, ...conversations]) {
       if (seen.has(c.id)) continue;
@@ -171,19 +236,20 @@ function MessagesInner() {
     if (item && !merged.some((c) => c.handle === item.seller))
       merged.unshift(syntheticConv(item));
     if (
-      toHandle &&
-      !merged.some((c) => c.handle === toHandle && c.itemBrand === "Message")
+      toKey &&
+      !dmMissing &&
+      !merged.some((c) => c.handle === dmHandle && c.itemBrand === "Message")
     )
-      merged.unshift(dmConv(toHandle));
+      merged.unshift(dmConv(toKey, dmMember));
     return merged;
-  }, [serverConvs, item, toHandle]);
+  }, [serverConvs, item, toKey, dmMissing, dmHandle, dmMember]);
 
   // Une pièce du catalogue se résout de façon synchrone : fil + pré-sélection
   // sont dérivés une seule fois via des initialiseurs lazy — pas de cascade.
   // Une annonce membre arrive après hydratation du store : l'effet ci-dessous
   // sème alors l'offre, une seule fois.
   const [selId, setSelId] = useState<string | null>(() => {
-    if (toHandle) return `dm-${toHandle}`;
+    if (toKey) return `dm-${toKey}`;
     const ci = itemId ? catalogItem(itemId) : undefined;
     if (!ci) return null;
     return (threadForItem(ci, conversations) ?? syntheticConv(ci)).id;
@@ -197,12 +263,12 @@ function MessagesInner() {
   });
   // si un fil DM serveur existe déjà avec ce membre, on le préfère au synthétique
   useEffect(() => {
-    if (!toHandle) return;
+    if (!toKey) return;
     const real = serverConvs.find(
-      (c) => c.handle === toHandle && c.itemBrand === "Message",
+      (c) => c.handle === dmHandle && c.itemBrand === "Message",
     );
     if (real) queueMicrotask(() => setSelId(real.id));
-  }, [toHandle, serverConvs]);
+  }, [toKey, dmHandle, serverConvs]);
 
   const seededRef = useRef(itemId ? Boolean(catalogItem(itemId)) : true);
   useEffect(() => {
@@ -262,11 +328,14 @@ function MessagesInner() {
       )?.focus();
   }, [focusReq]);
 
-  const active: Conversation | undefined = selBlocked
-    ? undefined
-    : (visibleConvs.find((c) => c.id === selId) ??
-      threadForItem(item, visibleConvs) ??
-      visibleConvs[0]);
+  // le fil demandé par ?to= n'existe pas : aucun autre fil à sa place
+  const dmNotFound = dmMissing && selId === `dm-${toKey}`;
+  const active: Conv | undefined =
+    selBlocked || dmNotFound
+      ? undefined
+      : (visibleConvs.find((c) => c.id === selId) ??
+        threadForItem(item, visibleConvs) ??
+        visibleConvs[0]);
   const thread = active
     ? [...active.messages, ...(extra[active.id] ?? [])]
     : [];
@@ -454,6 +523,7 @@ function MessagesInner() {
                 <Avatar
                   name={c.name}
                   seed={c.seed}
+                  src={c.avatar}
                   decorative
                   className="size-12 text-xl"
                 />
@@ -490,9 +560,29 @@ function MessagesInner() {
       <section
         className={`flex-1 flex-col ${selId ? "flex" : "hidden md:flex"}`}
       >
-        {!active && (
+        {!active && !dmNotFound && (
           <div className="flex flex-1 items-center justify-center px-6">
             <p className="text-sm text-ash">Aucune conversation à afficher.</p>
+          </div>
+        )}
+        {dmNotFound && (
+          <div className="flex flex-1 flex-col items-center justify-center px-6 text-center">
+            <h2 className="font-editorial text-2xl font-semibold tracking-tight text-bone">
+              Membre introuvable
+            </h2>
+            <p className="mt-2 max-w-sm text-[13px] leading-relaxed text-ash">
+              Aucun membre ne répond au nom de{" "}
+              <span className="text-bone">@{toKey}</span>. Le compte a peut-être
+              été supprimé, ou le lien est périmé.
+            </p>
+            {/* sur téléphone, la liste est masquée tant qu'un fil est choisi */}
+            <button
+              type="button"
+              onClick={backToList}
+              className="mt-5 inline-flex min-h-11 items-center rounded-full border border-bone/25 px-5 text-sm font-semibold text-bone transition-colors hover:bg-bone/10 md:hidden"
+            >
+              Voir mes messages
+            </button>
           </div>
         )}
         {active && (
@@ -513,11 +603,13 @@ function MessagesInner() {
               <Avatar
                 name={active.name}
                 seed={active.seed}
+                src={active.avatar}
                 decorative
                 className="size-10 text-lg"
               />
               {/* titre du fil (focalisé à l'ouverture) ; le lien vers le
-                  profil couvre tout le bloc, comme avant */}
+                  profil couvre tout le bloc, comme avant — pas de lien
+                  vers un compte supprimé */}
               <div className="relative min-w-0">
                 <h2
                   ref={threadTitleRef}
@@ -532,13 +624,21 @@ function MessagesInner() {
                     <Verified className="size-3.5 text-bone" />
                   )}
                 </h2>
-                <Link
-                  href={`/membre/${active.handle}`}
-                  className="block after:absolute after:inset-0 after:content-['']"
-                  aria-label={`Voir le profil de @${active.handle}`}
-                >
-                  <span className="text-[11px] text-ash">@{active.handle}</span>
-                </Link>
+                {hasProfile(active.handle) ? (
+                  <Link
+                    href={`/membre/${encodeURIComponent(active.handle)}`}
+                    className="block after:absolute after:inset-0 after:content-['']"
+                    aria-label={`Voir le profil de @${active.handle}`}
+                  >
+                    <span className="text-[11px] text-ash">
+                      @{active.handle}
+                    </span>
+                  </Link>
+                ) : (
+                  <span className="block text-[11px] text-ash">
+                    @{active.handle}
+                  </span>
+                )}
               </div>
               <div className="relative ml-auto">
                 <button

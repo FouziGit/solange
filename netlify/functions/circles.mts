@@ -25,6 +25,8 @@ import {
   userEmail,
 } from "./_shared/core.mts";
 import { storeImages } from "./_shared/media.mts";
+import { AUTHOR, resolveMembers, withMembers } from "./_shared/members.mts";
+import { resolveHandle } from "./_shared/users.mts";
 import {
   CIRCLE_IDS,
   extractMentions,
@@ -33,6 +35,7 @@ import {
   type CircleReply,
   type CircleThread,
 } from "../../src/lib/circles.ts";
+import { idsOf, overlayMember } from "../../src/lib/members.ts";
 
 /* Source unique : src/lib/circles.ts (partagée avec la suppression de
    compte, qui doit savoir où chercher les fils d'un membre). */
@@ -83,12 +86,15 @@ export default async (req: Request) => {
         lastSeenAt = seen[circleId] ?? 0;
       }
       return json({
-        threads: sortThreads(threads).map((t) => ({
-          ...t,
-          liked: user ? t.likedBy.includes(user.id) : false,
-          likedBy: undefined, // la liste des membres qui aiment reste privée
-          likes: t.likedBy.length,
-        })),
+        threads: await withMembers(
+          sortThreads(threads).map((t) => ({
+            ...t,
+            liked: user ? t.likedBy.includes(user.id) : false,
+            likedBy: undefined, // la liste des membres qui aiment reste privée
+            likes: t.likedBy.length,
+          })),
+          [AUTHOR],
+        ),
         lastSeenAt,
       });
     }
@@ -101,14 +107,22 @@ export default async (req: Request) => {
         ((await circles.get(`r:${threadId}`, {
           type: "json",
         })) as CircleReply[]) ?? [];
+      // une seule résolution pour le fil et ses réponses, auteur du fil en tête
+      const members = await resolveMembers(
+        idsOf([t, ...replies], ["authorId"]),
+      );
       return json({
-        thread: {
-          ...t,
-          liked: user ? t.likedBy.includes(user.id) : false,
-          likedBy: undefined,
-          likes: t.likedBy.length,
-        },
-        replies,
+        thread: overlayMember(
+          {
+            ...t,
+            liked: user ? t.likedBy.includes(user.id) : false,
+            likedBy: undefined,
+            likes: t.likedBy.length,
+          },
+          AUTHOR,
+          members,
+        ),
+        replies: replies.map((r) => overlayMember(r, AUTHOR, members)),
       });
     }
 
@@ -266,12 +280,12 @@ export default async (req: Request) => {
       }
     }
 
-    // @mentions : cloche avec lien profond (jamais l'auteur de la réponse)
-    const users = store("users");
+    /* @mentions : cloche avec lien profond. Un ancien handle mène à son
+       titulaire (alias) ; ni l'auteur du fil, déjà prévenu, ni celui de
+       la réponse, même mentionné sous un de ses anciens handles. */
     for (const h of extractMentions(text, user.handle).slice(0, 5)) {
-      const uid = (await users.get(`handle:${h}`, { type: "text" })) as
-        string | null;
-      if (uid && uid !== t.authorId)
+      const uid = await resolveHandle(h);
+      if (uid && uid !== t.authorId && uid !== user.id)
         await pushNotif(uid, {
           type: "circle",
           text: `@${user.handle} t'a mentionné dans « ${t.title} »`,

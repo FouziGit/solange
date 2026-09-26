@@ -117,3 +117,26 @@ export const TARGET_LABEL: Record<ReportTargetType, string> = {
 
 /** Durées de suspension proposées (jours). */
 export const SUSPEND_DAYS = [3, 7, 30] as const;
+
+/** Récidive : combien de signalements visent déjà ce membre ? Par son id
+    (`targetUserId`, posé à la création) ou par n'importe lequel de ses
+    handles, anciens compris : changer d'identifiant n'efface pas
+    l'historique. Seuls les signalements de membre et de message
+    comptent ; ceux d'une pièce, d'un post ou d'un fil visent un contenu. */
+export function countPriorReports(
+  reports: {
+    targetType: string;
+    targetId: string;
+    targetUserId?: string | null;
+  }[],
+  target: { id?: string; handles: Set<string> },
+): number {
+  const handles = new Set([...target.handles].map((h) => h.toLowerCase()));
+  return reports.filter(
+    (r) =>
+      (r.targetType === "user" || r.targetType === "message") &&
+      ((!!target.id && r.targetUserId === target.id) ||
+        (typeof r.targetId === "string" &&
+          handles.has(r.targetId.toLowerCase()))),
+  ).length;
+}

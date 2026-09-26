@@ -15,7 +15,9 @@ import {
   sendEmail,
   APP_URL,
 } from "./_shared/core.mts";
+import { resolveHandle } from "./_shared/users.mts";
 import { escapeHtml } from "../../src/lib/guards.ts";
+import { normalizeHandle } from "../../src/lib/handle.ts";
 
 const TYPES = new Set(["product", "post", "user", "message", "thread"]);
 
@@ -39,12 +41,22 @@ export default async (req: Request) => {
   if (!(await rateLimit(`report:${user.id}`, 10, 24 * 3_600_000)))
     return bad("Limite de signalements atteinte pour aujourd'hui", 429);
 
+  /* Un membre (ou l'auteur d'un message) est désigné par son handle, qui
+     peut changer. On note aussi son id, résolu maintenant, alias compris :
+     la modération et la récidive le suivront sous son prochain handle.
+     null : personne derrière ce handle (vendeur de démo, compte supprimé). */
+  const targetUserId =
+    targetType === "user" || targetType === "message"
+      ? await resolveHandle(normalizeHandle(targetId))
+      : undefined;
+
   const reports = store("reports");
   const id = newId("r");
   await reports.setJSON(`r:${id}`, {
     id,
     targetType,
     targetId,
+    targetUserId,
     reason,
     reporterId: user.id,
     reporterHandle: user.handle,

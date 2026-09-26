@@ -22,6 +22,7 @@ import { Skeleton, SkeletonRow } from "@/components/ui/Skeleton";
 import { Avatar } from "@/components/chrome/Avatar";
 import { Photo } from "@/components/ui/Photo";
 import { Heart } from "@/components/chrome/icons";
+import { authorAvatar, hasProfile } from "@/lib/member-display";
 
 const when = (t: number) =>
   new Date(t).toLocaleDateString("fr-FR", {
@@ -102,10 +103,14 @@ export default function FilPage() {
     if (res.ok) {
       track("circle_reply", { circle: circleId });
       setDraft("");
+      // la réponse renvoyée ne porte ni nom ni photo : ce sont les miens
+      const mine: ApiCircleReply = {
+        ...res.data.reply,
+        authorName: user?.name,
+        authorAvatar: user?.avatar ?? null,
+      };
       setState((s) =>
-        s.kind === "ready"
-          ? { ...s, replies: [...s.replies, res.data.reply] }
-          : s,
+        s.kind === "ready" ? { ...s, replies: [...s.replies, mine] } : s,
       );
     } else {
       setActionError(res.error);
@@ -216,7 +221,11 @@ export default function FilPage() {
           <div className="flex items-start gap-3">
             <Avatar
               name={state.thread.authorName}
-              seed={state.thread.authorHandle}
+              {...authorAvatar(
+                state.thread.authorId,
+                state.thread.authorHandle,
+                state.thread.authorAvatar,
+              )}
               className="size-10 shrink-0"
             />
             <div className="min-w-0 flex-1">
@@ -229,12 +238,16 @@ export default function FilPage() {
                 )}
               </h2>
               <p className="mt-0.5 text-[11.5px] text-ash">
-                <Link
-                  href={`/membre/${encodeURIComponent(state.thread.authorHandle)}`}
-                  className="hover:underline"
-                >
-                  @{state.thread.authorHandle}
-                </Link>{" "}
+                {hasProfile(state.thread.authorHandle) ? (
+                  <Link
+                    href={`/membre/${encodeURIComponent(state.thread.authorHandle)}`}
+                    className="hover:underline"
+                  >
+                    @{state.thread.authorHandle}
+                  </Link>
+                ) : (
+                  state.thread.authorName
+                )}{" "}
                 · {when(state.thread.createdAt)}
               </p>
             </div>
@@ -291,19 +304,25 @@ export default function FilPage() {
               <li key={r.id} className="flex items-start gap-3">
                 {/* @pseudo écrit juste à côté : l'avatar n'ajoute rien */}
                 <Avatar
-                  name={r.authorHandle}
-                  seed={r.authorHandle}
+                  name={r.authorName ?? r.authorHandle}
+                  {...authorAvatar(r.authorId, r.authorHandle, r.authorAvatar)}
                   decorative
                   className="size-8 shrink-0 text-xs"
                 />
                 <div className="min-w-0 flex-1">
                   <p className="text-[11.5px] text-ash">
-                    <Link
-                      href={`/membre/${encodeURIComponent(r.authorHandle)}`}
-                      className="font-medium text-bone/80 hover:underline"
-                    >
-                      @{r.authorHandle}
-                    </Link>{" "}
+                    {hasProfile(r.authorHandle) ? (
+                      <Link
+                        href={`/membre/${encodeURIComponent(r.authorHandle)}`}
+                        className="font-medium text-bone/80 hover:underline"
+                      >
+                        @{r.authorHandle}
+                      </Link>
+                    ) : (
+                      <span className="font-medium text-bone/80">
+                        {r.authorName ?? r.authorHandle}
+                      </span>
+                    )}{" "}
                     · {when(r.at)}
                     {user && user.id === r.authorId && (
                       <button

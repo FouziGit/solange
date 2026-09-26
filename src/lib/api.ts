@@ -5,6 +5,11 @@
 
 import type { PushPrefs } from "./push-rules";
 import type { LegalConsent } from "./legal-consent";
+import { AVATAR_QUALITY, squareCropRect } from "./avatar";
+import { normalizeHandle } from "./handle";
+import type { PublicMember } from "./members";
+
+export type { PublicMember } from "./members";
 
 export type SessionUser = {
   id: string;
@@ -14,6 +19,20 @@ export type SessionUser = {
   /** Preuve d'acceptation des conditions. `null` sur les comptes créés
       avant sa mise en place : ils passent par l'écran de réacceptation. */
   legal?: LegalConsent | null;
+  /** `/api/img/i_…`, ou null : pas de photo, ou photo masquée par la
+      modération. */
+  avatar?: string | null;
+  /** Une photo masquée par la modération est encore gardée : le membre
+      peut la retirer. */
+  avatarHidden?: boolean;
+  /** Photo masquée par la modération : pas de nouvelle photo possible. */
+  avatarLocked?: boolean;
+  /** Dernier changement d'@identifiant (ms). null : jamais changé. */
+  handleChangedAt?: number | null;
+  nextHandleChangeAt?: number | null;
+  /** Anciens identifiants du membre, qu'il peut reprendre. Vus par lui
+      seul (/api/me et connexion). */
+  formerHandles?: string[];
 };
 
 export type ApiProduct = {
@@ -27,6 +46,8 @@ export type ApiProduct = {
   description?: string;
   seed: string;
   seller: string;
+  sellerId?: string | null;
+  sellerAvatar?: string | null;
   likes: number;
   images: string[];
   /* `reserved` : quelqu'un est en train de payer la pièce (30 minutes au
@@ -87,8 +108,10 @@ export type ApiConversation = {
   orderId?: string;
   buyerId: string;
   buyerHandle: string;
+  buyerAvatar?: string | null;
   sellerId: string | null;
   sellerHandle: string;
+  sellerAvatar?: string | null;
   productId: string;
   itemBrand: string;
   itemName: string;
@@ -103,6 +126,7 @@ export type ApiPost = {
   authorId?: string;
   authorHandle: string;
   authorName: string;
+  authorAvatar?: string | null;
   caption: string;
   brandTags: string[];
   gallery: string[];
@@ -133,7 +157,7 @@ export type ApiNotif = {
 };
 
 export type PublicProfile = {
-  user: { handle: string; name: string };
+  user: { id?: string; handle: string; name: string; avatar?: string | null };
   dmOpen?: boolean;
   products: ApiProduct[];
   posts: ApiPost[];
@@ -146,6 +170,7 @@ export type ApiThread = {
   authorId: string;
   authorHandle: string;
   authorName: string;
+  authorAvatar?: string | null;
   title: string;
   text?: string;
   image?: string;
@@ -161,6 +186,8 @@ export type ApiCircleReply = {
   id: string;
   authorId: string;
   authorHandle: string;
+  authorName?: string;
+  authorAvatar?: string | null;
   text: string;
   at: number;
 };
@@ -210,12 +237,21 @@ export type ModAuditEntry = {
   note?: string;
 };
 
+/** Échec d'un appel. `code` : raison lisible par l'écran (`taken`,
+    `cooldown`…) ; `body` : la réponse entière (ex. `nextHandleChangeAt`). */
+export type ApiError = {
+  ok: false;
+  error: string;
+  status: number;
+  code?: string;
+  body?: unknown;
+};
+export type ApiResult<T> = { ok: true; data: T } | ApiError;
+
 async function request<T>(
   path: string,
   init?: RequestInit,
-): Promise<
-  { ok: true; data: T } | { ok: false; error: string; status: number }
-> {
+): Promise<ApiResult<T>> {
   try {
     const res = await fetch(path, {
       credentials: "same-origin",
@@ -223,12 +259,16 @@ async function request<T>(
       ...init,
     });
     const data = await res.json().catch(() => ({}));
-    if (!res.ok)
+    if (!res.ok) {
+      const code = (data as { code?: unknown } | null)?.code;
       return {
         ok: false,
         error: (data as { error?: string }).error ?? "Erreur réseau",
         status: res.status,
+        code: typeof code === "string" ? code : undefined,
+        body: data,
       };
+    }
     return { ok: true, data: data as T };
   } catch {
     return {
@@ -237,6 +277,50 @@ async function request<T>(
       status: 0,
     };
   }
+}
+
+/** Le serveur lit 50 handles au plus par requête. */
+export const MEMBERS_BATCH = 50;
+
+/** Handles normalisés (comme le serveur les lit), sans doublon, en lots
+    de `size`. Une saisie qui ne peut pas être un handle ne part pas. */
+export function memberBatches(
+  handles: string[],
+  size = MEMBERS_BATCH,
+): string[][] {
+  const unique = [
+    ...new Set(
+      handles.map(normalizeHandle).filter((h) => /^[a-z0-9._-]{1,30}$/.test(h)),
+    ),
+  ];
+  const out: string[][] = [];
+  for (let i = 0; i < unique.length; i += size)
+    out.push(unique.slice(i, i + size));
+  return out;
+}
+
+/** Membres par handle, clés normalisées (normalizeHandle). Un handle
+    inconnu, supprimé ou ancien sans renvoi est absent. Un lot en échec
+    fait échouer l'ensemble : « introuvable » et « hors ligne » ne se
+    confondent pas. */
+async function fetchMembers(
+  handles: string[],
+): Promise<ApiResult<{ members: Record<string, PublicMember> }>> {
+  const results = await Promise.all(
+    memberBatches(handles).map((batch) =>
+      request<{ members: Record<string, PublicMember> }>(
+        `/api/members?handles=${encodeURIComponent(batch.join(","))}`,
+      ),
+    ),
+  );
+  /* Sans prototype : un membre nommé « constructor » ou « __proto__ » est
+     une clé comme une autre, et un handle absent reste absent. */
+  const members = Object.create(null) as Record<string, PublicMember>;
+  for (const r of results) {
+    if (!r.ok) return r;
+    for (const [h, m] of Object.entries(r.data.members ?? {})) members[h] = m;
+  }
+  return { ok: true, data: { members } };
 }
 
 export const api = {
@@ -384,6 +468,30 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ dmOpen }),
     }),
+  /* — Profil : @identifiant et photo — */
+  /** Refus : `code` vaut invalid, same, blocked, taken, cooldown (avec
+      `nextHandleChangeAt` dans `body`), pending, conflict ou rate. */
+  changeHandle: (handle: string, redirect: boolean) =>
+    request<{
+      ok: boolean;
+      handle: string;
+      handleChangedAt: number;
+      nextHandleChangeAt: number;
+    }>("/api/me/handle", {
+      method: "POST",
+      body: JSON.stringify({ handle, redirect }),
+    }),
+  /** `image` : data URL JPEG, préparée par prepareAvatar(). */
+  setAvatar: (image: string) =>
+    request<{ ok: boolean; avatar: string }>("/api/me/avatar", {
+      method: "POST",
+      body: JSON.stringify({ image }),
+    }),
+  removeAvatar: () =>
+    request<{ ok: boolean; avatar: null }>("/api/me/avatar", {
+      method: "DELETE",
+    }),
+  members: (handles: string[]) => fetchMembers(handles),
   posts: () => request<{ posts: ApiPost[] }>("/api/posts"),
   createPost: (p: {
     caption: string;
@@ -547,6 +655,39 @@ export function resizeImage(
       URL.revokeObjectURL(url);
       reject(new Error("image illisible"));
     };
+    img.src = url;
+  });
+}
+
+/** Photo de profil : carré centré de 512 px au plus, en JPEG. Le fond
+    crème remplace la transparence d'un PNG, que le JPEG rendrait noire.
+    Le serveur retire ensuite les métadonnées (EXIF, position). */
+export function prepareAvatar(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const fail = (why: string) => {
+      URL.revokeObjectURL(url);
+      reject(new Error(why));
+    };
+    const img = new Image();
+    img.onload = () => {
+      const { sx, sy, side, out } = squareCropRect(
+        img.naturalWidth,
+        img.naturalHeight,
+      );
+      if (out < 1) return fail("image vide");
+      const canvas = document.createElement("canvas");
+      canvas.width = out;
+      canvas.height = out;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return fail("canvas");
+      ctx.fillStyle = "#f4f1ea";
+      ctx.fillRect(0, 0, out, out);
+      ctx.drawImage(img, sx, sy, side, side, 0, 0, out, out);
+      URL.revokeObjectURL(url);
+      resolve(canvas.toDataURL("image/jpeg", AVATAR_QUALITY));
+    };
+    img.onerror = () => fail("image illisible");
     img.src = url;
   });
 }

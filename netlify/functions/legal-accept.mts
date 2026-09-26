@@ -7,13 +7,13 @@
    il ne choisit pas ce qu'il accepte. */
 import type { Config } from "@netlify/functions";
 import {
-  store,
   json,
   bad,
   sameOrigin,
   readJson,
   currentUser,
 } from "./_shared/core.mts";
+import { updateUser } from "./_shared/users.mts";
 import {
   acceptancePayloadIsValid,
   buildConsent,
@@ -33,15 +33,14 @@ export default async (req: Request) => {
       400,
     );
 
-  const users = store("users");
-  const current = (await users.get(`u:${user.id}`, { type: "json" })) as Record<
-    string,
-    unknown
-  > | null;
-  if (!current) return bad("Compte introuvable", 404);
-
+  // Fusion sur l'enregistrement frais : une photo ou un identifiant
+  // changés au même instant ne sont pas écrasés.
   const legal = buildConsent(Date.now());
-  await users.setJSON(`u:${user.id}`, { ...current, legal });
+  const u = await updateUser(user.id, (r) => ({ ...r, legal }));
+  if (!u.ok)
+    return u.reason === "missing"
+      ? bad("Compte introuvable", 404)
+      : bad("Ton compte vient d'être modifié. Réessaie.", 409);
 
   return json({ ok: true, legal });
 };

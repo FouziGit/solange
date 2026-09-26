@@ -11,13 +11,25 @@ import { SkeletonRow } from "@/components/ui/Skeleton";
 import { PushSettings } from "@/components/chrome/PushSettings";
 import { SellerPayments } from "@/components/chrome/SellerPayments";
 import { Avatar } from "@/components/chrome/Avatar";
+import { AvatarSheet } from "@/components/profile/AvatarSheet";
+import { HandleSheet } from "@/components/profile/HandleSheet";
 import { AnimatePresence } from "motion/react";
 import { invite, looks, me } from "@/lib/mock";
 import { forSale, liked } from "@/lib/data";
-import { EASE, compact, euro, gradientFor, initials } from "@/lib/utils";
+import { EASE, compact, euro, gradientFor } from "@/lib/utils";
 import { useStore } from "@/lib/store";
-import { api, type ApiOrder, type ApiProduct } from "@/lib/api";
+import {
+  api,
+  type ApiOrder,
+  type ApiProduct,
+  type SessionUser,
+} from "@/lib/api";
 import { announce } from "@/lib/announce";
+import {
+  canChangeHandle,
+  formatHandleDate,
+  nextHandleChangeAt,
+} from "@/lib/handle";
 import { usePaymentsMode } from "@/lib/use-payments-mode";
 import {
   STATUS_LABEL,
@@ -33,6 +45,7 @@ import {
   Crown,
   Share,
   Check,
+  Camera,
 } from "@/components/chrome/icons";
 
 const tabs = [
@@ -64,6 +77,13 @@ function Row({
       {children}
     </Link>
   );
+}
+
+/** null : l'identifiant peut changer maintenant. Sinon, la date à partir
+    de laquelle il le pourra (90 jours après le dernier changement). */
+function nextHandleChange(u: SessionUser): number | null {
+  if (canChangeHandle(u.handleChangedAt, Date.now())) return null;
+  return u.nextHandleChangeAt ?? nextHandleChangeAt(u.handleChangedAt);
 }
 
 /** Libellé de statut — commandes démo locales sans statut = « Payée ». */
@@ -178,9 +198,13 @@ export default function ProfilPage() {
   const { orders, user, authReady, signOut, savedItems, refreshProducts } =
     useStore();
   const { memberPosts } = useStore();
+  // par id : un changement d'@identifiant ne fait rien disparaître
   const mesPublications = user
-    ? memberPosts.filter((p) => p.authorHandle === user.handle)
+    ? memberPosts.filter((p) => p.authorId === user.id)
     : [];
+  const [avatarOpen, setAvatarOpen] = useState(false);
+  const [handleOpen, setHandleOpen] = useState(false);
+  const handleNext = user ? nextHandleChange(user) : null;
   const saleItems = forSale();
   const likedItems = liked();
   const isGuest = authReady && user === null;
@@ -212,6 +236,16 @@ export default function ProfilPage() {
     flushSync(update);
     document.getElementById(targetId)?.focus();
   };
+
+  /* Après un changement d'identifiant, « Changer d'identifiant » laisse
+     place à la date du prochain : la feuille ne peut plus rendre le focus
+     à son déclencheur, il va à cette date. */
+  const focusHandleStatus = useRef(false);
+  useEffect(() => {
+    if (handleOpen || !focusHandleStatus.current) return;
+    focusHandleStatus.current = false;
+    document.getElementById(`${uid}-identifiant-statut`)?.focus();
+  }, [handleOpen, uid]);
 
   // réglage : accepter les messages directs
   const [dmOpen, setDmOpen] = useState<boolean | null>(null);
@@ -316,19 +350,26 @@ export default function ProfilPage() {
         <div className="relative">
           <span className="absolute -inset-1 rounded-full bg-gradient-to-tr from-bone/40 to-bone/10 blur-[2px]" />
           {user ? (
-            /* membre connecté : monogramme réel, pas de fausse photo */
-            <span
-              role="img"
-              aria-label={user.name}
-              className="relative grid size-28 place-items-center rounded-full ring-2 ring-ink md:size-32"
-              style={{ background: gradientFor(user.handle) }}
-            >
-              {/* gradientFor est toujours sombre : texte clair, même en
-                  thème clair */}
-              <span className="theme-dark font-display text-4xl font-bold tracking-wide text-bone/85">
-                {initials(user.name || user.handle)}
-              </span>
-            </span>
+            /* membre connecté : sa photo, sinon ses initiales — jamais un
+               portrait de démonstration */
+            <>
+              <Avatar
+                name={user.name || user.handle}
+                seed={user.id}
+                src={user.avatar ?? null}
+                className="relative size-28 text-[5.25rem] ring-2 ring-ink md:size-32"
+              />
+              <button
+                type="button"
+                onClick={() => setAvatarOpen(true)}
+                aria-label="Modifier la photo de profil"
+                aria-haspopup="dialog"
+                data-cursor="link"
+                className="absolute -bottom-1 -right-1 grid size-11 place-items-center rounded-full border border-bone/25 bg-coal text-bone transition-colors hover:border-bone/60"
+              >
+                <Camera className="size-5" />
+              </button>
+            </>
           ) : (
             <Avatar
               name={me.name}
@@ -777,6 +818,48 @@ export default function ProfilPage() {
         </p>
       )}
 
+      {/* @identifiant — modifiable une fois tous les 90 jours */}
+      {user && (
+        <section className="mt-8 md:max-w-md" aria-label="Mon profil public">
+          <p className="etiquette mb-3 text-[11px] text-ash">
+            Mon profil public
+          </p>
+          <div className="border border-bone/12 p-4">
+            <p className="text-[13.5px] text-bone/85">
+              Identifiant{" "}
+              <span className="font-semibold text-bone">@{user.handle}</span>
+            </p>
+            {handleNext === null ? (
+              <>
+                <Button
+                  variant="outline"
+                  className="mt-3"
+                  onClick={() => setHandleOpen(true)}
+                  aria-haspopup="dialog"
+                  aria-describedby={`${uid}-identifiant-aide`}
+                >
+                  Changer d&apos;identifiant
+                </Button>
+                <p
+                  id={`${uid}-identifiant-aide`}
+                  className="mt-2 text-[11.5px] text-ash"
+                >
+                  Modifiable une fois tous les 90 jours.
+                </p>
+              </>
+            ) : (
+              <p
+                id={`${uid}-identifiant-statut`}
+                tabIndex={-1}
+                className="mt-1.5 text-[11.5px] text-ash"
+              >
+                Prochain changement possible le {formatHandleDate(handleNext)}.
+              </p>
+            )}
+          </div>
+        </section>
+      )}
+
       {/* réglages — notifications push (lot 3 ; masqué si non configuré) */}
       {/* paiements AVANT les notifications : sans eux, rien ne se vend */}
       {user && <SellerPayments />}
@@ -914,6 +997,19 @@ export default function ProfilPage() {
           </Link>
         </div>
       </div>
+
+      {user && (
+        <>
+          <AvatarSheet open={avatarOpen} onClose={() => setAvatarOpen(false)} />
+          <HandleSheet
+            open={handleOpen}
+            onClose={() => {
+              focusHandleStatus.current = true;
+              setHandleOpen(false);
+            }}
+          />
+        </>
+      )}
     </PageShell>
   );
 }

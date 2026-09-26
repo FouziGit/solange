@@ -1,6 +1,20 @@
 import { cn, gradientFor, initials } from "@/lib/utils";
-import { imgPerson } from "@/lib/img";
+import { PORTRAIT_SEEDS, imgPerson } from "@/lib/img";
 import { Photo } from "../ui/Photo";
+
+/** La photo à poser sur le monogramme. `src` chaîne : la photo du membre
+    (vide : aucune). `src` null : le membre n'en a pas, initiales seules.
+    Le portrait de démo n'apparaît que si `src` n'est pas fourni du tout
+    et que la graine en a un : un membre réel ne peut ni déclencher un 404
+    par rendu, ni prendre le visage d'un créateur de démonstration. */
+export function avatarPhoto(
+  seed: string,
+  src: string | null | undefined,
+): string | null {
+  if (typeof src === "string") return src || null;
+  if (src === undefined && PORTRAIT_SEEDS.has(seed)) return imgPerson(seed);
+  return null;
+}
 
 /**
  * Monogram avatar with a real portrait overlay (falls back to the monogram).
@@ -12,14 +26,17 @@ import { Photo } from "../ui/Photo";
 export function Avatar({
   name,
   seed,
+  src,
   className,
   decorative = false,
 }: {
   name: string;
   seed: string;
+  src?: string | null;
   className?: string;
   decorative?: boolean;
 }) {
+  const photo = avatarPhoto(seed, src);
   return (
     <span
       {...(decorative
@@ -39,7 +56,7 @@ export function Avatar({
       >
         {initials(name)}
       </span>
-      <Photo src={imgPerson(seed)} alt="" className="rounded-full" />
+      {photo && <Photo src={photo} alt="" className="rounded-full" />}
     </span>
   );
 }

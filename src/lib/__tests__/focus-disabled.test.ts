@@ -12,23 +12,47 @@ import { describe, expect, it } from "vitest";
    Pas de DOM dans la suite : on lit les vrais fichiers et on vérifie
    qu'aucun `disabled={…}` n'y dépend d'un état de traitement. */
 
-const BUSY_STATES = /\b(?:photoBusy|submitting|addBlocked)\b/;
+const BUSY_STATES = /\b(?:photoBusy|submitting|addBlocked|busy)\b/;
 
-function disabledExpressions(page: string): string[] {
-  const src = readFileSync(
-    fileURLToPath(new URL(`../../app/${page}/page.tsx`, import.meta.url)),
+function source(file: string): string {
+  return readFileSync(
+    fileURLToPath(new URL(`../../${file}`, import.meta.url)),
     "utf8",
   );
-  // `disabled={…}` seul — pas `aria-disabled={…}`
-  return [...src.matchAll(/(?<![-\w])disabled=\{([^}]*)\}/g)].map((m) => m[1]);
+}
+
+// `disabled={…}` seul — pas `aria-disabled={…}`
+function disabledExpressions(file: string): string[] {
+  return [...source(file).matchAll(/(?<![-\w])disabled=\{([^}]*)\}/g)].map(
+    (m) => m[1],
+  );
+}
+
+function ariaDisabledExpressions(file: string): string[] {
+  return [...source(file).matchAll(/aria-disabled=\{([^}]*)\}/g)].map(
+    (m) => m[1],
+  );
 }
 
 describe("focus conservé pendant un traitement", () => {
-  for (const page of ["vendre", "creer"]) {
+  for (const page of ["vendre", "creer", "profil"]) {
     it(`/${page} : aucun bouton disabled par un traitement en cours`, () => {
-      const exprs = disabledExpressions(page);
+      const exprs = disabledExpressions(`app/${page}/page.tsx`);
       expect(exprs.length).toBeGreaterThan(0); // le motif lit bien le fichier
       for (const e of exprs) expect(e).not.toMatch(BUSY_STATES);
+    });
+  }
+
+  /* Les feuilles du profil n'ont aucun `disabled` : leur traitement passe
+     entièrement par aria-disabled, ce qu'on vérifie dans l'autre sens. */
+  for (const sheet of ["AvatarSheet", "HandleSheet"]) {
+    it(`${sheet} : le traitement en cours passe par aria-disabled`, () => {
+      const file = `components/profile/${sheet}.tsx`;
+      for (const e of disabledExpressions(file))
+        expect(e).not.toMatch(BUSY_STATES);
+      const aria = ariaDisabledExpressions(file);
+      expect(aria.length).toBeGreaterThan(0);
+      for (const e of aria) expect(e).toMatch(BUSY_STATES);
     });
   }
 });

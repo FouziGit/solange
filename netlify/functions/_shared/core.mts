@@ -4,6 +4,7 @@
    HS256 (jose) en cookie httpOnly. Zéro donnée sensible loggée.
    ============================================================ */
 import { getStore } from "@netlify/blobs";
+import type { HandleAlias } from "../../../src/lib/handle.ts";
 import type { LegalConsent } from "../../../src/lib/legal-consent.ts";
 import type { PushType } from "../../../src/lib/push-rules.ts";
 import { SignJWT, jwtVerify } from "jose";
@@ -23,6 +24,26 @@ export type SessionUser = {
       Absente sur tous les comptes créés avant sa mise en place — c'est
       voulu, ils passeront par l'écran de réacceptation. */
   legal?: LegalConsent;
+};
+
+/** Le compte tel qu'il est stocké sous `u:<id>`. Toute réécriture passe
+    par `updateUser` (users.mts) : écriture conditionnelle, jamais à
+    l'aveugle. */
+export type UserRecord = SessionUser & {
+  role?: string;
+  banned?: boolean;
+  suspendedUntil?: number;
+  stripeAccountId?: string;
+  stripePayable?: boolean;
+  /** `/api/img/i_<12hex>`. Absent : initiales. */
+  avatar?: string;
+  /** Masquée par la modération ; le fichier est en quarantaine. */
+  avatarHidden?: boolean;
+  /** Posé par le masquage : plus de nouvelle photo jusqu'au rétablissement. */
+  avatarLocked?: boolean;
+  handleChangedAt?: number;
+  handleHistory?: HandleAlias[];
+  pendingHandle?: { h: string; token: string; at: number };
 };
 
 export const store = (name: string) =>
@@ -86,12 +107,12 @@ export async function sessionUserId(req: Request): Promise<string | null> {
     est déconnecté partout d'un coup, sans exception à écrire endpoint par
     endpoint. Les champs de modération voyagent avec l'utilisateur pour que
     les gardes d'écriture n'aient pas à relire le compte. */
-export async function currentUser(req: Request): Promise<SessionUser | null> {
+export async function currentUser(req: Request): Promise<UserRecord | null> {
   const id = await sessionUserId(req);
   if (!id) return null;
   const u = (await store("users").get(`u:${id}`, {
     type: "json",
-  })) as (SessionUser & { banned?: boolean }) | null;
+  })) as UserRecord | null;
   if (!u || u.banned) return null;
   return u;
 }

@@ -14,6 +14,7 @@ import { FieldLabel } from "@/components/ui/FieldLabel";
 import { SkeletonRow } from "@/components/ui/Skeleton";
 import { Avatar } from "@/components/chrome/Avatar";
 import { Verified, Users, Comment, Check } from "@/components/chrome/icons";
+import { authorAvatar } from "@/lib/member-display";
 import { compact } from "@/lib/utils";
 import { track } from "@/lib/track";
 import { announce } from "@/lib/announce";
@@ -240,7 +241,7 @@ export function CommunityDetail({ community: c }: { community: Community }) {
               >
                 <Avatar
                   name={t.authorName}
-                  seed={t.authorHandle}
+                  {...authorAvatar(t.authorId, t.authorHandle, t.authorAvatar)}
                   className="size-9 shrink-0"
                 />
                 <div className="min-w-0 flex-1">

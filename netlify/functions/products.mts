@@ -14,6 +14,7 @@ import {
   readJson,
   rateLimit,
 } from "./_shared/core.mts";
+import { PRODUCT_SELLER, withMembers } from "./_shared/members.mts";
 import { normaliserMarque } from "../../src/lib/brands.ts";
 import { isValidId } from "../../src/lib/guards.ts";
 import { PRIX_MAX_EUR } from "../../src/lib/payments.ts";
@@ -65,9 +66,11 @@ export default async (req: Request) => {
       > | null;
       if (!p || p.shadow || p.hidden || p.status === "withdrawn")
         return bad("Annonce inconnue", 404);
-      return json({
-        product: { ...p, mine: me ? p.sellerId === me.id : false },
-      });
+      const [product] = await withMembers(
+        [{ ...p, mine: me ? p.sellerId === me.id : false }],
+        [PRODUCT_SELLER],
+      );
+      return json({ product });
     }
     const mineOnly = new URL(req.url).searchParams.get("mine") === "1";
     if (mineOnly && !me) return json({ products: [], soldSeeds: [] });
@@ -85,7 +88,7 @@ export default async (req: Request) => {
     const parcours = mineOnly
       ? idx.slice(-SCAN_MAX).reverse()
       : idx.slice(-PAGE).reverse();
-    const out: unknown[] = [];
+    const out: Record<string, unknown>[] = [];
     for (const id of parcours) {
       if (out.length >= PAGE) break;
       const p = (await products.get(`p:${id}`, { type: "json" })) as Record<
@@ -109,7 +112,12 @@ export default async (req: Request) => {
         string,
         number
       >) ?? {};
-    return json({ products: out, soldSeeds, likesMap });
+    // handle et photo du vendeur relus sur son compte, pas sur l'annonce
+    return json({
+      products: await withMembers(out, [PRODUCT_SELLER]),
+      soldSeeds,
+      likesMap,
+    });
   }
 
   if (req.method === "DELETE") {

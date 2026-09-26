@@ -147,9 +147,13 @@ export function ArticleDetail({
               aria-label={`Voir le profil de @${item.seller}`}
               className="flex min-h-11 min-w-0 flex-1 items-center gap-3 rounded-xl px-2 py-1 transition-colors hover:bg-bone/10"
             >
+              {/* annonce d'un membre : son compte et sa photo ; pièce de
+                  démo : le monogramme du vendeur, comme avant */}
               <Avatar
                 name={item.seller}
-                seed={item.seller}
+                {...(item.sellerId
+                  ? { seed: item.sellerId, src: item.sellerAvatar ?? null }
+                  : { seed: item.seller })}
                 className="size-11 shrink-0 text-2xl ring-1 ring-bone/15"
               />
               <span className="min-w-0">

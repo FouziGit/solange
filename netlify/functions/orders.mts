@@ -16,6 +16,7 @@ import {
   APP_URL,
 } from "./_shared/core.mts";
 import { SEED_CATALOG } from "./_shared/seed-catalog.mts";
+import { ORDER_BUYER, ORDER_SELLER, withMembers } from "./_shared/members.mts";
 import { capturePayment } from "./_shared/payment.mts";
 import { paymentsLive, stripe } from "./_shared/stripe.mts";
 import {
@@ -69,13 +70,17 @@ export default async (req: Request) => {
         return bad("Commande inconnue", 404);
       // L'adresse de livraison à domicile n'appartient qu'aux deux parties
       // de CETTE commande — c'est déjà le périmètre de cette lecture.
-      return json({
-        order: {
-          ...o,
-          status: normalizeStatus(o.status),
-          role: o.sellerId === user.id ? "seller" : "buyer",
-        },
-      });
+      const [order] = await withMembers(
+        [
+          {
+            ...o,
+            status: normalizeStatus(o.status),
+            role: o.sellerId === user.id ? "seller" : "buyer",
+          },
+        ],
+        [ORDER_BUYER, ORDER_SELLER],
+      );
+      return json({ order });
     }
 
     // ?sales=1 → les VENTES du membre (commandes sur ses annonces)
@@ -83,14 +88,17 @@ export default async (req: Request) => {
     const key = asSales ? `sales:${user.id}` : `u:${user.id}`;
     const ids =
       ((await store("orders").get(key, { type: "json" })) as string[]) ?? [];
-    const orders: unknown[] = [];
+    const orders: OrderRecord[] = [];
     for (const oid of ids.slice(-30).reverse()) {
       const o = (await store("orders").get(`o:${oid}`, {
         type: "json",
       })) as OrderRecord | null;
       if (o) orders.push({ ...o, status: normalizeStatus(o.status) });
     }
-    return json({ orders });
+    // handles des deux parties relus sur leurs comptes
+    return json({
+      orders: await withMembers(orders, [ORDER_BUYER, ORDER_SELLER]),
+    });
   }
 
   if (req.method !== "POST") return bad("Méthode non autorisée", 405);

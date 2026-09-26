@@ -41,7 +41,8 @@ taille, mais si elle intervient, ses coordonnées doivent figurer ici.]
 | ------------------------------------------------------------------------------------------------- | ----------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
 | Adresse électronique                                                                              | vous, à l'inscription                                 | créer et sécuriser votre compte, vous envoyer les codes de connexion et les messages liés à vos ventes et achats | exécution du contrat (art. 6.1.b RGPD)                                          |
 | Code de connexion à usage unique                                                                  | généré par le service                                 | vérifier que l'adresse est bien la vôtre. Il est **stocké sous forme hachée**, jamais en clair                   | exécution du contrat                                                            |
-| Pseudonyme et nom affiché                                                                         | dérivés de votre adresse électronique à l'inscription | vous identifier auprès des autres membres                                                                        | exécution du contrat                                                            |
+| Pseudonyme (identifiant) et nom affiché                                                           | dérivés de votre adresse électronique à l'inscription | vous identifier auprès des autres membres ; l'identifiant est ensuite modifiable par vous (voir ci-dessous)      | exécution du contrat                                                            |
+| Photo de profil (facultative)                                                                     | vous                                                  | vous représenter auprès des autres membres ; nos serveurs en retirent les métadonnées (dont la localisation)     | exécution du contrat                                                            |
 | Annonces : titre, marque, taille, état, prix, photographies                                       | vous                                                  | publier vos pièces                                                                                               | exécution du contrat                                                            |
 | Publications : légendes, photographies, vidéos                                                    | vous                                                  | alimenter le fil                                                                                                 | exécution du contrat                                                            |
 | Messages privés, discussions de Cercles                                                           | vous                                                  | vous permettre d'échanger                                                                                        | exécution du contrat                                                            |
@@ -52,9 +53,26 @@ taille, mais si elle intervient, ses coordonnées doivent figurer ici.]
 | Abonnements aux notifications (adresse technique de l'appareil, clés de chiffrement, préférences) | votre navigateur, si vous activez les notifications   | vous envoyer les notifications que vous avez demandées                                                           | consentement (art. 6.1.a) — retirable à tout moment                             |
 | Compteurs anti-abus rattachés à votre identifiant de compte                                       | le service                                            | limiter les envois massifs et les tentatives de connexion                                                        | intérêt légitime : sécurité                                                     |
 
-**Votre image de profil n'est pas une photographie que vous fournissez** :
-elle est composée à partir de votre pseudonyme. Aucune photo de profil ni
-biographie n'est demandée ni stockée à ce jour.
+**Votre photo de profil est facultative.** Sans photo, votre image de
+profil est composée à partir de vos initiales. Si vous en ajoutez une, elle
+est recadrée sur votre appareil, puis nos serveurs en retirent les
+métadonnées (dont la localisation) avant de la conserver. Elle est
+supprimée dès que vous la retirez ou que vous supprimez votre compte ; une
+copie peut toutefois subsister jusqu'à une heure dans le cache de votre
+navigateur ou de celui d'un autre membre qui l'a affichée. Une photo
+masquée par la modération n'est plus affichée : elle est conservée à
+l'écart, hors de toute page du service, jusqu'à son éventuel
+rétablissement, son retrait par vous ou la suppression de votre compte.
+Aucune biographie n'est demandée ni stockée à ce jour.
+
+**Votre identifiant** se modifie depuis votre profil, une fois tous les 90
+jours. Vos anciens identifiants restent attachés à votre compte, sans être
+affichés, pour qu'aucun autre membre ne puisse les reprendre et se faire
+passer pour vous. Ils servent aussi à ce qu'un blocage ou un signalement
+fait sous un ancien identifiant continue de s'appliquer à votre compte, et
+à vous prévenir d'une mention qui l'utilise. Un ancien identifiant ne mène
+publiquement à votre profil que si vous choisissez un renvoi, pendant 30
+jours.
 
 ### Ce que nous ne collectons pas
 
@@ -132,6 +150,8 @@ plutôt que d'inscrire ici une garantie que nous n'aurions pas contrôlée.
 | Code de connexion                       | **10 minutes**, puis inutilisable                                                                                                                                            | appliqué par le service                          |
 | Session de connexion                    | **30 jours**, renouvelée à chaque usage                                                                                                                                      | appliqué                                         |
 | Compte et contenus associés             | jusqu'à la suppression de votre compte, que vous déclenchez vous-même depuis vos paramètres                                                                                  | appliqué                                         |
+| Photo de profil                         | jusqu'à ce que vous la retiriez ou supprimiez votre compte ; une copie peut subsister jusqu'à une heure dans le cache d'un navigateur                                        | appliqué                                         |
+| Identifiants (actuel et anciens)        | tant que votre compte existe ; ensuite, ils restent réservés sans limite de durée, détachés de toute autre donnée, pour qu'aucun tiers ne les reprenne                       | appliqué                                         |
 | Commandes et leur historique            | [À COMPLÉTER : durée à arrêter. Le droit commercial impose la conservation des pièces des transactions ; à fixer avec un professionnel une fois les ventes réelles ouvertes] | non applicable aujourd'hui — aucune vente réelle |
 | Signalements et décisions de modération | [À COMPLÉTER : durée à arrêter, puis à implémenter]                                                                                                                          | conservés sans purge automatique à ce jour       |
 | Comptes inactifs                        | [À COMPLÉTER : durée à arrêter, puis à implémenter]                                                                                                                          | aucune suppression automatique à ce jour         |
@@ -149,17 +169,20 @@ cause ce qui a été envoyé auparavant.
 
 Concrètement, dans le service :
 
-- **rectification** : il n'existe pas encore d'écran permettant de
-  modifier vous-même votre pseudonyme ou votre nom affiché. Nous le
-  faisons sur simple demande à solange@nouhbenzidane.fr, et un écran est
-  en préparation. Nous préférons vous donner l'adresse plutôt que de vous
-  envoyer chercher un bouton qui n'existe pas ;
+- **rectification** : votre identifiant se modifie depuis votre profil,
+  une fois tous les 90 jours. Votre nom affiché ne se modifie pas encore
+  dans le service : nous le corrigeons sur simple demande à
+  solange@nouhbenzidane.fr. Pour une rectification urgente de l'un ou de
+  l'autre, écrivez à la même adresse : nous pouvons intervenir sans
+  attendre le délai de 90 jours ;
 - **notifications** : elles se coupent en un geste depuis vos paramètres,
   par type ou globalement, et vous pouvez fixer des heures calmes ;
 - **effacement** : la suppression de votre compte est disponible dans vos
   paramètres. Elle est **immédiate et définitive**. Elle efface votre
-  compte, vos annonces, vos publications et leurs images, vos messages et
-  vos abonnements aux notifications. Elle **n'efface pas les
+  compte, votre photo de profil, vos annonces, vos publications et leurs
+  images, vos messages et vos abonnements aux notifications. Vos
+  identifiants, eux, restent réservés, détachés de toute autre donnée,
+  pour qu'aucun tiers ne puisse les reprendre. Elle **n'efface pas les
   conversations des autres membres** dans les Cercles, qui leur
   appartiennent aussi : vos interventions y sont **anonymisées** — votre
   pseudonyme, votre nom et votre identifiant en sont retirés.

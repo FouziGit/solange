@@ -1,17 +1,19 @@
 /* POST /api/account/delete — suppression de compte (RGPD).
 
-   EFFACE : identité, index email/handle, état social, notifications, mes
-   annonces non vendues (+ photos), mes publications du feed (+ photos),
-   mes index de commandes et de conversations, mes abonnements push et
-   leurs préférences/compteurs, mes réponses dans les Cercles.
+   EFFACE : identité, index email, photo de profil, état social,
+   notifications, mes annonces non vendues (+ photos), mes publications du
+   feed (+ photos), mes index de commandes et de conversations, mes
+   abonnements push et leurs préférences/compteurs, mes réponses dans les
+   Cercles.
 
    ANONYMISE (plutôt qu'effacer, pour ne pas détruire la parole d'autrui) :
    mes fils de Cercle auxquels d'autres ont répondu — ils restent, signés
    « Membre supprimé », sans handle ni identifiant.
 
-   CONSERVE : les annonces VENDUES (trace de la commande de l'acheteur) et
-   les conversations côté autre participant. Documenté dans
-   /confidentialite. */
+   CONSERVE : les annonces VENDUES (trace de la commande de l'acheteur),
+   les conversations côté autre participant, et mes identifiants (@handle)
+   réduits à une pierre tombale, sans aucune autre donnée, pour qu'aucun
+   tiers ne les reprenne. Documenté dans /confidentialite. */
 import type { Config } from "@netlify/functions";
 import {
   store,
@@ -21,9 +23,13 @@ import {
   currentUser,
   sameOrigin,
   clearSessionCookie,
+  type UserRecord,
 } from "./_shared/core.mts";
+import { HANDLE_TOMBSTONE, updateUser } from "./_shared/users.mts";
+import { deleteImage } from "./_shared/media.mts";
 import { PUSH_TYPES } from "../../src/lib/push-rules.ts";
 import { CIRCLE_IDS } from "../../src/lib/circles.ts";
+import { DELETED_HANDLE, handlesOf } from "../../src/lib/handle.ts";
 
 export default async (req: Request) => {
   if (req.method !== "POST") return bad("Méthode non autorisée", 405);
@@ -114,7 +120,7 @@ export default async (req: Request) => {
         await circles.setJSON(`t:${tid}`, {
           ...t,
           authorId: "",
-          authorHandle: "membre-supprime",
+          authorHandle: DELETED_HANDLE,
           authorName: "Membre supprimé",
           likedBy: [],
         });
@@ -136,9 +142,34 @@ export default async (req: Request) => {
     }
   }
 
+  /* La photo est détachée par écriture conditionnelle et le compte figé
+     (avatarLocked) : un envoi de photo concurrent, avec une session encore
+     valide, est soit vu ici et effacé, soit refusé après, et efface alors
+     son propre fichier. Aucune photo ne survit au compte. */
   const users = store("users");
+  const detached = await updateUser(user.id, (r) => {
+    const x = { ...r, avatarLocked: true };
+    delete x.avatar;
+    delete x.avatarHidden;
+    return x;
+  });
+  const fresh = detached.ok
+    ? detached.prev
+    : ((await users.get(`u:${user.id}`, { type: "json" })) as UserRecord | null);
+  const rec = fresh ?? user;
+
+  /* Handles actuel, anciens et en cours : chacun devient une pierre
+     tombale, jamais une clé libre. Un lien, une mention ou un blocage
+     figés sur l'un d'eux ne désigneront jamais un autre membre. */
+  const handles = handlesOf(rec);
+  if (rec.pendingHandle?.h) handles.add(rec.pendingHandle.h);
+  for (const h of handles) {
+    const owner = await users.get(`handle:${h}`, { type: "text" });
+    if (owner === user.id)
+      await users.set(`handle:${h}`, HANDLE_TOMBSTONE).catch(() => {});
+  }
+  await deleteImage(rec.avatar);
   await users.delete(`email:${sha256(user.email)}`).catch(() => {});
-  await users.delete(`handle:${user.handle}`).catch(() => {});
   await users.delete(`u:${user.id}`).catch(() => {});
 
   return json({ ok: true }, 200, { "set-cookie": clearSessionCookie() });

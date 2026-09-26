@@ -20,17 +20,37 @@ import {
   store,
   userEmail,
   type SessionUser,
+  type UserRecord,
 } from "./_shared/core.mts";
+import {
+  deleteImage,
+  quarantineImage,
+  restoreImage,
+} from "./_shared/media.mts";
+import { mapLimit } from "./_shared/members.mts";
+import { resolveHandle, updateUser } from "./_shared/users.mts";
 import { lookupOwn } from "../../src/lib/guards.ts";
 import { applyTransition, type OrderRecord } from "./_shared/order-core.mts";
-import { isAdmin, type ModAction } from "../../src/lib/moderation.ts";
+import {
+  countPriorReports,
+  isAdmin,
+  type ModAction,
+} from "../../src/lib/moderation.ts";
 import { CIRCLE_IDS } from "../../src/lib/circles.ts";
 import { normalizeStatus } from "../../src/lib/order-state.ts";
+import { handlesOf, normalizeHandle } from "../../src/lib/handle.ts";
+import { toPublicMember } from "../../src/lib/members.ts";
+
+/** Lectures simultanées au chargement de la file. */
+const PARALLEL_READS = 10;
 
 type Report = {
   id: string;
   targetType: string;
   targetId: string;
+  /** Membre visé (signalement de membre ou de message), résolu à la
+      création. Absent sur les signalements antérieurs. */
+  targetUserId?: string | null;
   reason: string;
   reporterId: string;
   reporterHandle: string;
@@ -55,19 +75,22 @@ async function requireAdmin(req: Request): Promise<SessionUser | null> {
     : null;
 }
 
-/** Le contenu incriminé, résumé pour la file (sans quitter l'écran). */
-async function contextOf(
-  targetType: string,
-  targetId: string,
-): Promise<{
+type ReportContext = {
   label: string;
   excerpt?: string;
   image?: string;
   authorId?: string;
   authorHandle?: string;
+  /** Handle actuel et anciens du membre visé : sert à la récidive, ne
+      part jamais vers le client. */
+  handles?: string[];
   hidden?: boolean;
   link?: string;
-} | null> {
+};
+
+/** Le contenu incriminé, résumé pour la file (sans quitter l'écran). */
+async function contextOf(r: Report): Promise<ReportContext | null> {
+  const { targetType, targetId } = r;
   if (targetType === "product") {
     const p = (await store("products").get(`p:${targetId}`, {
       type: "json",
@@ -113,46 +136,87 @@ async function contextOf(
       link: `/communaute/${t.circleId}/fil/${targetId}`,
     };
   }
-  if (targetType === "user") {
-    const uid = (await store("users").get(`handle:${targetId}`, {
-      type: "text",
-    })) as string | null;
-    const rec = uid
-      ? ((await store("users").get(`u:${uid}`, { type: "json" })) as Record<
-          string,
-          unknown
-        > | null)
-      : null;
-    return {
-      label: `@${targetId}`,
-      excerpt: rec?.banned
-        ? "Compte banni"
-        : rec?.suspendedUntil && (rec.suspendedUntil as number) > Date.now()
-          ? "Compte suspendu"
-          : undefined,
-      authorId: uid ?? undefined,
-      authorHandle: targetId,
-      link: `/membre/${targetId}`,
-    };
-  }
-  // message : le contenu d'une conversation privée n'est PAS exposé ici.
-  // L'admin voit le motif et l'auteur signalé, pas la conversation.
-  return { label: "Message privé", authorHandle: targetId, link: "/admin" };
+  /* Membre ou message. Le membre visé a pu changer d'identifiant depuis :
+     l'id noté à la création le suit ; un signalement plus ancien passe
+     par son handle, alias compris (pierre tombale : personne, jamais un
+     tiers). Un id resté null ne se résout pas une seconde fois, pour ne
+     jamais viser qui aurait pris ce handle depuis.
+     Message : le contenu de la conversation privée n'est PAS exposé ici.
+     L'admin voit le motif et le membre signalé, pas la conversation. */
+  const uid =
+    r.targetUserId !== undefined
+      ? r.targetUserId
+      : await resolveHandle(normalizeHandle(targetId));
+  const rec = uid
+    ? ((await store("users").get(`u:${uid}`, {
+        type: "json",
+      })) as UserRecord | null)
+    : null;
+  const handle = rec?.handle ?? targetId;
+  const notes = [
+    rec?.banned
+      ? "Compte banni"
+      : rec?.suspendedUntil && rec.suspendedUntil > Date.now()
+        ? "Compte suspendu"
+        : null,
+    rec?.avatarHidden ? "Photo masquée" : null,
+  ].filter((n) => n !== null);
+  return {
+    label: `@${handle}`,
+    excerpt: notes.join(" · ") || undefined,
+    image: toPublicMember(rec)?.avatar ?? undefined,
+    // compte supprimé : plus personne à avertir ni à sanctionner
+    authorId: rec && uid ? uid : undefined,
+    authorHandle: handle,
+    handles: rec ? [...handlesOf(rec)] : [normalizeHandle(targetId)],
+    hidden: targetType === "user" && rec?.avatarHidden === true,
+    link: `/membre/${encodeURIComponent(handle)}`,
+  };
 }
 
-/** Combien de fois cet auteur a-t-il déjà été signalé ? (récidive) */
-async function priorReports(handle: string | undefined): Promise<number> {
-  if (!handle) return 0;
-  const reports = store("reports");
-  const idx = ((await reports.get("idx", { type: "json" })) as string[]) ?? [];
-  let n = 0;
-  for (const rid of idx.slice(-200)) {
-    const r = (await reports.get(`r:${rid}`, {
-      type: "json",
-    })) as Report | null;
-    if (r && r.targetType === "user" && r.targetId === handle) n++;
-  }
-  return n;
+/** Après un déplacement de photo : si le membre l'a retirée ou remplacée
+    pendant ce temps (ou supprimé son compte), son effacement a pu passer
+    avant le déplacement, qui l'a fait revenir. Le fichier ne serait plus
+    rattaché à rien : on l'efface. */
+async function dropIfDetached(
+  userId: string,
+  path: string | undefined,
+): Promise<void> {
+  const rec = (await store("users").get(`u:${userId}`, {
+    type: "json",
+  })) as UserRecord | null;
+  if (rec?.avatar !== path) await deleteImage(path);
+}
+
+/** Masque la photo d'un membre : drapeaux posés sur le compte (écriture
+    conditionnelle), puis le fichier passe en quarantaine, hors de
+    /api/img. Le verrou l'empêche d'en publier une autre d'ici là. */
+async function hideAvatar(userId: string | undefined): Promise<boolean> {
+  if (!userId) return false;
+  const u = await updateUser(userId, (rec) =>
+    rec.avatar ? { ...rec, avatarHidden: true, avatarLocked: true } : null,
+  );
+  if (!u.ok) return false;
+  await quarantineImage(u.prev.avatar);
+  await dropIfDetached(userId, u.prev.avatar);
+  return true;
+}
+
+/** Rétablit la photo, puis lève le masquage et le verrou. */
+async function restoreAvatar(userId: string | undefined): Promise<boolean> {
+  if (!userId) return false;
+  const rec = (await store("users").get(`u:${userId}`, {
+    type: "json",
+  })) as UserRecord | null;
+  if (!rec) return false;
+  await restoreImage(rec.avatar);
+  const u = await updateUser(userId, (r) => ({
+    ...r,
+    avatarHidden: false,
+    avatarLocked: false,
+  }));
+  await dropIfDetached(userId, rec.avatar);
+  return u.ok;
 }
 
 async function writeAudit(entry: {
@@ -221,22 +285,37 @@ export default async (req: Request) => {
     const queue = url.searchParams.get("queue") ?? "open";
     const idx =
       ((await reports.get("idx", { type: "json" })) as string[]) ?? [];
-    const items: unknown[] = [];
+    /* Les 200 derniers signalements, lus une seule fois : la file et la
+       récidive de chaque auteur se calculent sur ce tableau. La récidive
+       relisait les 200 pour CHAQUE élément (40 000 lectures). */
+    const recent = (
+      await mapLimit(
+        idx.slice(-200),
+        PARALLEL_READS,
+        async (rid) =>
+          (await reports.get(`r:${rid}`, { type: "json" })) as Report | null,
+      )
+    ).filter((r): r is Report => r !== null);
     // du plus ancien au plus récent : le plus vieux est le plus urgent
-    for (const rid of idx.slice(-200)) {
-      const r = (await reports.get(`r:${rid}`, {
-        type: "json",
-      })) as Report | null;
-      if (!r) continue;
-      if (queue !== "all" && r.status !== (queue === "done" ? "done" : "open"))
-        continue;
-      const ctx = await contextOf(r.targetType, r.targetId);
-      items.push({
+    const shown = recent.filter(
+      (r) =>
+        queue === "all" || r.status === (queue === "done" ? "done" : "open"),
+    );
+    const items = await mapLimit(shown, PARALLEL_READS, async (r) => {
+      const ctx = await contextOf(r);
+      if (!ctx) return { ...r, context: null, priorReports: 0 };
+      const { handles, ...context } = ctx;
+      return {
         ...r,
-        context: ctx,
-        priorReports: await priorReports(ctx?.authorHandle),
-      });
-    }
+        context,
+        priorReports: countPriorReports(recent, {
+          id: ctx.authorId,
+          handles: new Set(
+            handles ?? (ctx.authorHandle ? [ctx.authorHandle] : []),
+          ),
+        }),
+      };
+    });
 
     // Litiges de commande : même file, même urgence.
     const orders = store("orders");
@@ -345,13 +424,16 @@ export default async (req: Request) => {
   })) as Report | null;
   if (!report) return bad("Signalement inconnu", 404);
 
-  const ctx = await contextOf(report.targetType, report.targetId);
+  const ctx = await contextOf(report);
   const authorId = b.authorId || ctx?.authorId;
-  const users = store("users");
   let applied = true;
 
   if (action === "hide") {
-    applied = await setHidden(report.targetType, report.targetId, true);
+    // un membre signalé : c'est sa photo qui est masquée
+    applied =
+      report.targetType === "user"
+        ? await hideAvatar(authorId)
+        : await setHidden(report.targetType, report.targetId, true);
     if (applied && authorId)
       await pushNotif(authorId, {
         type: "report",
@@ -379,26 +461,33 @@ export default async (req: Request) => {
          <p style="margin:0"><a href="${APP_URL}/profil" style="color:#f4f1ea">Mon profil →</a></p>`,
       );
   } else if ((action === "suspend" || action === "ban") && authorId) {
-    const rec = (await users.get(`u:${authorId}`, { type: "json" })) as Record<
-      string,
-      unknown
-    > | null;
-    if (!rec) applied = false;
-    else if (action === "ban") {
-      await users.setJSON(`u:${authorId}`, { ...rec, banned: true });
+    /* Écriture conditionnelle sur le compte relu : une sanction ne doit
+       ni écraser ni être écrasée par une écriture concurrente (photo,
+       identifiant, consentement). */
+    if (action === "ban") {
+      const u = await updateUser(authorId, (rec) => ({ ...rec, banned: true }));
+      applied = u.ok;
       // le bannissement déconnecte : pas de notification qui n'arriverait pas
     } else {
       const days = [3, 7, 30].includes(b.days ?? 0) ? b.days! : 7;
       const until = Date.now() + days * 86_400_000;
-      await users.setJSON(`u:${authorId}`, { ...rec, suspendedUntil: until });
-      await pushNotif(authorId, {
-        type: "report",
-        text: `Publication suspendue ${days} jours par la modération.`,
-        link: "/profil",
-      });
+      const u = await updateUser(authorId, (rec) => ({
+        ...rec,
+        suspendedUntil: until,
+      }));
+      applied = u.ok;
+      if (u.ok)
+        await pushNotif(authorId, {
+          type: "report",
+          text: `Publication suspendue ${days} jours par la modération.`,
+          link: "/profil",
+        });
     }
   } else if (action === "unhide") {
-    applied = await setHidden(report.targetType, report.targetId, false);
+    applied =
+      report.targetType === "user"
+        ? await restoreAvatar(authorId)
+        : await setHidden(report.targetType, report.targetId, false);
     if (applied && authorId)
       await pushNotif(authorId, {
         type: "report",
@@ -411,34 +500,21 @@ export default async (req: Request) => {
        sanction était donc irréversible, et la charte inapplicable. */
     if (!authorId) applied = false;
     else {
-      const rec = (await users.get(`u:${authorId}`, {
-        type: "json",
-      })) as Record<string, unknown> | null;
-      if (!rec) applied = false;
-      else {
-        const { banned, suspendedUntil, ...reste } = rec as Record<
-          string,
-          unknown
-        > & {
-          banned?: boolean;
-          suspendedUntil?: number;
-        };
-        void banned;
+      const u = await updateUser(authorId, (rec) => {
+        const { banned, suspendedUntil, ...reste } = rec;
         void suspendedUntil;
-        await users.setJSON(
-          `u:${authorId}`,
-          action === "unban" ? reste : { ...reste, banned: rec.banned },
-        );
-        /* Un compte banni est déconnecté : la notification n'arriverait
-           pas. Elle part pour une levée de suspension, où le membre est
-           encore là pour la lire. */
-        if (action === "unsuspend")
-          await pushNotif(authorId, {
-            type: "report",
-            text: "Ta suspension a été levée après réexamen.",
-            link: "/profil",
-          });
-      }
+        return action === "unban" ? reste : { ...reste, banned };
+      });
+      applied = u.ok;
+      /* Un compte banni est déconnecté : la notification n'arriverait
+         pas. Elle part pour une levée de suspension, où le membre est
+         encore là pour la lire. */
+      if (u.ok && action === "unsuspend")
+        await pushNotif(authorId, {
+          type: "report",
+          text: "Ta suspension a été levée après réexamen.",
+          link: "/profil",
+        });
     }
   }
 

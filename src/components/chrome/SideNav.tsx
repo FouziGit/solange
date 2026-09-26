@@ -83,7 +83,7 @@ const items = [
 
 export function SideNav() {
   const pathname = usePathname();
-  const { circlesUnread } = useStore();
+  const { circlesUnread, user } = useStore();
   const [composeOpen, setComposeOpen] = useState(false);
   const composeRef = useRef<HTMLDivElement>(null);
 
@@ -228,12 +228,22 @@ export function SideNav() {
 
       <Link href="/profil" className="group relative" aria-label="Mon profil">
         <span className="absolute -inset-[3px] rounded-full bg-gradient-to-tr from-bone to-bone/40 opacity-70 blur-[1px] transition-opacity group-hover:opacity-100" />
-        <Avatar
-          name="Nouh B"
-          seed="solange-me-01"
-          className="relative size-10 text-lg"
-          decorative
-        />
+        {user ? (
+          <Avatar
+            name={user.name || user.handle}
+            seed={user.id}
+            src={user.avatar ?? null}
+            className="relative size-10 text-lg"
+            decorative
+          />
+        ) : (
+          <Avatar
+            name="Nouh B"
+            seed="solange-me-01"
+            className="relative size-10 text-lg"
+            decorative
+          />
+        )}
       </Link>
     </aside>
   );

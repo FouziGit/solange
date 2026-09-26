@@ -14,6 +14,7 @@ import {
   rateLimit,
 } from "./_shared/core.mts";
 import { storeImages, storeVideo } from "./_shared/media.mts";
+import { AUTHOR, withMembers } from "./_shared/members.mts";
 import { cleanTranscript } from "../../src/lib/transcript.ts";
 
 export default async (req: Request) => {
@@ -21,15 +22,17 @@ export default async (req: Request) => {
 
   if (req.method === "GET") {
     const idx = ((await posts.get("idx", { type: "json" })) as string[]) ?? [];
-    const out: unknown[] = [];
+    const out: Record<string, unknown>[] = [];
     for (const id of idx.slice(-30).reverse()) {
-      const p = (await posts.get(`l:${id}`, { type: "json" })) as {
-        hidden?: boolean;
-      } | null;
+      const p = (await posts.get(`l:${id}`, { type: "json" })) as Record<
+        string,
+        unknown
+      > | null;
       // lot 4 : un contenu masqué par la modération sort des lectures publiques
       if (p && !p.hidden) out.push(p);
     }
-    return json({ posts: out });
+    // pseudo, nom et photo relus sur le compte de l'auteur, pas sur la copie
+    return json({ posts: await withMembers(out, [AUTHOR]) });
   }
 
   if (req.method !== "POST") return bad("Méthode non autorisée", 405);

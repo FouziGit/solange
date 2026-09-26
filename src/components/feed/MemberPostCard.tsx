@@ -12,12 +12,14 @@ import Link from "next/link";
 import type { ApiPost } from "@/lib/api";
 import { useStore } from "@/lib/store";
 import { catalogItem } from "@/lib/mock";
+import { authorAvatar, hasProfile } from "@/lib/member-display";
 import { compact, gradientFor, initials } from "@/lib/utils";
 import { CarouselMedia } from "./CarouselMedia";
 import { MemberVideo } from "./MemberVideo";
 import { RailAction } from "./RailAction";
 import { ShopTheLook } from "./ShopTheLook";
 import { ReportSheet } from "../ui/ReportSheet";
+import { Avatar } from "../chrome/Avatar";
 import { Heart, Bookmark, Hanger, ChevronRight } from "../chrome/icons";
 
 const group: Variants = {
@@ -72,6 +74,22 @@ export function MemberPostCard({
   const hasGallery = post.gallery.length > 1;
   const hero = post.gallery[0];
   const altText = `Publication de ${post.authorName} (@${post.authorHandle})`;
+  // graine = compte de l'auteur : même dégradé en fond et sur l'avatar
+  const face = authorAvatar(
+    post.authorId,
+    post.authorHandle,
+    post.authorAvatar,
+  );
+  const linked = hasProfile(post.authorHandle);
+  const authorFace = (
+    <Avatar
+      name={post.authorName}
+      seed={face.seed}
+      src={face.src}
+      decorative
+      className="size-9 shrink-0 text-[26px] ring-1 ring-bone/25"
+    />
+  );
 
   /* Lot 5 : pièces taguées — « Shop the look » sur une publication membre
      exactement comme sur un look éditorial (même primitive, même feuille). */
@@ -189,7 +207,7 @@ export function MemberPostCard({
                 <div
                   aria-hidden="true"
                   className="absolute inset-0"
-                  style={{ background: gradientFor(post.authorHandle) }}
+                  style={{ background: gradientFor(face.seed) }}
                 >
                   <div className="absolute inset-0 bg-black/45" />
                   <span className="absolute inset-0 grid place-items-center font-display text-7xl font-bold tracking-widest text-bone/40">
@@ -282,25 +300,28 @@ export function MemberPostCard({
               }}
               className="absolute inset-x-0 bottom-0 z-20 space-y-3 p-4 pl-[max(1rem,env(safe-area-inset-left))] pr-[calc(5rem+env(safe-area-inset-right))] md:!pb-9 md:pl-4 md:pr-20"
             >
-              {/* auteur — rangée compacte en bas (mobile), profil cliquable */}
+              {/* auteur — rangée compacte en bas (mobile), profil cliquable ;
+                  un compte supprimé n'a plus de profil vers lequel mener */}
               <motion.div variants={item} className="flex items-center gap-2.5">
-                <Link
-                  href={`/membre/${encodeURIComponent(post.authorHandle)}`}
-                  className="flex min-h-11 min-w-0 items-center gap-2.5"
-                  aria-label={`Profil de @${post.authorHandle}`}
-                >
-                  <span
-                    className="grid size-9 shrink-0 place-items-center rounded-full ring-1 ring-bone/25"
-                    style={{ background: gradientFor(post.authorHandle) }}
+                {linked ? (
+                  <Link
+                    href={`/membre/${encodeURIComponent(post.authorHandle)}`}
+                    className="flex min-h-11 min-w-0 items-center gap-2.5"
+                    aria-label={`Profil de @${post.authorHandle}`}
                   >
-                    <span className="font-display text-[11px] font-bold tracking-wide text-bone/85">
-                      {initials(post.authorName)}
+                    {authorFace}
+                    <span className="truncate text-[14px] font-semibold text-bone">
+                      @{post.authorHandle}
                     </span>
-                  </span>
-                  <span className="truncate text-[14px] font-semibold text-bone">
-                    @{post.authorHandle}
-                  </span>
-                </Link>
+                  </Link>
+                ) : (
+                  <div className="flex min-h-11 min-w-0 items-center gap-2.5">
+                    {authorFace}
+                    <span className="truncate text-[14px] font-semibold text-bone">
+                      {post.authorName}
+                    </span>
+                  </div>
+                )}
               </motion.div>
 
               {post.caption ? (

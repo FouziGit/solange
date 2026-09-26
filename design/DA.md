@@ -115,8 +115,9 @@ exception écrite : l'ombre du stage feed desktop (profondeur de scène).
   locales de `StreamsView` y sont rapatriées. Trois tailles : 16 / 20 / 24.
 - Une icône = navigation, action ou statut. Aucun emoji dans l'interface.
 - Bouton icône seule : toujours `aria-label` (déjà largement le cas).
-- Avatars : initiales sur dégradé déterministe (existant, conservé) ; portraits
-  réels seulement pour les créateurs mock du lookbook.
+- Avatars : photo du membre si fournie, sinon initiales sur dégradé
+  déterministe (graine = id du membre) ; portraits de démo réservés aux
+  créateurs mock (`PORTRAIT_SEEDS`).
 - Aucune illustration stock. Les états vides sont typographiques (voir voix).
 
 ## 7. Motion

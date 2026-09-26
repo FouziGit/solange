@@ -24,6 +24,7 @@ import {
   type ModAction,
   type ReportTargetType,
 } from "@/lib/moderation";
+import { modActionLabel, photoModAction } from "@/lib/member-display";
 import { euro } from "@/lib/utils";
 import { PageShell } from "@/components/ui/PageShell";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -333,11 +334,26 @@ export default function AdminPage() {
                     </p>
 
                     {it.status === "done" ? (
-                      <p className="mt-3 text-[12px] text-ash">
-                        {MOD_ACTION_LABEL[it.action as ModAction] ?? it.action}{" "}
-                        par @{it.resolvedBy}
-                        {it.resolvedAt ? ` · ${when(it.resolvedAt)}` : ""}
-                      </p>
+                      <>
+                        <p className="mt-3 text-[12px] text-ash">
+                          {modActionLabel(it.targetType, it.action ?? "")} par @
+                          {it.resolvedBy}
+                          {it.resolvedAt ? ` · ${when(it.resolvedAt)}` : ""}
+                        </p>
+                        {/* rétablir la photo lève aussi le verrou qui
+                            empêche le membre d'en publier une autre */}
+                        {photoModAction(it) === "unhide" && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            disabled={busy === it.id}
+                            onClick={() => void runAction(it, "unhide")}
+                            className="mt-2"
+                          >
+                            Rétablir la photo
+                          </Button>
+                        )}
+                      </>
                     ) : (
                       <div className="mt-3 flex flex-wrap gap-2">
                         <Button
@@ -359,17 +375,19 @@ export default function AdminPage() {
                         >
                           Avertir
                         </Button>
-                        {it.targetType !== "user" &&
-                          it.targetType !== "message" && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              disabled={busy === it.id}
-                              onClick={() => void runAction(it, "hide")}
-                            >
-                              Masquer
-                            </Button>
-                          )}
+                        {/* membre signalé : seule sa photo se masque */}
+                        {(photoModAction(it) === "hide" ||
+                          (it.targetType !== "user" &&
+                            it.targetType !== "message")) && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            disabled={busy === it.id}
+                            onClick={() => void runAction(it, "hide")}
+                          >
+                            {modActionLabel(it.targetType, "hide")}
+                          </Button>
+                        )}
                         <Button
                           variant="outline"
                           size="sm"
@@ -434,8 +452,8 @@ export default function AdminPage() {
                     <span className="w-28 shrink-0 text-ash">{when(a.at)}</span>
                     <span className="min-w-0 text-bone/85">
                       @{a.adminHandle} ·{" "}
-                      {MOD_ACTION_LABEL[a.action as ModAction] ?? a.action} ·{" "}
-                      {a.targetType} {a.targetId}
+                      {modActionLabel(a.targetType, a.action)} · {a.targetType}{" "}
+                      {a.targetId}
                       {a.note ? (
                         <span className="text-ash"> — {a.note}</span>
                       ) : null}

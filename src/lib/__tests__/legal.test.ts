@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { PAYMENTS_UNKNOWN, type PaymentsMode } from "../use-payments-mode";
@@ -64,6 +64,24 @@ describe("registre des documents", () => {
         /(?<!tant que )les paiements (?:y )?sont simulés/i,
       );
       expect(texte, d.slug).not.toMatch(/aucune somme n'est débitée/i);
+    }
+  });
+
+  /* La photo de profil et le changement d'identifiant existent : aucun
+     texte ne peut plus affirmer le contraire. Tous les fichiers de legal/,
+     pas seulement ceux du registre, lus comme au rendu. */
+  it("aucun document ne nie la photo de profil ni l'écran d'identifiant", () => {
+    const dir = path.resolve(__dirname, "../../../legal");
+    const fichiers = readdirSync(dir).filter((f) => f.endsWith(".md"));
+    expect(fichiers).toContain("confidentialite.md"); // le motif lit bien le dossier
+    for (const f of fichiers) {
+      const texte = stripComments(
+        readFileSync(path.join(dir, f), "utf8"),
+      ).replace(/\s+/g, " ");
+      expect(texte, f).not.toMatch(/aucune photo de profil/i);
+      expect(texte, f).not.toMatch(
+        /il n'existe pas encore d'écran permettant de/i,
+      );
     }
   });
 });

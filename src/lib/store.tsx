@@ -16,6 +16,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
@@ -27,12 +28,15 @@ import {
   type CatalogItem,
 } from "@/lib/mock";
 import { markMeaningfulAction } from "@/lib/push-client";
+import { announce } from "@/lib/announce";
 import {
   api,
   type ApiPost,
   type ApiProduct,
   type SessionUser,
 } from "@/lib/api";
+
+type SocialKind = "liked" | "saved" | "follows" | "joined" | "blocked";
 
 /** A completed (simulated) purchase — recorded for the profile order history. */
 export type Order = {
@@ -98,6 +102,33 @@ function toggle<T>(set: Set<T>, key: T): Set<T> {
   if (next.has(key)) next.delete(key);
   else next.add(key);
   return next;
+}
+
+/** `key` présent (`on`) ou absent, quel que soit l'état de départ. Le
+    même Set s'il y est déjà : pas de rendu pour rien. */
+export function withMembership<T>(set: Set<T>, key: T, on: boolean): Set<T> {
+  if (set.has(key) === on) return set;
+  const next = new Set(set);
+  if (on) next.add(key);
+  else next.delete(key);
+  return next;
+}
+
+/** Envoie un toggle déjà affiché. Refusé ou perdu, il est annulé à
+    l'écran et le lecteur d'écran le dit, sauf si un toggle plus récent de
+    la même pièce est parti depuis : c'est lui qui décide. */
+export async function sendToggle(
+  send: () => Promise<{ ok: boolean }>,
+  undo: () => void,
+  stillLatest: () => boolean,
+): Promise<boolean> {
+  const res = await send();
+  if (res.ok) return true;
+  if (stillLatest()) {
+    undo();
+    announce("Action non enregistrée. Réessaie.", "assertive");
+  }
+  return false;
 }
 
 /** Pseudo-CatalogItem pour une commande serveur dont l'item n'est pas local. */
@@ -237,14 +268,30 @@ export function SolangeProvider({ children }: { children: ReactNode }) {
     [],
   );
 
-  /** Toggle optimiste + synchro serveur (fire-and-forget) si connecté. */
+  /* Numéro du dernier toggle envoyé, par pièce : seul le plus récent peut
+     annuler l'affichage s'il échoue. */
+  const lastToggle = useRef(new Map<string, number>());
+
+  /** Toggle optimiste + synchro serveur si connecté. Un refus du serveur
+      n'est plus muet : l'écran revient à l'état d'avant. */
   const sync = useCallback(
-    (
-      kind: "liked" | "saved" | "follows" | "joined" | "blocked",
-      id: string,
-      on: boolean,
-    ) => {
-      if (user) void api.social(kind, id, on);
+    (kind: SocialKind, id: string, on: boolean) => {
+      if (!user) return;
+      const key = `${kind}:${id}`;
+      const n = (lastToggle.current.get(key) ?? 0) + 1;
+      lastToggle.current.set(key, n);
+      const setters = {
+        liked: setLiked,
+        saved: setSaved,
+        follows: setFollowing,
+        joined: setJoined,
+        blocked: setBlocked,
+      } as const;
+      void sendToggle(
+        () => api.social(kind, id, on),
+        () => setters[kind]((s) => withMembership(s, id, !on)),
+        () => lastToggle.current.get(key) === n,
+      );
     },
     [user],
   );

@@ -12,8 +12,18 @@ import {
   rateLimit,
   assertCanWrite,
 } from "./_shared/core.mts";
+import { resolveHandle } from "./_shared/users.mts";
+import { readRenameLog, renameSocial } from "./_shared/handle-migrate.mts";
+import {
+  applyRenames,
+  normalizeHandle,
+  publicHandleTarget,
+} from "../../src/lib/handle.ts";
+import type { UserRecord } from "./_shared/core.mts";
 
 const KINDS = new Set(["liked", "saved", "follows", "joined", "blocked"]);
+/** Listes indexées par @handle : canoniques (minuscules, handle actuel). */
+const BY_HANDLE = new Set(["follows", "blocked"]);
 
 export default async (req: Request) => {
   if (req.method !== "POST") return bad("Méthode non autorisée", 405);
@@ -25,7 +35,8 @@ export default async (req: Request) => {
 
   const b = await readJson<{ kind?: string; id?: string; on?: boolean }>(req);
   const kind = b?.kind ?? "";
-  const id = (b?.id ?? "").slice(0, 80);
+  const byHandle = BY_HANDLE.has(kind);
+  let id = (byHandle ? normalizeHandle(b?.id) : (b?.id ?? "")).slice(0, 80);
   if (!KINDS.has(kind) || !id) return bad("Requête invalide");
 
   /* Ces écritures notifient des tiers (j'aime sur une annonce, nouvel
@@ -36,11 +47,31 @@ export default async (req: Request) => {
     return bad("Trop d'actions — réessaie dans un moment", 429);
 
   const social = store("social");
-  const state =
+  let state =
     ((await social.get(`s:${user.id}`, { type: "json" })) as Record<
       string,
       string[]
     >) ?? {};
+  /* Un membre suivi ou bloqué a pu changer d'@handle : la liste et la
+     cible passent à son handle actuel avant d'être comparées — une
+     relation vise la personne, pas le pseudo. Mais un ancien @ masqué
+     (changé sans renvoi) ne s'AJOUTE pas : /api/me révélerait alors le
+     nouveau à quelqu'un qui ne le connaissait pas. */
+  if (byHandle) {
+    if (b?.on) {
+      const uid = await resolveHandle(id);
+      const rec = uid
+        ? ((await store("users").get(`u:${uid}`, {
+            type: "json",
+          })) as UserRecord | null)
+        : null;
+      if (rec && publicHandleTarget(rec, id, Date.now()) === "hidden")
+        return bad("Profil inconnu", 404);
+    }
+    const log = await readRenameLog().catch(() => []);
+    state = renameSocial(state, log).state as Record<string, string[]>;
+    id = applyRenames([id], log).list[0] ?? id;
+  }
   const set = new Set(state[kind] ?? []);
   /* Vrai changement d'état ? Toggler deux fois ne doit pas renotifier :
      c'est l'autre moitié du correctif anti-boucle ci-dessus. */
@@ -81,9 +112,7 @@ export default async (req: Request) => {
 
   // Follow d'un membre réel → notification cloche.
   if (kind === "follows" && b?.on && changed) {
-    const targetId = (await store("users").get(`handle:${id}`, {
-      type: "text",
-    })) as string | null;
+    const targetId = await resolveHandle(id);
     if (targetId && targetId !== user.id)
       await pushNotif(targetId, {
         type: "follow",
