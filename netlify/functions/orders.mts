@@ -3,7 +3,15 @@
    TOUS les montants depuis sa propre table de prix, marque la pièce vendue
    (anti double-vente) et persiste la commande. GET → mes commandes.
    Corrige : montants côté serveur, protection au centime, machine à états
-   minimale disponible→vendu (audit §5.4/5.5). */
+   minimale disponible→vendu (audit §5.4/5.5).
+
+   Port (D-037) : grille publique Mondial Relay de src/lib/shipping.ts,
+   selon le mode choisi par l'acheteur et la taille de colis FIGÉE sur
+   l'annonce. Jamais un montant venu du client : `expectedShippingCents`
+   ne sert qu'à détecter un récapitulatif périmé (409).
+   Paiement réel : le compte du vendeur doit être en versements manuels
+   (vendeur payé à la livraison, _shared/payout.mts) AVANT la réservation ;
+   sinon, rien n'est réservé ni créé (503) et les admins sont prévenus. */
 import type { Config } from "@netlify/functions";
 import {
   store,
@@ -13,12 +21,18 @@ import {
   currentUser,
   sameOrigin,
   readJson,
+  rateLimit,
   APP_URL,
 } from "./_shared/core.mts";
 import { SEED_CATALOG } from "./_shared/seed-catalog.mts";
 import { ORDER_BUYER, ORDER_SELLER, withMembers } from "./_shared/members.mts";
 import { capturePayment } from "./_shared/payment.mts";
 import { paymentsLive, stripe } from "./_shared/stripe.mts";
+import { alerterAdmins } from "./_shared/admin-alert.mts";
+import {
+  assurerVersementsManuels,
+  verifierAccesVersements,
+} from "./_shared/payout.mts";
 import {
   libererReservation,
   onOrderPaid,
@@ -37,20 +51,20 @@ import { toCents, toEur } from "../../src/lib/fees.ts";
 const RESERVATION_MS = 30 * 60_000;
 import type { OrderRecord } from "./_shared/order-core.mts";
 import { normalizeStatus } from "../../src/lib/order-state.ts";
-import { isPayableAmount, isValidId, lookupOwn } from "../../src/lib/guards.ts";
+import { isPayableAmount, isValidId } from "../../src/lib/guards.ts";
 import {
   buildSaleConsent,
   saleAcceptanceIsValid,
 } from "../../src/lib/legal-consent.ts";
-import { validateRelay } from "../../src/lib/shipping.ts";
-
-const SHIPPING_EUR = 4.9;
-/* Barème transporteur — miroir du front (src/lib/shipping.ts). */
-const SHIP: Record<string, { price: number; carrier: string }> = {
-  mondial_relay: { price: 3.9, carrier: "Mondial Relay" },
-  point_relais: { price: 4.5, carrier: "Point Relais" },
-  chronopost: { price: 6.9, carrier: "Chronopost" },
-};
+import {
+  isRelayMethod,
+  isShipMethod,
+  packageSize,
+  packageSizeOf,
+  shipMethodLabel,
+  shippingCents,
+  validateRelay,
+} from "../../src/lib/shipping.ts";
 
 export default async (req: Request) => {
   const user = await currentUser(req);
@@ -111,6 +125,8 @@ export default async (req: Request) => {
     relayLabel?: string;
     address?: { name?: string; line?: string; postal?: string; city?: string };
     acceptCgv?: boolean;
+    /** Port affiché au récapitulatif : contrôle seulement, jamais payé. */
+    expectedShippingCents?: unknown;
   }>(req);
   const pid = (b?.productId ?? "").trim();
   if (!isValidId(pid)) return bad("Article manquant");
@@ -120,21 +136,21 @@ export default async (req: Request) => {
      personne. Elle est horodatée sur la commande juste en dessous. */
   if (!saleAcceptanceIsValid(b))
     return bad("Accepte les conditions de vente pour commander", 400);
-  const method = (b?.shippingMethod ?? "").trim();
-  const shipSel = lookupOwn(SHIP, method, {
-    price: SHIPPING_EUR,
-    carrier: "Livraison suivie",
-  });
-  /* Point relais : obligatoire en Mondial Relay / Point Relais (le
-     vendeur doit savoir où déposer le colis), 160 caractères au plus
-     (nom, adresse, code postal, ville). Même règle qu'au paiement. */
+  /* Mode de livraison : un id de la grille, sinon refus. Un id inconnu
+     ne retombe plus sur un prix par défaut. */
+  const method =
+    typeof b?.shippingMethod === "string" ? b.shippingMethod.trim() : "";
+  if (!isShipMethod(method)) return bad("Choisis un mode de livraison", 400);
+  /* Point relais : obligatoire en Point Relais ou Locker (le vendeur doit
+     savoir où déposer le colis), 160 caractères au plus (nom, adresse,
+     code postal, ville). Même règle qu'au paiement. */
   const relayCheck = validateRelay(method, b?.relayLabel);
   if (!relayCheck.ok) return bad(relayCheck.error, 400);
   const relayLabel = relayCheck.label;
 
-  // Livraison à domicile (Chronopost) : adresse requise, validée serveur.
+  // Livraison à domicile : adresse requise, validée serveur.
   // En point relais, l'adresse du relais fait foi — rien d'autre n'est stocké.
-  const isHome = method === "chronopost";
+  const isHome = !isRelayMethod(method);
   const addr = b?.address;
   const field = (v: unknown, max: number) =>
     typeof v === "string" ? v.trim().slice(0, max) : "";
@@ -161,6 +177,9 @@ export default async (req: Request) => {
     seller: string;
     sellerId?: string;
     status: string;
+    /** Taille de colis figée au dépôt (D-037) ; absente sur les annonces
+        antérieures. */
+    packageSize?: unknown;
   } | null;
   const seedItem = SEED_CATALOG[pid];
   if (!record && !seedItem) return bad("Article inconnu", 404);
@@ -177,6 +196,21 @@ export default async (req: Request) => {
     return bad("Cette pièce n'est plus disponible", 409);
   if (record && record.sellerId === user.id)
     return bad("Tu ne peux pas acheter ta propre annonce", 403);
+
+  /* Port : grille × taille figée sur l'annonce (seed et annonces
+     antérieures : « Moyen »). Le montant du client n'est jamais payé ; un
+     écart signale seulement un récapitulatif périmé, avant toute
+     réservation. */
+  const size = packageSizeOf(record?.packageSize);
+  const port = shippingCents(method, size);
+  if (
+    typeof b?.expectedShippingCents === "number" &&
+    b.expectedShippingCents !== port
+  )
+    return bad(
+      "Le prix du port a changé — recharge la page pour voir le nouveau montant",
+      409,
+    );
 
   const live = paymentsLive();
 
@@ -198,11 +232,33 @@ export default async (req: Request) => {
           .accounts.retrieve(sellerAccount)
           .catch(() => null)
       : null;
-    if (!sellerPayable(acct))
+    if (!sellerAccount || !sellerPayable(acct))
       return bad(
         "Le vendeur n'a pas encore activé ses paiements — la pièce n'est pas achetable pour l'instant",
         409,
       );
+
+    /* Vendeur payé à la livraison (D-037) : son compte doit être en
+       versements manuels, et la clé doit pouvoir lire son solde et ses
+       virements. Vérifié AVANT la réservation : sinon, la part partirait
+       vers sa banque au calendrier Stripe, avant la livraison. */
+    const sched = await assurerVersementsManuels(sellerAccount, acct);
+    const acces = sched.ok
+      ? await verifierAccesVersements(sellerAccount)
+      : sched;
+    if (!acces.ok) {
+      console.error("orders_payout_setup_error", sellerAccount, acces.error);
+      if (await rateLimit("payout-setup-alert", 1, 86_400_000))
+        await alerterAdmins({
+          text: `Achats bloqués sur le compte vendeur ${sellerAccount} : versements par commande impossibles — ${acces.error}`,
+          link: "/admin",
+          subject: "SOLANGE — achats bloqués (versements vendeur)",
+        });
+      return bad(
+        "Paiement momentanément indisponible — réessaie un peu plus tard",
+        503,
+      );
+    }
   }
 
   /* Plafond déclaré à Stripe : une annonce déposée avant qu'il existe, ou
@@ -213,14 +269,14 @@ export default async (req: Request) => {
   /* Tous les montants en centimes entiers, calculés à UN endroit
      (src/lib/payments.ts). Le taux de commission est gelé sur la commande. */
   const priceCents = toCents(item.priceEUR);
-  const shippingCents = toCents(shipSel.price);
-  const m = montants(priceCents, shippingCents);
+  const m = montants(priceCents, port);
   const total = toEur(m.totalCents);
   if (!isPayableAmount(total)) return bad("Montant de commande invalide", 400);
 
+  const methodLabel = shipMethodLabel(method);
   const shippingLabel = relayLabel
-    ? `${shipSel.carrier} · ${relayLabel}`
-    : shipSel.carrier;
+    ? `${methodLabel} · ${relayLabel}`
+    : methodLabel;
   const orderId = newId("o");
   const now = Date.now();
 
@@ -273,7 +329,11 @@ export default async (req: Request) => {
     totalCents: m.totalCents,
     applicationFeeCents: m.applicationFeeCents,
     sellerCents: m.sellerCents,
-    shippingMethod: shipSel.carrier,
+    /* D-037 : taille figée et mode, port en centimes, tels que payés */
+    packageSize: size,
+    shippingMethodId: method,
+    shippingCents: m.shippingCents,
+    shippingMethod: methodLabel,
     shippingLabel,
     address, // domicile uniquement, sinon undefined
     commissionRate: m.rateBps / 10_000,
@@ -292,6 +352,11 @@ export default async (req: Request) => {
       },
     ],
     simulated: !live,
+    /* Versement PAR COMMANDE, à la livraison (D-037). En réel, on n'arrive
+       ici qu'après la bascule du compte en versements manuels. */
+    payoutMode: "manual",
+    // compte de DESTINATION du transfert, figé (réel uniquement)
+    ...(sellerAccount ? { sellerStripeAccountId: sellerAccount } : {}),
     createdAt: now,
   } as Record<string, unknown> & { id: string };
 
@@ -336,7 +401,9 @@ export default async (req: Request) => {
                     price_data: {
                       currency: "eur",
                       unit_amount: m.shippingCents,
-                      product_data: { name: `Livraison — ${shipSel.carrier}` },
+                      product_data: {
+                        name: `Livraison — ${methodLabel} · colis ${packageSize(size).label}`,
+                      },
                     },
                   },
                 ]

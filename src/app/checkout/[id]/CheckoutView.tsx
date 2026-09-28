@@ -18,11 +18,18 @@ import { toCents, toEur } from "@/lib/fees";
 import {
   SHIP_OPTIONS,
   shipOption,
+  shipMethodLabel,
+  shippingCents,
+  packageSize,
+  packageSizeOf,
+  weightLabel,
   relayAddressLine,
   relayLabelFor,
+  type PackageSizeId,
   type ShipMethodId,
   type RelayChoice,
 } from "@/lib/shipping";
+import { BUYER_PROTECTION_TEXT } from "@/lib/payout";
 import { RelayPicker } from "@/components/checkout/RelayPicker";
 import {
   ArrowLeft,
@@ -65,7 +72,13 @@ const DEMO_EXP = "12 / 34";
 const DEMO_CVC = "123";
 const DEMO_NAME = "Démo SOLANGE";
 
-export function CheckoutView({ item }: { item: CatalogItem }) {
+export function CheckoutView({
+  item,
+}: {
+  /** packageSize : taille du colis figée par le vendeur au dépôt ; absente
+      (annonce antérieure) → « Moyen », comme côté serveur. */
+  item: CatalogItem & { packageSize?: PackageSizeId };
+}) {
   const { addOrder, user, authReady, refreshProducts, refreshSession, isSold } =
     useStore();
 
@@ -87,15 +100,19 @@ export function CheckoutView({ item }: { item: CatalogItem }) {
 
   // livraison — choisie avant paiement (Vinted-like)
   const [method, setMethod] = useState<ShipMethodId>("mondial_relay");
-  /* Le point relais appartient au réseau pour lequel il a été choisi : un
-     relais Mondial Relay ne vaut pas pour le réseau Pickup. */
+  /* Taille du colis : choisie par le vendeur au dépôt, figée. Le port
+     vient de la même grille que le serveur (src/lib/shipping.ts). */
+  const size = packageSizeOf(item.packageSize);
+  const colis = packageSize(size);
+  /* Le point relais appartient au mode pour lequel il a été choisi : il
+     ne sert plus si l'acheteur passe à la livraison à domicile. */
   const [relayPick, setRelayPick] = useState<{
     method: ShipMethodId;
     point: RelayChoice;
   } | null>(null);
   const relay = relayPick?.method === method ? relayPick.point : null;
   const [pickerOpen, setPickerOpen] = useState(false);
-  // adresse — domicile (Chronopost) uniquement, revalidée serveur (lot 1)
+  // adresse — livraison à domicile uniquement, revalidée serveur (lot 1)
   const [addrName, setAddrName] = useState("");
   const [addrLine, setAddrLine] = useState("");
   const [addrPostal, setAddrPostal] = useState("");
@@ -111,9 +128,11 @@ export function CheckoutView({ item }: { item: CatalogItem }) {
       addrCity.trim()
     );
   const relayLabel = ship.relay && relay ? relayLabelFor(relay) : undefined;
+  const methodLabel = shipMethodLabel(method);
+  // même libellé que celui que le serveur enregistre sur la commande
   const shippingLabel = relayLabel
-    ? `${ship.carrier} · ${relayLabel}`
-    : ship.carrier;
+    ? `${methodLabel} · ${relayLabel}`
+    : methodLabel;
 
   /* Ce qui empêche de payer ET que l'acheteur peut corriger. Le bouton
      reste atteignable (aria-disabled) : il dit ce qui manque, et un appui
@@ -129,6 +148,7 @@ export function CheckoutView({ item }: { item: CatalogItem }) {
     login: `${uid}-connexion`,
     hint: `${uid}-manque`,
     ship: `${uid}-livraison`,
+    colis: `${uid}-colis`,
   };
   const blockers: Blocker[] = [];
   if (needsRelay)
@@ -173,6 +193,9 @@ export function CheckoutView({ item }: { item: CatalogItem }) {
   // l'erreur « il manque… » s'efface d'elle-même une fois corrigée
   const shownError =
     error ?? blockers.find((b) => b.key === blockedKey)?.error ?? null;
+  // 409 « prix du port » : l'écart vient d'une grille plus récente côté
+  // serveur ; la page doit être rechargée pour l'afficher
+  const portPerime = error !== null && /prix du port/.test(error);
 
   const alreadySold = isSold(item.id);
 
@@ -188,13 +211,16 @@ export function CheckoutView({ item }: { item: CatalogItem }) {
      (src/lib/payments.ts). Le client faisait son propre calcul —
      arrondi(5 %) + 0,70 € — quand le serveur prenait 5 % pile : sur une
      pièce à 250 €, la page affichait 267,60 € et le paiement aurait débité
-     266,40 €. Un prix affiché doit être le prix payé, au centime. */
-  const m = montants(toCents(item.priceEUR), toCents(ship.priceEUR));
+     266,40 €. Un prix affiché doit être le prix payé, au centime.
+     Port : grille × taille figée, envoyé au serveur pour contrôle
+     (expectedShippingCents) — il refuse la commande en cas d'écart. */
+  const m = montants(toCents(item.priceEUR), shippingCents(method, size));
   const price = toEur(m.priceCents);
   const protection = toEur(m.serviceCents);
   const shipping = toEur(m.shippingCents);
   const total = toEur(m.totalCents);
-  // ce que le vendeur touche SUR LE PRIX (hors port, qu'il reverse au transporteur)
+  /* ce que le vendeur touche SUR LE PRIX. Le port lui est reversé en plus
+     (il achète l'étiquette) : son virement vaut net + port (sellerCents). */
   const net = toEur(m.priceCents - m.commissionCents);
   const ratePct = (m.rateBps / 100).toLocaleString("fr-FR");
 
@@ -261,6 +287,7 @@ export function CheckoutView({ item }: { item: CatalogItem }) {
             city: addrCity.trim(),
           },
       cgvAccepted,
+      m.shippingCents,
     );
     if (res.ok && res.data.checkoutUrl) {
       /* Paiement réel : la saisie de carte se fait chez Stripe, sur sa page
@@ -288,8 +315,9 @@ export function CheckoutView({ item }: { item: CatalogItem }) {
       return;
     }
     if (res.status === 409) {
-      // le serveur dit pourquoi : vendue, réservée, ou vendeur non activé
-      setSoldOut(!/paiements|réessaie/.test(res.error));
+      /* le serveur dit pourquoi : vendue, réservée, vendeur non activé, ou
+         port du récapitulatif périmé (la pièce reste alors achetable) */
+      setSoldOut(!/paiements|réessaie|prix du port/.test(res.error));
       setError(res.error);
       void refreshProducts();
     } else if (res.status === 401) {
@@ -361,9 +389,7 @@ export function CheckoutView({ item }: { item: CatalogItem }) {
           <dl className="mt-4 space-y-2 rounded-2xl border border-bone/10 p-4 text-[13px]">
             <Row label="Article">{euro(paidPrice)}</Row>
             <Row label="Protection acheteur">{euro(paidProtection)}</Row>
-            <Row label={`Livraison · ${ship.carrier}`}>
-              {euro(paidShipping)}
-            </Row>
+            <Row label={`Livraison · ${methodLabel}`}>{euro(paidShipping)}</Row>
             {relayLabel && (
               <div className="text-[11.5px] text-ash">
                 <dt className="sr-only">Point relais</dt>
@@ -544,14 +570,21 @@ export function CheckoutView({ item }: { item: CatalogItem }) {
 
           {/* ---- livraison : choix du transporteur ---- */}
           <div className="mt-4 rounded-2xl border border-bone/10 p-4">
-            <p id={ids.ship} className="etiquette mb-3 text-[11px] text-ash">
+            <p id={ids.ship} className="etiquette mb-1.5 text-[11px] text-ash">
               Livraison
             </p>
-            {/* choix unique : de vrais boutons radio (flèches, « 1 sur 3,
+            {/* taille figée par le vendeur : elle fixe le prix de chaque mode */}
+            <p id={ids.colis} className="mb-3 text-[12px] text-ash">
+              Colis <span className="text-bone">{colis.label}</span> ·
+              jusqu&apos;à {weightLabel(colis.maxWeightG)} — choisi par le
+              vendeur
+            </p>
+            {/* choix unique : de vrais boutons radio (flèches, « 1 sur 2,
                 coché »), posés sur toute la carte et transparents */}
             <div
               role="radiogroup"
               aria-labelledby={ids.ship}
+              aria-describedby={ids.colis}
               className="flex flex-col gap-2"
             >
               {SHIP_OPTIONS.map((o) => {
@@ -590,14 +623,14 @@ export function CheckoutView({ item }: { item: CatalogItem }) {
                       </span>
                     </span>
                     <span className="font-display shrink-0 text-[14px] font-bold tabular-nums text-bone">
-                      {euro(o.priceEUR)}
+                      {euro(shippingCents(o.id, size) / 100)}
                     </span>
                   </label>
                 );
               })}
             </div>
 
-            {/* point relais — pour Mondial Relay / Point Relais */}
+            {/* point relais — Point Relais ou Locker Mondial Relay */}
             {ship.relay && (
               <button
                 id={ids.relay}
@@ -635,8 +668,8 @@ export function CheckoutView({ item }: { item: CatalogItem }) {
               </button>
             )}
 
-            {/* domicile (Chronopost) : adresse requise — le vendeur en aura
-                besoin pour expédier (lot 1) ; validée aussi côté serveur */}
+            {/* domicile : adresse requise — le vendeur en aura besoin pour
+                expédier (lot 1) ; validée aussi côté serveur */}
             {!ship.relay && (
               <div className="mt-3 grid gap-3 sm:grid-cols-2">
                 <div className="sm:col-span-2">
@@ -689,7 +722,7 @@ export function CheckoutView({ item }: { item: CatalogItem }) {
           <dl className="mt-4 space-y-2 rounded-2xl border border-bone/10 p-4 text-[13px]">
             <Row label="Article">{euro(price)}</Row>
             <Row label="Protection acheteur">{euro(protection)}</Row>
-            <Row label={`Livraison · ${ship.carrier}`}>{euro(shipping)}</Row>
+            <Row label={`Livraison · ${methodLabel}`}>{euro(shipping)}</Row>
             <div className="flex items-center justify-between border-t border-bone/10 pt-1">
               <dt className="font-semibold text-bone">Total</dt>
               <dd className="font-display text-xl font-bold tracking-tight text-bone">
@@ -704,12 +737,21 @@ export function CheckoutView({ item }: { item: CatalogItem }) {
               Répartition · Stripe Connect
             </p>
             <dl>
-              <Row label={`Le vendeur reçoit`}>{euro(net)}</Row>
+              <Row label="Le vendeur reçoit (hors port, après réception)">
+                {euro(net)}
+              </Row>
+              <Row label="Port, reversé au vendeur pour l'étiquette">
+                {euro(shipping)}
+              </Row>
               <Row label={`Commission SOLANGE (${ratePct} %)`}>
                 {euro(price - net)}
               </Row>
             </dl>
           </div>
+          <p className="mt-2 flex items-start gap-1.5 px-1 text-[12px] leading-snug text-ash">
+            <Lock className="mt-0.5 size-3.5 shrink-0" />
+            <span>{BUYER_PROTECTION_TEXT}</span>
+          </p>
         </section>
 
         {/* ---- payment card ---- */}
@@ -837,6 +879,17 @@ export function CheckoutView({ item }: { item: CatalogItem }) {
                 className="mt-4 rounded-xl border border-bone/25 bg-bone/[0.05] px-3.5 py-2.5 text-[12.5px] leading-snug text-bone"
               >
                 {shownError}
+                {/* port périmé : la page garde l'ancienne grille, seul un
+                   rechargement l'actualise — revalider bouclerait */}
+                {portPerime && (
+                  <button
+                    type="button"
+                    onClick={() => location.reload()}
+                    className="mt-2.5 flex min-h-11 w-full items-center justify-center rounded-full border border-bone/25 px-4 text-[13px] font-semibold text-bone transition-colors active:bg-bone/10"
+                  >
+                    Recharger la page
+                  </button>
+                )}
               </div>
             )}
 
@@ -860,7 +913,7 @@ export function CheckoutView({ item }: { item: CatalogItem }) {
                 {paiementReel ? (
                   <>
                     . Le paiement est encaissé par Stripe, et la part du vendeur
-                    lui est versée directement.
+                    ne lui est versée qu&apos;après la réception.
                   </>
                 ) : paiementReel === false ? (
                   <>

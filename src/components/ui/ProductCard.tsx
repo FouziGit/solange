@@ -7,6 +7,11 @@ import type { ApiProduct } from "@/lib/api";
 import { euro } from "@/lib/utils";
 import { imgItem } from "@/lib/img";
 import { useStore } from "@/lib/store";
+import {
+  packageSizeOf,
+  shippingFromCents,
+  type PackageSizeId,
+} from "@/lib/shipping";
 import { LuxeMedia } from "./LuxeMedia";
 import { Heart, Bag } from "../chrome/icons";
 
@@ -27,6 +32,8 @@ export type DisplayItem = CatalogItem & {
   reserved?: boolean;
   /** Annonce du membre connecté : on ne s'achète pas soi-même. */
   mine?: boolean;
+  /** Taille du colis figée au dépôt : fixe le port payé par l'acheteur. */
+  packageSize?: PackageSizeId;
 };
 
 /** Mappe une annonce membre (ApiProduct) vers l'affichage catalogue existant. */
@@ -47,6 +54,7 @@ export function toDisplayItem(p: ApiProduct): DisplayItem {
     soldBase: p.status === "sold",
     reserved: p.status === "reserved",
     mine: p.mine === true,
+    packageSize: packageSizeOf(p.packageSize),
   };
 }
 
@@ -159,6 +167,13 @@ export function ProductCard({
           </div>
           <span className="text-[11px] text-ash">T. {item.size}</span>
         </div>
+        {/* port de l'annonce membre : grille × taille figée, relais */}
+        {item.member && !sold && (
+          <p className="mt-0.5 text-[11px] text-ash">
+            + envoi dès{" "}
+            {euro(shippingFromCents(packageSizeOf(item.packageSize)) / 100)}
+          </p>
+        )}
       </div>
     </>
   );

@@ -8,6 +8,9 @@
    tout (order-state) — l'écran n'affiche que ce qui est permis.
    Rendu client assumé (D-017) : données derrière cookie httpOnly,
    UN fetch, squelette DA, zéro cascade.
+   D-037 : numéro de suivi obligatoire pour expédier, lien vers la page
+   de suivi du transporteur, note « Versement » (vendeur) ou
+   « Protection » (acheteur), colis perdu.
    ============================================================ */
 
 import { useCallback, useEffect, useId, useState } from "react";
@@ -20,6 +23,13 @@ import { announce } from "@/lib/announce";
 import { euro } from "@/lib/utils";
 import { STATUS_LABEL, TIMELINE, type OrderStatus } from "@/lib/order-state";
 import { stepState } from "@/lib/order-display";
+import {
+  carrierOfOrder,
+  isPackageSize,
+  packageSize,
+  validateTracking,
+} from "@/lib/shipping";
+import { payoutNote } from "@/lib/payout";
 import { PageShell } from "@/components/ui/PageShell";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Button } from "@/components/ui/Button";
@@ -107,8 +117,10 @@ export default function CommandePage() {
 
   // sheets + confirmations
   const [shipOpen, setShipOpen] = useState(false);
-  const [carrier, setCarrier] = useState("");
   const [tracking, setTracking] = useState("");
+  // suivi obligatoire : contrôlé ici avant l'appel, revalidé par le serveur
+  const [trackingError, setTrackingError] = useState<string | null>(null);
+  const [trackingCopied, setTrackingCopied] = useState(false);
   const [disputeOpen, setDisputeOpen] = useState(false);
   const [disputeReason, setDisputeReason] = useState<
     "non_recue" | "non_conforme"
@@ -245,6 +257,47 @@ export default function CommandePage() {
             ? `@${o.buyerHandle ?? "membre"}`
             : `@${o.sellerHandle}`;
 
+          const transporteur = carrierOfOrder(o);
+          const suivi = o.shipment?.tracking;
+          const note = payoutNote(
+            { ...o, status },
+            seller ? "seller" : "buyer",
+          );
+
+          const copyTracking = async () => {
+            if (!suivi) return;
+            try {
+              await navigator.clipboard.writeText(suivi);
+              setTrackingCopied(true);
+              announce("Numéro copié");
+              window.setTimeout(() => setTrackingCopied(false), 1800);
+            } catch {
+              /* presse-papier indisponible — le numéro reste lisible */
+            }
+          };
+
+          /* Le numéro est contrôlé AVANT l'appel : une erreur de saisie se
+             corrige sur place, focus rendu au champ qui la porte. */
+          const confirmShip = () => {
+            const v = validateTracking(tracking);
+            if (!v.ok) {
+              flushSync(() => setTrackingError(v.error));
+              document.getElementById(`${uid}-suivi`)?.focus();
+              return;
+            }
+            void transition(
+              {
+                id: o.id,
+                action: "ship",
+                // transporteur fixé par la commande (grille du port, CGV
+                // art. 5, liens de suivi et de réclamation)
+                carrier: o.shippingMethod,
+                tracking: v.tracking,
+              },
+              "order_ship",
+            );
+          };
+
           const copyAddress = async () => {
             if (!o.address) return;
             try {
@@ -334,12 +387,86 @@ export default function CommandePage() {
                 )}
               </p>
 
+              {/* La page de suivi du transporteur ne se pré-remplit pas :
+                  on ouvre la page officielle et on copie le numéro. */}
+              {transporteur && suivi && (
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <a
+                    href={transporteur.trackingUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex min-h-11 items-center border border-bone/25 px-3.5 text-[12px] font-semibold text-bone transition-colors hover:border-bone/60"
+                  >
+                    Suivre sur {transporteur.name}
+                    <span className="sr-only"> (nouvel onglet)</span>
+                  </a>
+                  <Button variant="outline" size="sm" onClick={copyTracking}>
+                    {trackingCopied ? (
+                      <>
+                        <Check className="size-3.5" /> Numéro copié
+                      </>
+                    ) : (
+                      "Copier le numéro"
+                    )}
+                  </Button>
+                </div>
+              )}
+
               {status === "annulee" && (
                 <p className="mt-2 border border-bone/15 px-3.5 py-3 text-[13px] text-ash">
                   Commande annulée
-                  {o.cancelReason ? ` — ${o.cancelReason}` : ""}. La pièce est
-                  remise en vente.
+                  {o.cancelReason ? ` — ${o.cancelReason}` : ""}.
+                  {/* colis perdu : la pièce reste vendue (D-037) */}
+                  {!o.lostParcel && " La pièce est remise en vente."}
                 </p>
+              )}
+              {status === "annulee" && o.lostParcel && (
+                <div className="mt-2 border border-bone/15 px-3.5 py-3 text-[13px] leading-relaxed text-bone/85">
+                  {!seller ? (
+                    <p>
+                      Colis perdu : tu es intégralement remboursé (prix, frais
+                      de service et port). Le délai d&apos;apparition dépend de
+                      ta banque.
+                    </p>
+                  ) : transporteur ? (
+                    <>
+                      <p>
+                        Colis déclaré perdu. Déclare la perte à{" "}
+                        {transporteur.name}
+                        {suivi ? (
+                          <>
+                            {" "}
+                            avec ton numéro de suivi{" "}
+                            <span className="font-semibold text-bone">
+                              {suivi}
+                            </span>
+                          </>
+                        ) : null}
+                        &nbsp;:
+                      </p>
+                      <a
+                        href={transporteur.claimUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="mt-2.5 inline-flex min-h-11 items-center border border-bone/25 px-3.5 text-[12px] font-semibold text-bone transition-colors hover:border-bone/60"
+                      >
+                        Service client {transporteur.name}
+                        <span className="sr-only"> (nouvel onglet)</span>
+                      </a>
+                      <p className="mt-2.5 text-[12.5px] text-ash">
+                        {transporteur.name} indemnise selon ses conditions (
+                        {euro(transporteur.lossCompensationCents / 100)}{" "}
+                        forfaitaires inclus dans son tarif).
+                      </p>
+                    </>
+                  ) : (
+                    <p>
+                      Colis déclaré perdu. Déclare la perte au transporteur
+                      {suivi ? ` avec ton numéro de suivi ${suivi}` : ""}
+                      &nbsp;: il indemnise selon ses propres conditions.
+                    </p>
+                  )}
+                </div>
               )}
               {status === "litige" && (
                 <p className="mt-2 border border-danger/60 px-3.5 py-3 text-[13px] text-bone/85">
@@ -353,6 +480,18 @@ export default function CommandePage() {
               )}
               {status !== "annulee" && status !== "litige" && (
                 <Timeline status={status} />
+              )}
+
+              {/* versement (vendeur) ou protection (acheteur) — D-037 */}
+              {note && (
+                <div className="mt-5 border border-bone/15 px-3.5 py-3">
+                  <p className="etiquette text-[11px] text-ash">
+                    {seller ? "Versement" : "Protection"}
+                  </p>
+                  <p className="mt-1.5 text-[12.5px] leading-relaxed text-bone/85">
+                    {note}
+                  </p>
+                </div>
               )}
 
               {seed && (
@@ -417,6 +556,7 @@ export default function CommandePage() {
                         size="lg"
                         onClick={() => {
                           setActionError(null);
+                          setTrackingError(null);
                           setShipOpen(true);
                         }}
                         disabled={busy}
@@ -641,6 +781,9 @@ export default function CommandePage() {
                 <div className="flex justify-between">
                   <dt className="text-ash">
                     Livraison{o.shippingMethod ? ` · ${o.shippingMethod}` : ""}
+                    {isPackageSize(o.packageSize)
+                      ? ` · colis ${packageSize(o.packageSize).label}`
+                      : ""}
                   </dt>
                   <dd className="text-bone">{euro(o.shippingEUR)}</dd>
                 </div>
@@ -691,35 +834,65 @@ export default function CommandePage() {
                 onClose={() => {
                   setShipOpen(false);
                   setActionError(null);
+                  setTrackingError(null);
                 }}
                 eyebrow="Commande"
                 title="Expédition"
               >
                 <div className="flex flex-col gap-4 px-5 py-4 pb-8">
-                  <div>
-                    <FieldLabel htmlFor={`${uid}-transporteur`}>
-                      Transporteur (facultatif)
-                    </FieldLabel>
-                    <input
-                      id={`${uid}-transporteur`}
-                      value={carrier}
-                      onChange={(e) => setCarrier(e.target.value)}
-                      placeholder={o.shippingMethod ?? "Mondial Relay"}
-                      className="field w-full"
-                    />
-                  </div>
+                  {/* obligatoire (D-037) : sans numéro, pas d'expédition */}
                   <div>
                     <FieldLabel htmlFor={`${uid}-suivi`}>
-                      Numéro de suivi (facultatif)
+                      Numéro de suivi
+                      <span className="font-normal normal-case tracking-normal">
+                        {" "}
+                        · obligatoire
+                      </span>
                     </FieldLabel>
                     <input
                       id={`${uid}-suivi`}
                       value={tracking}
-                      onChange={(e) => setTracking(e.target.value)}
-                      placeholder="Ex. 6A1234567890"
+                      onChange={(e) => {
+                        setTracking(e.target.value);
+                        if (trackingError) setTrackingError(null);
+                      }}
+                      placeholder="Ex. 12345678"
+                      autoComplete="off"
+                      autoCapitalize="characters"
+                      spellCheck={false}
+                      aria-required="true"
+                      aria-invalid={trackingError ? true : undefined}
+                      aria-describedby={
+                        trackingError
+                          ? `${uid}-suivi-aide ${uid}-suivi-erreur`
+                          : `${uid}-suivi-aide`
+                      }
                       className="field w-full"
                     />
+                    <p
+                      id={`${uid}-suivi-aide`}
+                      className="mt-1.5 text-[12px] leading-relaxed text-ash"
+                    >
+                      {transporteur?.trackingHint ??
+                        "Le numéro de suivi de ton étiquette"}
+                    </p>
+                    {trackingError && (
+                      <p
+                        id={`${uid}-suivi-erreur`}
+                        role="alert"
+                        className="mt-1.5 text-[12.5px] leading-relaxed text-bone"
+                      >
+                        {trackingError}
+                      </p>
+                    )}
                   </div>
+                  {o.shippingMethod && (
+                    <p className="text-[12.5px] leading-relaxed text-ash">
+                      Transporteur :{" "}
+                      <span className="text-bone">{o.shippingMethod}</span> — le
+                      mode choisi par l&apos;acheteur, au prix payé.
+                    </p>
+                  )}
                   {actionError && (
                     <p
                       role="alert"
@@ -728,21 +901,7 @@ export default function CommandePage() {
                       {actionError}
                     </p>
                   )}
-                  <Button
-                    size="lg"
-                    disabled={busy}
-                    onClick={() =>
-                      void transition(
-                        {
-                          id: o.id,
-                          action: "ship",
-                          carrier: carrier.trim() || o.shippingMethod,
-                          tracking: tracking.trim() || undefined,
-                        },
-                        "order_ship",
-                      )
-                    }
-                  >
+                  <Button size="lg" disabled={busy} onClick={confirmShip}>
                     {busy ? "Envoi…" : "Confirmer l'expédition"}
                   </Button>
                 </div>

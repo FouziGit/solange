@@ -14,13 +14,20 @@
    refusé et on répond 200 sans rien refaire. Les effets de vente ne
    partent que sur une transition RÉUSSIE.
 
+   ÉCRITURES sur `o:<id>` : conditionnelles (patchOrder, etag), comme
+   partout ailleurs depuis D-037. Une écriture qui perd la course est
+   rejouée sur la version fraîche ; si elle échoue encore, 500, et Stripe
+   réessaie. Jamais d'écriture à l'aveugle qui écraserait un virement, un
+   remboursement ou un changement de statut concurrent.
+
    Réponse 2xx dès que l'événement est traité ou sans objet ; 4xx/5xx
    seulement quand on veut que Stripe réessaie. */
 import type { Config } from "@netlify/functions";
 import type Stripe from "stripe";
 import { store, json, pushNotif, sha256 } from "./_shared/core.mts";
 import { stripe } from "./_shared/stripe.mts";
-import { applyTransition } from "./_shared/order-core.mts";
+import { applyTransition, patchOrder } from "./_shared/order-core.mts";
+import { alerterAdmins } from "./_shared/admin-alert.mts";
 import { onOrderPaid, type OrderPaye } from "./_shared/order-paid.mts";
 
 const orderIdOf = (session: Stripe.Checkout.Session): string =>
@@ -63,8 +70,14 @@ async function payer(recu: Stripe.Checkout.Session) {
     typeof session.payment_intent === "string"
       ? session.payment_intent
       : (session.payment_intent?.id ?? null);
-  if (pi && avant.paymentIntentId !== pi)
-    await orders.setJSON(`o:${orderId}`, { ...avant, paymentIntentId: pi });
+  if (pi && avant.paymentIntentId !== pi) {
+    const w = await patchOrder(orderId, (fresh) =>
+      fresh.paymentIntentId === pi ? null : { ...fresh, paymentIntentId: pi },
+    );
+    if (!w.ok && w.reason === "conflict")
+      throw new Error(`paymentIntentId non écrit sur ${orderId} (conflit)`);
+    if (!w.ok) return;
+  }
 
   const r = await applyTransition({
     orderId,
@@ -101,36 +114,58 @@ async function expirer(recu: Stripe.Checkout.Session, motif: string) {
   });
 }
 
-/* Contestation bancaire : l'argent est débité du solde SOLANGE par Stripe
-   (destination charge). On ne change pas l'état de la commande — c'est
-   une procédure bancaire, pas un litige SOLANGE — mais on la marque et on
-   prévient les administrateurs, qui ont un délai court pour répondre. */
-async function contestation(recu: Stripe.Dispute) {
-  const dispute = await stripe()!.disputes.retrieve(recu.id);
+/** Contestation relue chez Stripe, et la commande qu'elle vise. */
+async function contestationEtCommande(
+  recu: Stripe.Dispute,
+): Promise<{ dispute: Stripe.Dispute; orderId: string } | null> {
+  const s = stripe()!;
+  const dispute = await s.disputes.retrieve(recu.id);
   const pi =
     typeof dispute.payment_intent === "string"
       ? dispute.payment_intent
       : (dispute.payment_intent?.id ?? "");
-  if (!pi) return;
-  const s = stripe()!;
+  if (!pi) return null;
   const intent = await s.paymentIntents.retrieve(pi);
   const orderId = intent.metadata?.orderId;
-  if (!orderId) return;
-  const orders = store("orders");
-  const o = (await orders.get(`o:${orderId}`, { type: "json" })) as Record<
-    string,
-    unknown
-  > | null;
-  if (!o) return;
-  await orders.setJSON(`o:${orderId}`, {
-    ...o,
-    bankDispute: {
-      id: dispute.id,
-      reason: dispute.reason,
-      amount: dispute.amount,
-      at: Date.now(),
-    },
-  });
+  return orderId ? { dispute, orderId } : null;
+}
+
+/** Écriture conditionnelle ; un conflit persistant remonte en 500 pour
+    que Stripe rejoue l'événement. Commande introuvable : false. */
+async function ecrireCommande(
+  orderId: string,
+  fn: Parameters<typeof patchOrder>[1],
+): Promise<boolean> {
+  const w = await patchOrder(orderId, fn);
+  if (!w.ok && w.reason === "conflict")
+    throw new Error(`commande ${orderId} non écrite (conflit)`);
+  return w.ok;
+}
+
+/* Contestation bancaire : l'argent est débité du solde SOLANGE par Stripe
+   (destination charge). On ne change pas l'état de la commande — c'est
+   une procédure bancaire, pas un litige SOLANGE — mais on la marque (ce
+   qui suspend le virement au vendeur, D-037) et on prévient les
+   administrateurs, qui ont un délai court pour répondre. Un rejeu du même
+   événement garde la date d'origine. */
+async function contestation(recu: Stripe.Dispute) {
+  const found = await contestationEtCommande(recu);
+  if (!found) return;
+  const { dispute, orderId } = found;
+  const ecrit = await ecrireCommande(orderId, (fresh) =>
+    fresh.bankDispute?.id === dispute.id
+      ? null
+      : {
+          ...fresh,
+          bankDispute: {
+            id: dispute.id,
+            reason: dispute.reason,
+            amount: dispute.amount,
+            at: Date.now(),
+          },
+        },
+  );
+  if (!ecrit) return;
   const users = store("users");
   for (const raw of (process.env.ADMIN_EMAILS ?? "").split(",")) {
     const mail = raw.trim().toLowerCase();
@@ -144,6 +179,46 @@ async function contestation(recu: Stripe.Dispute) {
         link: `/commande/${orderId}`,
       });
   }
+}
+
+/* Contestation close (charge.dispute.closed). Gagnée (`won`), ou simple
+   demande d'information close sans litige (`warning_closed`) : la
+   contestation n'est plus « en cours » (CGV art. 12.7), elle est archivée
+   et le virement au vendeur reprend son cours au prochain passage du
+   cron (vérifié dans la doc Stripe : `warning_closed` clôt une demande
+   d'information sans chargeback). Perdue (`lost`), ou toute autre issue
+   (`prevented` : résolue — souvent par un remboursement de l'acheteur —
+   ou bloquée avant le chargeback, selon le programme de prévention) : le
+   virement reste suspendu, et l'équipe décide. */
+const CONTESTATION_LEVEE = new Set(["won", "warning_closed"]);
+
+async function contestationClose(recu: Stripe.Dispute) {
+  const found = await contestationEtCommande(recu);
+  if (!found) return;
+  const { dispute, orderId } = found;
+  const levee = CONTESTATION_LEVEE.has(dispute.status);
+  const now = Date.now();
+  // rejeu de l'événement : rien à réécrire, personne à re-prévenir
+  const etat = { change: false };
+  const ecrit = await ecrireCommande(orderId, (fresh) => {
+    const bd = fresh.bankDispute;
+    etat.change = false;
+    if (!bd || bd.id !== dispute.id || bd.closedAt) return null;
+    etat.change = true;
+    const close = { ...bd, status: dispute.status, closedAt: now };
+    if (!levee) return { ...fresh, bankDispute: close };
+    const { bankDispute: ancienne, ...reste } = fresh;
+    void ancienne;
+    return { ...reste, bankDisputeClosed: close };
+  });
+  if (!ecrit || !etat.change) return;
+  await alerterAdmins({
+    text: levee
+      ? `Contestation bancaire close en faveur du vendeur — commande ${orderId} : le virement au vendeur reprend automatiquement`
+      : `Contestation bancaire perdue (${dispute.status}) — commande ${orderId} : ${dispute.status === "lost" ? "la banque a rendu la somme à l'acheteur" : "issue à vérifier dans le Dashboard Stripe"}. Virement au vendeur suspendu : décider de reprendre sa part (Dashboard Stripe) ou de verser malgré tout (/admin)`,
+    link: "/admin",
+    subject: levee ? undefined : "SOLANGE — contestation bancaire perdue",
+  });
 }
 
 export default async (req: Request) => {
@@ -188,6 +263,9 @@ export default async (req: Request) => {
         break;
       case "charge.dispute.created":
         await contestation(event.data.object);
+        break;
+      case "charge.dispute.closed":
+        await contestationClose(event.data.object);
         break;
       default:
         // événement non écouté : 200, sinon Stripe le rejouerait pour rien

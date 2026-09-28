@@ -2,9 +2,12 @@
    Un non-admin reçoit 404, jamais 403 : on ne confirme pas l'existence
    d'un espace d'administration.
 
-   GET  ?queue=open|done|all   → signalements + litiges, contexte inclus
+   GET  ?queue=open|done|all   → signalements + litiges + versements à
+                                 surveiller, contexte inclus
    POST {op:"act", …}          → action de modération (tracée)
    POST {op:"dispute", …}      → tranche un litige (via la machine du lot 1)
+                                 décisions : cancel | close | return | lost
+   POST {op:"payout", …}       → relance le virement au vendeur (D-037)
    GET  ?audit=1               → journal d'audit                          */
 import type { Config } from "@netlify/functions";
 import {
@@ -29,20 +32,57 @@ import {
 } from "./_shared/media.mts";
 import { mapLimit } from "./_shared/members.mts";
 import { resolveHandle, updateUser } from "./_shared/users.mts";
-import { lookupOwn } from "../../src/lib/guards.ts";
-import { applyTransition, type OrderRecord } from "./_shared/order-core.mts";
+import { isValidId, lookupOwn } from "../../src/lib/guards.ts";
+import {
+  applyTransition,
+  patchOrder,
+  type OrderRecord,
+} from "./_shared/order-core.mts";
+import { verserVendeur } from "./_shared/payout.mts";
 import {
   countPriorReports,
   isAdmin,
   type ModAction,
 } from "../../src/lib/moderation.ts";
 import { CIRCLE_IDS } from "../../src/lib/circles.ts";
-import { normalizeStatus } from "../../src/lib/order-state.ts";
+import {
+  normalizeStatus,
+  type OrderStatus,
+} from "../../src/lib/order-state.ts";
 import { handlesOf, normalizeHandle } from "../../src/lib/handle.ts";
+import { adminPayoutRetry } from "../../src/lib/payout.ts";
 import { toPublicMember } from "../../src/lib/members.ts";
 
 /** Lectures simultanées au chargement de la file. */
 const PARALLEL_READS = 10;
+
+/** Décisions admises sur un litige. Toute autre valeur est refusée : elle
+    tranchait jusqu'ici pour le VENDEUR (resolve_close) sans le dire. */
+const DECISIONS = ["cancel", "close", "return", "lost"] as const;
+type Decision = (typeof DECISIONS)[number];
+const isDecision = (v: unknown): v is Decision =>
+  typeof v === "string" && (DECISIONS as readonly string[]).includes(v);
+
+/** Versement à surveiller (D-037) : en erreur, en attente de fonds,
+    remboursé après versement, ou bloqué par une contestation bancaire sur
+    une commande terminée. Une commande antérieure (sans `payoutMode`
+    "manual") n'a pas de versement par commande : verserVendeur l'ignore,
+    elle n'a rien à faire dans cette file. Annulée : l'acheteur est
+    remboursé, il n'y a plus rien à verser — sauf si la part était déjà
+    partie (remboursement après versement). */
+function versementASurveiller(o: OrderRecord, status: OrderStatus): boolean {
+  if (o.payoutMode !== "manual") return false;
+  if (o.refundAfterPayout) return true;
+  if (status === "annulee") return false;
+  const ps = o.payout?.status;
+  if (ps === "erreur" || ps === "en_attente_fonds") return true;
+  return (
+    !!o.bankDispute &&
+    status === "terminee" &&
+    ps !== "envoye" &&
+    ps !== "simule"
+  );
+}
 
 type Report = {
   id: string;
@@ -317,30 +357,63 @@ export default async (req: Request) => {
       };
     });
 
-    // Litiges de commande : même file, même urgence.
+    /* Litiges de commande : même file, même urgence. Versements à
+       surveiller (D-037) : calculés dans la même boucle. */
     const orders = store("orders");
     const { blobs } = await orders.list({ prefix: "o:" });
     const disputes: unknown[] = [];
+    const payouts: unknown[] = [];
     for (const b of blobs) {
       const o = (await orders.get(b.key, {
         type: "json",
       })) as OrderRecord | null;
       if (!o) continue;
       const status = normalizeStatus(o.status);
-      if (status !== "litige") continue;
-      disputes.push({
-        id: o.id,
-        brand: o.brand,
-        name: o.name,
-        buyerHandle: o.buyerHandle,
-        sellerHandle: o.sellerHandle,
-        totalEUR: o.totalEUR,
-        dispute: o.dispute,
-        createdAt: o.createdAt,
-      });
+      if (status === "litige")
+        disputes.push({
+          id: o.id,
+          brand: o.brand,
+          name: o.name,
+          buyerHandle: o.buyerHandle,
+          sellerHandle: o.sellerHandle,
+          totalEUR: o.totalEUR,
+          dispute: o.dispute,
+          createdAt: o.createdAt,
+          paidAt: o.paidAt,
+          shippedAt: o.shippedAt,
+          tracking: o.shipment?.tracking,
+          // transporteur de la commande (carrierOfOrder côté page)
+          shippingMethodId: o.shippingMethodId,
+          shippingMethod: o.shippingMethod,
+          payout: o.payout,
+          bankDispute: o.bankDispute,
+          // note vendeur (payoutNote) : même sans versement encore lancé
+          payoutMode: o.payoutMode,
+          simulated: o.simulated,
+        });
+      if (versementASurveiller(o, status))
+        payouts.push({
+          id: o.id,
+          brand: o.brand,
+          name: o.name,
+          sellerHandle: o.sellerHandle,
+          netSellerEUR: o.netSellerEUR,
+          status,
+          payout: o.payout,
+          paidAt: o.paidAt,
+          refundAfterPayout: o.refundAfterPayout,
+          bankDispute: o.bankDispute,
+          payoutMode: o.payoutMode,
+          simulated: o.simulated,
+          // le bouton « Réessayer » n'est proposé que s'il peut agir
+          retryable: adminPayoutRetry(
+            { status, paidAt: o.paidAt, createdAt: o.createdAt },
+            Date.now(),
+          ).ok,
+        });
     }
 
-    return json({ items, disputes });
+    return json({ items, disputes, payouts });
   }
 
   if (req.method !== "POST") return bad("Méthode non autorisée", 405);
@@ -356,7 +429,10 @@ export default async (req: Request) => {
     days?: number;
     note?: string;
     orderId?: string;
-    decision?: "cancel" | "close" | "return";
+    /** Validée contre DECISIONS : la valeur vient du client. */
+    decision?: unknown;
+    /** op payout : verser malgré une contestation bancaire. */
+    overrideBankDispute?: unknown;
   }>(req);
 
   /* ---- trancher un litige (via la machine à états du lot 1) ---- */
@@ -364,26 +440,42 @@ export default async (req: Request) => {
     const orderId = (b.orderId ?? "").trim();
     const decision = b.decision;
     if (!orderId || !decision) return bad("Décision manquante");
+    if (!isDecision(decision)) return bad("Décision inconnue", 400);
     if (decision === "return") {
-      // dégeler sans trancher : la commande repart d'où elle venait
-      const o = (await store("orders").get(`o:${orderId}`, {
-        type: "json",
-      })) as OrderRecord | null;
-      if (!o) return bad("Commande inconnue", 404);
-      const history = o.history ?? [];
-      history.push({
-        at: Date.now(),
-        by: "admin",
-        from: "litige",
-        to: "expediee",
-        note: b.note?.slice(0, 200) ?? "Renvoyé aux parties",
+      /* Dégeler sans trancher : la commande repart en « expédiée » et le
+         délai de clôture (qui PAIE le vendeur, D-037) repart de zéro, avec
+         ses rappels. Écriture conditionnelle : un litige tranché ou
+         modifié entre-temps n'est jamais écrasé. */
+      const now = Date.now();
+      const etat: { from: OrderStatus | null } = { from: null };
+      const r = await patchOrder(orderId, (fresh) => {
+        etat.from = normalizeStatus(fresh.status);
+        if (etat.from !== "litige") return null;
+        const history = fresh.history ?? [];
+        history.push({
+          at: now,
+          by: "admin",
+          from: "litige",
+          to: "expediee",
+          note: b.note?.slice(0, 200) ?? "Renvoyé aux parties",
+        });
+        return {
+          ...fresh,
+          status: "expediee",
+          dispute: undefined,
+          shippedAt: now,
+          remindReceiveAt: undefined,
+          remindReceiveLastAt: undefined,
+          disputeAlertAt: undefined,
+          history,
+        };
       });
-      await store("orders").setJSON(`o:${orderId}`, {
-        ...o,
-        status: "expediee",
-        dispute: undefined,
-        history,
-      });
+      if (!r.ok)
+        return r.reason === "missing"
+          ? bad("Commande inconnue", 404)
+          : bad("Commande modifiée entre-temps — réessaie", 409);
+      if (etat.from !== "litige")
+        return bad(`Impossible depuis « ${etat.from} »`, 409);
       await writeAudit({
         adminId: admin.id,
         adminHandle: admin.handle,
@@ -394,13 +486,26 @@ export default async (req: Request) => {
       });
       return json({ ok: true });
     }
-    const res = await applyTransition({
-      orderId,
-      action: decision === "cancel" ? "resolve_cancel" : "resolve_close",
-      role: "admin",
-      by: "admin",
-      note: b.note,
-    });
+    /* « lost » : colis perdu sur un litige « non reçu ». L'acheteur est
+       remboursé, la pièce n'est PAS remise en vente (order-core). */
+    const res = await applyTransition(
+      decision === "lost"
+        ? {
+            orderId,
+            action: "resolve_cancel",
+            role: "admin",
+            by: "admin",
+            lost: true,
+            note: b.note ?? "Colis perdu",
+          }
+        : {
+            orderId,
+            action: decision === "cancel" ? "resolve_cancel" : "resolve_close",
+            role: "admin",
+            by: "admin",
+            note: b.note,
+          },
+    );
     if (!res.ok) return bad(res.error, res.code);
     await writeAudit({
       adminId: admin.id,
@@ -411,6 +516,43 @@ export default async (req: Request) => {
       note: b.note,
     });
     return json({ ok: true });
+  }
+
+  /* ---- relancer le virement au vendeur (D-037) ----
+     Même chemin que le cron (_shared/payout.mts), sans attendre son
+     prochain passage. `overrideBankDispute` : décision explicite de
+     verser malgré une contestation bancaire en cours. Une commande
+     expédiée à J+80 se relance en versement d'office, comme au cron ; le
+     serveur en décide, jamais le client. */
+  if (b?.op === "payout") {
+    const orderId = (b.orderId ?? "").trim();
+    if (!isValidId(orderId)) return bad("Commande manquante");
+    const existe = (await store("orders").get(`o:${orderId}`, {
+      type: "json",
+    })) as OrderRecord | null;
+    if (!existe) return bad("Commande inconnue", 404);
+    const override = b.overrideBankDispute === true;
+    const relance = adminPayoutRetry(
+      {
+        status: normalizeStatus(existe.status),
+        paidAt: existe.paidAt,
+        createdAt: existe.createdAt,
+      },
+      Date.now(),
+    );
+    const payout = await verserVendeur(orderId, {
+      admin: override,
+      force: relance.force,
+    });
+    await writeAudit({
+      adminId: admin.id,
+      adminHandle: admin.handle,
+      action: "payout_retry",
+      targetType: "order",
+      targetId: orderId,
+      note: override ? "malgré contestation" : b.note,
+    });
+    return json({ ok: true, payout });
   }
 
   /* ---- action de modération sur un signalement ---- */

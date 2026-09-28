@@ -9,9 +9,16 @@ import { Stamp } from "@/components/ui/Stamp";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Chip } from "@/components/ui/Chip";
 import { GlassInput } from "@/components/ui/GlassInput";
+import { PackageSizePicker } from "@/components/ui/PackageSizePicker";
 import { categories, conditions, universDe } from "@/lib/taxonomie";
 import { normaliserMarque, suggestions } from "@/lib/brands";
 import { PRIX_MAX_EUR } from "@/lib/payments";
+import {
+  isPackageSize,
+  shippingFromCents,
+  type PackageSizeId,
+} from "@/lib/shipping";
+import { SELLER_PAYOUT_TEXT } from "@/lib/payout";
 import { commission, euro, gradientFor } from "@/lib/utils";
 import { api, resizeImage } from "@/lib/api";
 import { announce } from "@/lib/announce";
@@ -70,6 +77,7 @@ export default function VendrePage() {
     size: string;
     price: string;
     desc: string;
+    packageSize?: string;
   };
   const draft = readDraft<VenteDraft>(VENTE_DRAFT);
   const [title, setTitle] = useState(draft?.title ?? "");
@@ -79,13 +87,28 @@ export default function VendrePage() {
   const [size, setSize] = useState(draft?.size ?? "");
   const [price, setPrice] = useState(draft?.price ?? "");
   const [desc, setDesc] = useState(draft?.desc ?? "");
+  /* Taille du colis : fixe le port payé par l'acheteur, figée une fois
+     l'annonce publiée (D-037). Un brouillon illisible ne choisit rien. */
+  const draftPackage = draft?.packageSize;
+  const [packageSize, setPackageSize] = useState<PackageSizeId | null>(
+    isPackageSize(draftPackage) ? draftPackage : null,
+  );
   const [boost, setBoost] = useState(false);
   const [listed, setListed] = useState(false);
 
   useEffect(() => {
     if (listed) return; // succès → brouillon effacé plus bas
-    writeDraft(VENTE_DRAFT, { title, brand, cat, cond, size, price, desc });
-  }, [title, brand, cat, cond, size, price, desc, listed]);
+    writeDraft(VENTE_DRAFT, {
+      title,
+      brand,
+      cat,
+      cond,
+      size,
+      price,
+      desc,
+      packageSize: packageSize ?? undefined,
+    });
+  }, [title, brand, cat, cond, size, price, desc, packageSize, listed]);
   useEffect(() => {
     if (listed) clearDraft(VENTE_DRAFT);
   }, [listed]);
@@ -116,12 +139,15 @@ export default function VendrePage() {
   const { rate, fee, net } = commission(p);
 
   const tropCher = p > PRIX_MAX_EUR;
-  const ready = Boolean(title.trim() && p > 0 && !tropCher && cond);
+  const ready = Boolean(
+    title.trim() && p > 0 && !tropCher && cond && packageSize,
+  );
   const missing = [
     !title.trim() && "un titre",
     !(p > 0) && "un prix",
     tropCher && `un prix de ${PRIX_MAX_EUR.toLocaleString("fr-FR")} € au plus`,
     !cond && "un état",
+    !packageSize && "une taille de colis",
   ].filter(Boolean) as string[];
 
   /* « Ajoute des photos » garde le focus quand le sélecteur se referme.
@@ -175,7 +201,7 @@ export default function VendrePage() {
   }
 
   async function publish() {
-    if (!ready || submitting) return;
+    if (!ready || submitting || !packageSize) return;
     setSubmitting(true);
     setSubmitError(null);
     const res = await api.createProduct({
@@ -187,6 +213,7 @@ export default function VendrePage() {
       priceEUR: Number(price),
       description: desc.trim() || undefined,
       images,
+      packageSize,
     });
     if (res.ok) {
       setListed(true);
@@ -208,6 +235,7 @@ export default function VendrePage() {
     setSize("");
     setPrice("");
     setDesc("");
+    setPackageSize(null);
     setBoost(false);
     setImages([]);
     setPhotoError(null);
@@ -441,6 +469,18 @@ export default function VendrePage() {
           </div>
 
           <div>
+            <FieldLabel id={`${uid}-colis`}>
+              Taille du colis
+              <Obligatoire />
+            </FieldLabel>
+            <PackageSizePicker
+              value={packageSize}
+              onChange={setPackageSize}
+              labelledBy={`${uid}-colis`}
+            />
+          </div>
+
+          <div>
             <FieldLabel htmlFor={`${uid}-description`}>Description</FieldLabel>
             <GlassInput
               multiline
@@ -535,6 +575,15 @@ export default function VendrePage() {
                   {boost && (
                     <Row label="Mise en avant 72 h" value="− 2 €" muted />
                   )}
+                  <Row
+                    label="Port (payé par l'acheteur)"
+                    value={
+                      packageSize
+                        ? `dès ${euro(shippingFromCents(packageSize) / 100)}`
+                        : "selon la taille"
+                    }
+                    muted
+                  />
                 </div>
 
                 <div className="mt-4 flex items-end justify-between rounded-2xl bg-bone/[0.05] px-4 py-3">
@@ -549,6 +598,16 @@ export default function VendrePage() {
                 <p className="mt-3 text-[12px] leading-relaxed text-ash">
                   Commission dégressive : 4 % &lt; 200 € · 3,5 % 200–500 € · 2,5
                   % 500–1000 € · 2 % &gt; 1000 €.
+                </p>
+
+                {/* port et versement (D-037) */}
+                <p className="mt-2 text-[12px] leading-relaxed text-ash">
+                  Le port t&apos;est reversé avec ta part après la réception :
+                  il paie l&apos;étiquette Mondial Relay que tu achètes au même
+                  tarif. La taille ne pourra plus être changée.
+                </p>
+                <p className="mt-2 text-[12px] leading-relaxed text-ash">
+                  {SELLER_PAYOUT_TEXT}
                 </p>
 
                 {/* boost toggle */}

@@ -163,7 +163,7 @@ export function ShopTheLook({
             d'accueil reste à dégager */}
         <div className="flex items-center justify-between gap-3 border-t border-bone/10 px-5 pb-[calc(1rem+env(safe-area-inset-bottom))] pt-4 md:pb-5">
           <span className="text-xs text-ash">
-            Protection acheteur incluse · livraison 48h
+            Protection acheteur incluse · envoi Mondial Relay
           </span>
           <Button
             onClick={addAll}

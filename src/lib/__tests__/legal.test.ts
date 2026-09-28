@@ -4,6 +4,8 @@ import { describe, expect, it } from "vitest";
 import { PAYMENTS_UNKNOWN, type PaymentsMode } from "../use-payments-mode";
 import { LEGAL_DOCS, paymentsClaim } from "../legal";
 import { stripComments } from "../markdown";
+import { CARRIERS } from "../shipping";
+import { euro } from "../utils";
 
 describe("paymentsClaim", () => {
   it("n'affirme rien tant que le serveur n'a pas répondu", () => {
@@ -83,5 +85,35 @@ describe("registre des documents", () => {
         /il n'existe pas encore d'écran permettant de/i,
       );
     }
+  });
+});
+
+/* D-037 : les CGV et la grille transporteur (CARRIERS) disent la même
+   chose. Lecture comme au rendu (réserves en commentaire retirées),
+   retours à la ligne aplatis. */
+describe("CGV — cohérence avec D-037", () => {
+  const cgv = stripComments(
+    readFileSync(path.resolve(__dirname, "../../../legal/cgv.md"), "utf8"),
+  ).replace(/\s+/g, " ");
+
+  it("ni versement le vendredi, ni transporteur retiré, ni « séquestre »", () => {
+    expect(cgv).not.toMatch(/vendredi/i);
+    expect(cgv).not.toMatch(/Chronopost/i);
+    expect(cgv).not.toMatch(/Pickup/i);
+    expect(cgv).not.toMatch(/séquestre/i);
+  });
+
+  it("art. 12.6 : l'indemnisation Mondial Relay est celle de CARRIERS", () => {
+    const art12 = cgv.match(/## 12\.[\s\S]*?(?=## 13\.)/)?.[0];
+    expect(art12).toBeDefined();
+    const art126 = art12!.match(
+      /6\. \*\*Remboursements\.\*\*[\s\S]*?(?=7\. \*\*Contestation bancaire)/,
+    )?.[0];
+    expect(art126).toBeDefined();
+    const plafond = euro(CARRIERS.mondial_relay.lossCompensationCents / 100);
+    expect(plafond).toBe("25 €");
+    expect(art126).toContain(
+      `${CARRIERS.mondial_relay.name} indique une indemnisation forfaitaire de ${plafond}`,
+    );
   });
 });

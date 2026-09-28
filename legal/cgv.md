@@ -15,21 +15,35 @@ effectiveDate: "[À COMPLÉTER : date de publication]"
        - art. 12 : régime applicable À COMPTER de l'activation du paiement
          réel. Il s'applique depuis la date d'activation qui y est
          inscrite (24 septembre 2026). Sa rédaction est
-         volontairement prudente : plusieurs points (séquestre, statut au
-         regard de la DSP2, obligations de lutte anti-blanchiment) dépendent
+         volontairement prudente : plusieurs points (détention des fonds,
+         statut au regard de la DSP2, obligations de lutte anti-blanchiment) dépendent
          du prestataire de paiement retenu et ne peuvent pas être arrêtés
          avant ce choix ;
        - art. 7 : l'absence de droit de rétractation entre particuliers est
          exacte, mais elle se dit avec précaution car elle cesse d'être
          vraie si un vendeur agit à titre professionnel ;
        - art. 9 : intervention de la Plateforme en litige. Le point
-         d'équilibre est qu'elle ne prive personne de son droit d'agir.
+         d'équilibre est qu'elle ne prive personne de son droit d'agir ;
+       - art. 5 : frais de livraison calculés sur la grille publique du
+         transporteur selon la taille du colis, choisie par le vendeur et
+         figée au dépôt de l'annonce (D-037) ;
+       - art. 6 : numéro de suivi obligatoire, et risque de perte à la
+         charge du vendeur jusqu'à la réception ;
+       - art. 12.5 : la part du vendeur n'est virée qu'après la réception,
+         la clôture automatique ou la décision de la Plateforme, au plus
+         tard quatre-vingts jours après le paiement hors litige, une fois
+         la Pièce expédiée ;
+       - art. 12.6 : reprise de la part du vendeur même déjà virée (solde
+         débiteur possible), et régime du colis perdu : l'indemnisation du
+         vendeur relève du transporteur, pas de la Plateforme ;
+       - art. 12.7 : suspension du virement pendant une contestation
+         bancaire.
 
-     POINT SIGNALÉ À L'EXPLOITANT : le service affiche aujourd'hui les noms
-     de Mondial Relay, Chronopost et du réseau Pickup, sans intégration ni
-     accord commercial avec ces sociétés. L'article 6 est rédigé pour ne
-     rien affirmer d'inexact, mais l'usage de ces marques doit être
-     régularisé ou retiré du produit. Voir 99-a-completer.md. -->
+     POINT SIGNALÉ À L'EXPLOITANT : le service affiche aujourd'hui le nom
+     de Mondial Relay, sans intégration ni accord commercial avec cette
+     société. L'article 6 est rédigé pour ne rien affirmer d'inexact, mais
+     l'usage de cette marque doit être régularisé ou retiré du produit.
+     Voir 99-a-completer.md. -->
 
 # Conditions générales de vente
 
@@ -110,6 +124,20 @@ Le prix est **librement fixé par le vendeur** et affiché en euros, toutes
 taxes comprises. Les frais de livraison s'y ajoutent et sont indiqués
 avant validation.
 
+Les frais de livraison dépendent de la taille du colis, choisie par le
+vendeur lors du dépôt de l'annonce et non modifiable ensuite — Petit
+(jusqu'à 500 g), Moyen (jusqu'à 1 kg), Grand (jusqu'à 2 kg), Très grand
+(jusqu'à 4 kg) — et du mode de livraison choisi par l'acheteur (Point
+Relais ou Locker, ou domicile). Ils correspondent au tarif public toutes
+taxes comprises de Mondial Relay pour les envois de particuliers en
+France, selon sa grille applicable au 15 juin 2026, reproduite dans le
+service et mise à jour lors de ses évolutions, et sont figés sur la
+commande au moment de sa validation. Ils sont reversés au vendeur avec sa
+part : c'est lui qui achète l'étiquette d'expédition. Le vendeur choisit
+une taille correspondant au poids de la Pièce emballée ; s'il choisit une
+taille inférieure au poids réel, la différence de prix de l'étiquette
+reste à sa charge.
+
 La Plateforme perçoit une **commission à la charge du vendeur**, calculée
 sur le prix de la Pièce hors frais de livraison, selon le barème
 dégressif suivant :
@@ -140,7 +168,8 @@ supporte le coût.
 
 **L'expédition incombe au vendeur**, qui s'engage à remettre la Pièce au
 transporteur dans un délai de **trois jours ouvrés** après la commande, et
-au plus tard sept jours, et à renseigner le suivi dans le service.
+au plus tard sept jours, et à renseigner le numéro de suivi, sans lequel
+l'expédition ne peut pas être confirmée dans le service.
 
 La Plateforme n'a la qualité ni de transporteur, ni de commissionnaire de
 transport. **Elle n'a conclu aucun contrat de transport pour votre
@@ -148,9 +177,10 @@ compte** et n'émet aucun bordereau d'expédition : les options affichées
 dans le service décrivent des modes d'envoi disponibles auprès des
 transporteurs, que le vendeur souscrit lui-même.
 
-Les risques de perte ou d'avarie sont supportés selon les règles de droit
-commun applicables entre les parties et, le cas échéant, selon les
-conditions du transporteur choisi.
+Jusqu'à la réception de la Pièce par l'acheteur, le risque de perte
+incombe au vendeur, qui a conclu le contrat de transport. En cas de perte
+constatée par la Plateforme, l'acheteur est remboursé dans les conditions
+de l'article 12.6.
 
 L'adresse de livraison que vous communiquez n'est transmise qu'au vendeur
 de la Pièce concernée, et uniquement en cas de livraison à domicile.
@@ -259,23 +289,40 @@ modération.
 4. **Circulation des fonds.** Au paiement, la part revenant au vendeur —
    le prix, diminué de la commission de l'article 5, augmenté des frais de
    livraison — est portée **directement sur son compte de paiement Stripe**.
-   La Plateforme ne détient pas les fonds du vendeur. La commission et les
+   Elle y reste jusqu'à son versement, dans les conditions du point 5. La
+   Plateforme ne détient pas les fonds du vendeur. La commission et les
    frais de service acheteur sont perçus par la Plateforme au même moment.
-5. **Versement au vendeur.** Stripe verse le solde du vendeur sur son
-   compte bancaire **une fois par semaine, le vendredi**, sous réserve de
-   ses délais de disponibilité.
+5. **Versement au vendeur.** La part du vendeur reste sur son compte de
+   paiement Stripe jusqu'à ce que l'acheteur confirme la réception de la
+   Pièce, ou jusqu'à la clôture automatique de la commande quatorze jours
+   après l'expédition sans litige, ou jusqu'à la décision de la Plateforme
+   en cas de litige. Elle est alors virée sur son compte bancaire, sous
+   réserve de sa disponibilité auprès de Stripe. Hors litige ou
+   contestation en cours, et une fois la Pièce expédiée, elle est virée au
+   plus tard quatre-vingts jours après le paiement.
 6. **Remboursements.** En cas d'annulation avant expédition — par
    l'acheteur, par le vendeur, ou d'office faute d'expédition sous sept
    jours — ou de litige tranché en faveur de l'acheteur, l'acheteur est
    **intégralement remboursé** sur le moyen de paiement utilisé : prix,
    frais de service et frais de livraison. La part du vendeur est reprise
    sur son compte de paiement, et la commission n'est pas conservée par la
-   Plateforme. Le délai d'apparition du remboursement sur le relevé dépend
-   de la banque de l'acheteur.
+   Plateforme. Si la part du vendeur lui a déjà été virée, elle est
+   néanmoins reprise sur son compte de paiement, dont le solde peut devenir
+   débiteur. Le délai d'apparition du remboursement sur le relevé dépend
+   de la banque de l'acheteur. **Colis perdu.** Lorsqu'un litige pour Pièce
+   non reçue conduit la Plateforme à constater la perte du colis,
+   l'acheteur est intégralement remboursé et la part du vendeur, frais de
+   livraison compris, est reprise. Le vendeur, qui a conclu le contrat de
+   transport en achetant l'étiquette, déclare la perte au transporteur,
+   qui l'indemnise selon ses propres conditions ; à la date de rédaction,
+   Mondial Relay indique une indemnisation forfaitaire de 25 € incluse dans
+   son tarif, et des niveaux complémentaires à souscrire lors de la
+   création de l'étiquette.
 7. **Contestation bancaire.** Si l'acheteur conteste un paiement auprès de
-   sa banque, la Plateforme en est informée par Stripe et peut reprendre
-   la somme correspondante sur le compte de paiement du vendeur, dans
-   l'attente de l'issue de la contestation.
+   sa banque, la Plateforme en est informée par Stripe. Tant que la
+   contestation est en cours, la part du vendeur ne lui est pas virée. Si
+   la contestation aboutit en faveur de l'acheteur, la somme correspondante
+   peut être reprise sur le compte de paiement du vendeur.
 8. **Facturation.** Le vendeur particulier n'émet pas de facture. La
    Plateforme met à disposition du vendeur le détail de chaque vente et de
    la commission perçue.

@@ -13,6 +13,17 @@
    Ils ne dépendent d'aucune donnée du navigateur.
    ============================================================ */
 import { store, pushNotif, sendEmail, userEmail, APP_URL } from "./core.mts";
+import { escapeHtml } from "../../../src/lib/guards.ts";
+import {
+  carrierOfOrder,
+  isPackageSize,
+  packageSize,
+  weightLabel,
+} from "../../../src/lib/shipping.ts";
+import {
+  SELLER_PAYOUT_TEXT,
+  SIMULATED_PAYOUT_TEXT,
+} from "../../../src/lib/payout.ts";
 
 const eur = (n: number) =>
   n.toLocaleString("fr-FR", { minimumFractionDigits: 2 }) + " €";
@@ -29,7 +40,34 @@ export type OrderPaye = {
   commissionRate: number;
   commissionEUR: number;
   netSellerEUR: number;
+  /** Taille figée au dépôt de l'annonce (D-037). Absente : commande
+      antérieure, la ligne « Colis » n'est pas affichée. */
+  packageSize?: string;
+  /** Libellé du mode (« Mondial Relay · Point Relais ou Locker »). */
+  shippingMethod?: string;
+  shippingMethodId?: string;
+  /** Démonstration : aucun virement réel n'aura lieu (CGV art. 2). */
+  simulated?: boolean;
 };
+
+/** Consignes d'expédition du « Vendu » (D-037) : taille et mode, étiquette
+    au bon format, suivi obligatoire, port reversé après la réception. */
+function consignesExpedition(order: OrderPaye): string {
+  const carrier = carrierOfOrder(order);
+  const etiquette = carrier ? `l'étiquette ${carrier.name}` : "l'étiquette";
+  const indemnise = carrier ? carrier.name : "le transporteur";
+  let colis = "";
+  if (isPackageSize(order.packageSize)) {
+    const t = packageSize(order.packageSize);
+    const mode = order.shippingMethod
+      ? ` · ${escapeHtml(order.shippingMethod)}`
+      : "";
+    colis = `<p style="font-size:14px;color:#b8b3a8;margin:0 0 12px">Colis : <strong style="color:#f4f1ea">${t.label}</strong> (jusqu'à ${weightLabel(t.maxWeightG)})${mode}</p>`;
+  }
+  return `${colis}
+       <p style="font-size:14px;color:#b8b3a8;margin:0 0 12px">Achète ${etiquette} au format de colis indiqué, expédie sous 3 jours et renseigne le numéro de suivi dans l'app (il est obligatoire). Le port payé par l'acheteur t'est reversé avec ta part après la réception ; si le colis se perd, il est repris avec ta part et c'est ${indemnise} qui t'indemnise selon ses conditions.</p>
+       <p style="font-size:14px;color:#b8b3a8;margin:0 0 20px">${order.simulated === true ? SIMULATED_PAYOUT_TEXT : SELLER_PAYOUT_TEXT}</p>`;
+}
 
 /** Marque la pièce vendue. Idempotent : rejouer ne change rien. */
 export async function marquerVendue(productId: string, orderId: string) {
@@ -112,7 +150,7 @@ export async function onOrderPaid(order: OrderPaye) {
          Prix : ${eur(order.priceEUR)} · Commission (${(order.commissionRate * 100).toLocaleString("fr-FR")} %) : −${eur(order.commissionEUR)}<br/>
          <strong style="color:#f4f1ea">Net vendeur : ${eur(order.netSellerEUR)}</strong> · Acheteur : @${order.buyerHandle}
        </p>
-       <p style="font-size:14px;color:#b8b3a8;margin:0 0 20px">Expédie sous 3 jours et renseigne le suivi dans l'app.</p>
+       ${consignesExpedition(order)}
        <p style="margin:0"><a href="${APP_URL}/commande/${order.id}" style="color:#f4f1ea">Voir la commande →</a></p>`,
     );
   }

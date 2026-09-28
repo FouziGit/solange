@@ -16,6 +16,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { api } from "@/lib/api";
+import { SELLER_PAYOUT_TEXT } from "@/lib/payout";
 import { Button } from "@/components/ui/Button";
 import { Skeleton } from "@/components/ui/Skeleton";
 
@@ -32,8 +33,9 @@ const TEXTE: Record<"absent" | "incomplet" | "verification" | "actif", string> =
       "Ton inscription n'est pas terminée. Tant qu'elle ne l'est pas, tes pièces ne sont pas achetables.",
     verification:
       "Stripe vérifie tes informations. Tes pièces deviendront achetables dès que c'est validé.",
-    actif:
-      "Tes paiements sont actifs. Quand une pièce se vend, ta part arrive sur ton compte Stripe, puis sur ta banque chaque vendredi.",
+    /* Versements manuels, un par commande livrée (D-037) : plus de
+       versement hebdomadaire. */
+    actif: `Tes paiements sont actifs. ${SELLER_PAYOUT_TEXT}`,
   };
 
 export function SellerPayments() {

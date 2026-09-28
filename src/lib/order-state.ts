@@ -82,21 +82,28 @@ export function nextStatus(
   return t.to;
 }
 
-/* ---------- délais des automatismes (D-016) ----------
+/* ---------- délais des automatismes (D-016, D-037) ----------
    Repère marché : Vinted annule à 7 jours sans expédition — c'est le
    comportement que nos utilisateurs connaissent. Après expédition, pas de
    suivi transporteur réel en beta → clôture large à 14 jours (2× le délai
-   postal courant), rappel à mi-course. */
+   postal courant), rappel à mi-course. Depuis D-037, la clôture PAIE le
+   vendeur sans preuve de livraison : un dernier rappel part à J+12 pour
+   laisser à l'acheteur 2 jours pour signaler un problème. */
 const DAY = 24 * 60 * 60 * 1000;
 export const DELAYS = {
   remindShipMs: 3 * DAY, // rappel vendeur : J+3 après paiement
   autoCancelMs: 7 * DAY, // annulation auto : J+7 sans expédition
   remindReceiveMs: 7 * DAY, // rappel acheteur : J+7 après expédition
+  lastCallReceiveMs: 12 * DAY, // dernier rappel acheteur : J+12 après expédition
   autoCloseMs: 14 * DAY, // clôture auto : J+14 après expédition
 } as const;
 
 export type DueAction =
-  "remind_ship" | "auto_cancel" | "remind_receive" | "auto_close";
+  | "remind_ship"
+  | "auto_cancel"
+  | "remind_receive"
+  | "remind_receive_last"
+  | "auto_close";
 
 /** Ce que le cron doit faire MAINTENANT pour une commande donnée.
     Pure : horloge injectée, idempotence par les marqueurs remind*At. */
@@ -107,6 +114,7 @@ export function dueActions(
     shippedAt?: number;
     remindShipAt?: number;
     remindReceiveAt?: number;
+    remindReceiveLastAt?: number;
   },
   now: number,
 ): DueAction[] {
@@ -117,8 +125,13 @@ export function dueActions(
       due.push("remind_ship");
   }
   if (o.status === "expediee" && o.shippedAt) {
-    if (now - o.shippedAt >= DELAYS.autoCloseMs) due.push("auto_close");
-    else if (now - o.shippedAt >= DELAYS.remindReceiveMs && !o.remindReceiveAt)
+    const since = now - o.shippedAt;
+    if (since >= DELAYS.autoCloseMs) due.push("auto_close");
+    else if (since >= DELAYS.lastCallReceiveMs) {
+      /* Passé J+12, plus de premier rappel : si le cron l'a manqué, le
+         dernier rappel le remplace (jamais « rappel » après « dernier »). */
+      if (!o.remindReceiveLastAt) due.push("remind_receive_last");
+    } else if (since >= DELAYS.remindReceiveMs && !o.remindReceiveAt)
       due.push("remind_receive");
   }
   // litige / recue / terminee / annulee : le cron ne touche à rien.

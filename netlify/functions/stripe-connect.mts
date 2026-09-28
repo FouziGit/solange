@@ -15,8 +15,15 @@
    - requirement_collection = stripe + tableau de bord express : Stripe
      collecte et vérifie l'identité, le vendeur a un espace simple.
    Seule capacité demandée : `transfers`, suffisante pour recevoir une
-   destination charge sans on_behalf_of. */
+   destination charge sans on_behalf_of.
+
+   Versements MANUELS (D-037) : le vendeur est payé commande par commande,
+   à la livraison (_shared/payout.mts). Les comptes créés avant restent en
+   hebdomadaire jusqu'à leur prochain passage ici (GET ou POST), qui les
+   bascule. Une bascule impossible ne bloque pas le membre : elle est
+   journalisée et signalée aux administrateurs, une fois par jour. */
 import type { Config } from "@netlify/functions";
+import type Stripe from "stripe";
 import {
   store,
   json,
@@ -29,7 +36,25 @@ import {
 } from "./_shared/core.mts";
 import { stripe } from "./_shared/stripe.mts";
 import { updateUser } from "./_shared/users.mts";
+import { alerterAdmins } from "./_shared/admin-alert.mts";
+import { assurerVersementsManuels } from "./_shared/payout.mts";
 import { sellerPayable } from "../../src/lib/payments.ts";
+
+/** Compte existant → versements manuels. Jamais bloquant pour le membre. */
+async function basculerEnManuel(
+  accountId: string,
+  acct?: Stripe.Account | null,
+): Promise<void> {
+  const r = await assurerVersementsManuels(accountId, acct);
+  if (r.ok) return;
+  console.error("connect_schedule_error", accountId, r.error);
+  if (await rateLimit("payout-schedule-alert", 1, 86_400_000))
+    await alerterAdmins({
+      text: `Compte vendeur ${accountId} : passage en versements manuels impossible — ${r.error}`,
+      link: "/admin",
+      subject: "SOLANGE — versements vendeur à configurer",
+    });
+}
 
 export default async (req: Request) => {
   const s = stripe();
@@ -50,6 +75,7 @@ export default async (req: Request) => {
   if (req.method === "GET") {
     if (!accountId) return json({ enabled: true, status: "absent" });
     const acct = await s.accounts.retrieve(accountId);
+    await basculerEnManuel(accountId, acct);
     const payable = sellerPayable(acct);
     // cache du dernier état connu : /api/orders le lit sans rappeler Stripe
     if (rec.stripePayable !== payable)
@@ -86,15 +112,16 @@ export default async (req: Request) => {
           stripe_dashboard: { type: "express" },
         },
         capabilities: { transfers: { requested: true } },
-        /* Versements HEBDOMADAIRES vers la banque du vendeur, plutôt que
-           quotidiens. Avec une destination charge, la part du vendeur est
-           sur son solde Stripe dès le paiement ; tant qu'elle n'est pas
-           partie vers sa banque, un remboursement peut la reprendre
-           (reverse_transfer). Une semaine de marge couvre l'annulation
-           d'office à J+7 et la plupart des litiges. */
+        /* Versements MANUELS (D-037). Avec une destination charge, la
+           part du vendeur est sur son solde Stripe dès le paiement ; elle
+           y reste jusqu'à la livraison, puis un virement PAR COMMANDE part
+           vers sa banque (_shared/payout.mts). Tant qu'elle n'est pas
+           partie, un remboursement la reprend (reverse_transfer). Stripe
+           garde ces fonds 90 jours au plus : versement d'office à J+80
+           hors litige, alertes à J+80 et J+85 sinon. */
         settings: {
           payouts: {
-            schedule: { interval: "weekly", weekly_anchor: "friday" },
+            schedule: { interval: "manual" },
           },
         },
         business_profile: {
@@ -105,8 +132,11 @@ export default async (req: Request) => {
         },
         metadata: { solangeUserId: user.id },
       },
-      // une double requête ne crée jamais deux comptes pour le même membre
-      { idempotencyKey: `connect-account-${user.id}` },
+      /* une double requête ne crée jamais deux comptes pour le même
+         membre. « v2 » : les paramètres ont changé (versements manuels) ;
+         rejouée avec d'autres paramètres, la clé v1 renverrait une
+         idempotency_error au lieu du compte. */
+      { idempotencyKey: `connect-account-v2-${user.id}` },
     );
     id = acct.id;
     /* Sans cet enregistrement, le compte Stripe serait perdu pour nous. La
@@ -118,6 +148,9 @@ export default async (req: Request) => {
     }));
     if (!saved.ok)
       return bad("Ton compte vient d'être modifié. Réessaie.", 409);
+  } else {
+    // compte existant : relu chez Stripe (retrieve) puis basculé si besoin
+    await basculerEnManuel(id);
   }
 
   // Lien à usage unique, jamais stocké ni envoyé par e-mail (doc Stripe).

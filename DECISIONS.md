@@ -268,3 +268,116 @@ Chaque entrée : décision, alternative écartée, raison. Relire en début de p
   pas un automatisme.
   Le drapeau est la présence de STRIPE_SECRET_KEY (même règle que D-023) :
   sans clé, tout reste simulé.
+
+- **D-037 — Vendeur payé à la livraison, versements manuels ; port à la
+  taille du colis, figée.** Complète D-036. Demande du 28/09/2026 : le prix
+  du port dépend de la taille du colis, choisie par le vendeur au dépôt de
+  l'annonce puis figée ; le vendeur n'est payé qu'une fois le colis livré ;
+  colis perdu, l'acheteur est remboursé et le vendeur indemnisé jusqu'à un
+  plafond fixé par transporteur.
+
+  **L'argent ne change pas de mains.** Les destination charges de D-036
+  restent : au paiement, la part du vendeur part sur SON compte connecté
+  Stripe. SOLANGE ne détient pas ces fonds, et ce n'est pas un séquestre
+  (Stripe précise ne pas en fournir). Ce qui change, c'est le versement de
+  ce compte vers la banque : hebdomadaire (le vendredi) → MANUEL. Les
+  nouveaux comptes sont créés ainsi ; les comptes existants basculent à la
+  première occasion (profil, création de commande). Un solde disponible au
+  moment de la bascule n'est rattaché à aucune commande : il est signalé
+  aux admins, jamais versé automatiquement ; les commandes antérieures
+  (sans `payoutMode`) n'ont pas de versement par commande. Si la bascule ou
+  l'accès aux versements échoue, la commande est refusée (503) avant toute
+  réservation.
+
+  **Un versement par commande**, quand elle passe à `terminee` : réception
+  confirmée, clôture automatique à J+14, ou litige tranché pour le vendeur.
+  Idempotent : réconciliation par `metadata.orderId` avant tout envoi (les
+  virements `failed` ou `canceled` sont ignorés), clé `payout-<id>`, puis
+  suffixée (`payout-<id>-<n>`) après un échec d'envoi. Fonds pas encore
+  disponibles (`en_attente_fonds`) : nouvel essai chaque jour. Hors litige,
+  versement d'office à J+80 après le paiement, sur une commande EXPÉDIÉE
+  seulement (`expediee`, `recue`) : une commande `payee` n'est jamais
+  versée d'office (la pièce n'est pas partie ; l'annulation J+7 qui échoue
+  est signalée à l'équipe une fois par jour). La commande est relue juste
+  avant la création du virement : un litige, une annulation ou une
+  contestation survenus pendant les appels Stripe l'arrêtent ; un virement
+  parti malgré tout sur une commande passée en litige ou annulée est noté
+  (et, annulée, `refundAfterPayout`) et signalé. Litiges et contestations :
+  alertes à J+80 puis J+85 (URGENT), et bandeau en tête de /admin. En
+  versements manuels, Stripe garde les fonds 90 jours au plus (France) ; ce
+  qu'il fait au-delà n'est PAS vérifié : un admin DOIT trancher avant J+88.
+  Un virement échoué (`payout.failed`) est repéré par le cron, qui relit le
+  virement chaque jour pendant 15 jours, et non par un webhook Connect (non
+  traité). Le `source_type` du virement est choisi selon le solde
+  disponible (carte, puis virement bancaire, puis le reste) : le Checkout
+  n'est pas restreint à la carte. Contestation bancaire : aucun virement
+  tant qu'elle est présente ; un admin peut forcer le versement, en deux
+  temps. Elle est écrite par le webhook en écriture conditionnelle (comme
+  `paymentIntentId`), et sa clôture est suivie (`charge.dispute.closed`) :
+  gagnée (`won`, `warning_closed`), elle est archivée
+  (`bankDisputeClosed`) et le virement reprend ; perdue (`lost`) ou
+  « prévenue » (`prevented` : résolue, souvent par remboursement, ou
+  bloquée — issue à vérifier), le virement reste suspendu et l'équipe
+  décide (reprendre la part ou verser). Remboursement après versement : toléré et signalé
+  aux admins — la part est reprise sur un solde déjà versé, qui devient
+  négatif, et la plateforme en répond ; il se lit sur la version fraîche
+  de la commande, même quand un conflit d'écriture impose l'annulation.
+  Annulation imposée après un conflit : la pièce n'est remise en vente, et
+  les parties prévenues, que si le statut n'a pas changé entre-temps (une
+  pièce expédiée pendant l'annulation reste vendue, l'équipe s'en occupe).
+  Un vendeur ne peut pas supprimer son compte tant qu'une vente est en
+  cours (y compris un acheteur en train de payer : pièce réservée par une
+  commande en attente) ou qu'un virement attend.
+
+  **Colis perdu** (litige « non reçu » tranché par l'équipe) : l'acheteur
+  est intégralement remboursé, la part du vendeur, port compris, est
+  reprise, et la pièce reste vendue. Le vendeur est indemnisé PAR LE
+  TRANSPORTEUR, jusqu'à son plafond : `CARRIERS.lossCompensationCents`,
+  25 € pour Mondial Relay (vérifié le 28/09/2026), lu par tous les textes.
+  C'est lui qui a acheté l'étiquette et détient le contrat de transport.
+  SOLANGE ne verse pas elle-même d'indemnité : elle ferait double emploi
+  avec celle du transporteur, et SOLANGE n'achète pas les étiquettes
+  (contrairement au modèle Vinted). **À CONFIRMER par le fondateur** ; le
+  changer demanderait un transfert plateforme → vendeur, non conçu ici.
+
+  **Port.** Grille publique Mondial Relay applicable au 15/06/2026
+  (particuliers, TTC, France), selon la taille du colis — Petit 500 g,
+  Moyen 1 kg, Grand 2 kg, Très grand 4 kg — en Point Relais ou Locker, ou à
+  domicile. Une seule grille pour le front et le serveur
+  (`src/lib/shipping.ts`) ; le serveur recalcule le port depuis la taille
+  stockée sur l'annonce, jamais depuis un montant envoyé par le client. La
+  taille est figée au dépôt : c'est la demande, qui remplace « modifiable
+  tant que non vendue ». Les options Pickup (4,50 €) et Chronopost (6,90 €)
+  sont retirées : leurs tarifs n'étaient pas vérifiés.
+
+  **Suivi obligatoire** pour confirmer l'expédition (format contrôlé), avec
+  un lien vers la page officielle de suivi, sans pré-remplissage : il ne
+  fonctionne pas. ÉCART ASSUMÉ : la clôture à J+14 paie le vendeur sans
+  preuve de livraison, le numéro n'étant contrôlé que sur son format.
+  Atténuations : dernier rappel à l'acheteur à J+12, suivi visible par
+  l'acheteur. Piste : l'API de suivi Mondial Relay.
+
+  **Risques.** Le vendeur avance l'étiquette et la perd si le colis se perd
+  (hors indemnisation du transporteur). Une taille sur-déclarée rapporte
+  jusqu'à 5,84 € en relais et 8,90 € à domicile : à surveiller par la
+  modération. **Coût** pour SOLANGE (tarifs Connect vérifiés, plateforme
+  payeuse des frais) : 0,25 % + 0,10 € par versement, soit par vente, et
+  2 € par mois et par compte actif (mois où un versement a lieu).
+
+  **Liste de vérification avant déploiement** (exploitant, Dashboard
+  Stripe) : la clé restreinte doit avoir Connect › Accounts (écriture),
+  Connect › Payouts (lecture ET écriture) et Balance (lecture). La lecture
+  est contrôlée avant chaque commande ; l'écriture des virements ne peut
+  pas l'être sans écrire. L'endpoint webhook doit écouter
+  `charge.dispute.created` ET `charge.dispute.closed`.
+
+  **Non traité** : webhook `payout.*` ; commandes ACHETEUR ouvertes lors
+  d'une suppression de compte ; boucle d'alerte admin dupliquée dans
+  `report.mts` et `payment-webhook.mts` (dont le lien `/commande/<id>`
+  répond 404 à un admin) ; retrait du champ déprécié
+  `ShipOption.priceEUR`. CGV art. 5, 6 et 12.4 à 12.7 réécrites, version
+  inchangée : à relire.
+  Alternatives écartées : revenir aux « separate charges and transfers »
+  (SOLANGE détiendrait les fonds d'autrui, la question que D-036 a
+  supprimée) ; garder un calendrier automatique avec un délai (ne garantit
+  pas que le vendeur est payé après la livraison).

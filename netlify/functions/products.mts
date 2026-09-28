@@ -1,7 +1,11 @@
 /* /api/products
    GET  → liste des annonces créées par les membres (CatalogItem-compatible)
    POST → crée une annonce (auth requise) : photos base64 → Blobs, champs validés.
-   Corrige l'impasse /vendre de l'audit : l'annonce EXISTE désormais. */
+   Corrige l'impasse /vendre de l'audit : l'annonce EXISTE désormais.
+
+   Taille du colis (D-037) : obligatoire au dépôt, puis FIGÉE — aucun
+   endpoint ne la modifie (un PATCH reçoit le 405 générique). En lecture,
+   une annonce antérieure sans taille est rendue en « moyen ». */
 import type { Config } from "@netlify/functions";
 import {
   store,
@@ -18,6 +22,7 @@ import { PRODUCT_SELLER, withMembers } from "./_shared/members.mts";
 import { normaliserMarque } from "../../src/lib/brands.ts";
 import { isValidId } from "../../src/lib/guards.ts";
 import { PRIX_MAX_EUR } from "../../src/lib/payments.ts";
+import { isPackageSize, packageSizeOf } from "../../src/lib/shipping.ts";
 
 const CATEGORIES = [
   "Femme",
@@ -46,6 +51,8 @@ type CreateBody = {
   priceEUR?: number;
   description?: string;
   images?: string[];
+  /** Taille du colis (PackageSizeId), figée après le dépôt. */
+  packageSize?: unknown;
 };
 
 export default async (req: Request) => {
@@ -67,7 +74,13 @@ export default async (req: Request) => {
       if (!p || p.shadow || p.hidden || p.status === "withdrawn")
         return bad("Annonce inconnue", 404);
       const [product] = await withMembers(
-        [{ ...p, mine: me ? p.sellerId === me.id : false }],
+        [
+          {
+            ...p,
+            packageSize: packageSizeOf(p.packageSize),
+            mine: me ? p.sellerId === me.id : false,
+          },
+        ],
         [PRODUCT_SELLER],
       );
       return json({ product });
@@ -102,7 +115,7 @@ export default async (req: Request) => {
       // lot 4 : masquée par la modération — invisible au public, mais son
       // auteur la voit encore (il doit comprendre ce qui lui arrive)
       if (!mine && p.hidden) continue;
-      out.push({ ...p, mine });
+      out.push({ ...p, packageSize: packageSizeOf(p.packageSize), mine });
     }
     // état vendu des pièces seed (shadows) pour griser le catalogue côté UI
     const soldSeeds =
@@ -168,6 +181,9 @@ export default async (req: Request) => {
     return bad(`Prix invalide (1 à ${PRIX_MAX_EUR.toLocaleString("fr-FR")} €)`);
   if (!CATEGORIES.includes(b.category ?? "")) return bad("Catégorie invalide");
   if (!CONDITIONS.includes(b.condition ?? "")) return bad("État invalide");
+  // le port en dépend : jamais de taille par défaut au dépôt
+  if (!isPackageSize(b.packageSize)) return bad("Choisis la taille du colis");
+  const packageSize = b.packageSize;
 
   // photos : dataURL → Blobs (max 4, types sûrs, taille bornée)
   const imgs = store("imgs");
@@ -198,6 +214,7 @@ export default async (req: Request) => {
     size,
     condition: b.condition,
     category: b.category,
+    packageSize,
     description,
     seed: `api-${id}`,
     seller: user.handle,

@@ -8,6 +8,9 @@ import type { LegalConsent } from "./legal-consent";
 import { AVATAR_QUALITY, squareCropRect } from "./avatar";
 import { normalizeHandle } from "./handle";
 import type { PublicMember } from "./members";
+import type { PackageSizeId, ShipMethodId } from "./shipping";
+import type { OrderPayout } from "./payout";
+import type { OrderStatus } from "./order-state";
 
 export type { PublicMember } from "./members";
 
@@ -55,6 +58,23 @@ export type ApiProduct = {
   status: "available" | "sold" | "reserved" | "withdrawn";
   createdAt: number;
   mine?: boolean;
+  /** Taille du colis choisie au dépôt puis figée (D-037). Le serveur
+      renvoie « moyen » pour les annonces antérieures. */
+  packageSize?: PackageSizeId;
+};
+
+/** Contestation bancaire (chargeback) signalée par Stripe sur une
+    commande : tant qu'elle est présente, la part du vendeur n'est pas
+    versée (D-037). */
+export type ApiBankDispute = {
+  id?: string;
+  reason?: string;
+  amount?: number;
+  at: number;
+  /** Close sur une issue défavorable (`lost`…) : le virement reste
+      suspendu, l'équipe décide. */
+  status?: string;
+  closedAt?: number;
 };
 
 export type ApiOrder = {
@@ -72,6 +92,11 @@ export type ApiOrder = {
   totalEUR: number;
   shippingMethod?: string;
   shippingLabel?: string;
+  /* Commandes créées après D-037 : taille du colis figée, mode de
+     livraison (id de la grille) et port payé, en centimes. */
+  packageSize?: PackageSizeId;
+  shippingMethodId?: ShipMethodId;
+  shippingCents?: number;
   /** Livraison à domicile uniquement — visible des deux parties de la commande. */
   address?: { name: string; line: string; postal: string; city: string };
   commissionRate?: number;
@@ -92,6 +117,15 @@ export type ApiOrder = {
   role?: "buyer" | "seller";
   simulated: boolean;
   createdAt: number;
+  /* Versement au vendeur après livraison (D-037). `payoutMode` absent :
+     commande antérieure, sans versement par commande. */
+  payoutMode?: "manual";
+  payout?: OrderPayout;
+  /** Colis déclaré perdu par l'équipe : l'acheteur est remboursé. */
+  lostParcel?: { at: number; by: "admin" };
+  /** Remboursement intervenu alors que la part était déjà versée. */
+  refundAfterPayout?: { at: number };
+  bankDispute?: ApiBankDispute;
 };
 
 export type ApiMessage = {
@@ -225,6 +259,39 @@ export type ModDispute = {
   totalEUR: number;
   dispute?: { reason: string; note?: string; at: number };
   createdAt: number;
+  paidAt?: number;
+  shippedAt?: number;
+  tracking?: string;
+  /** Mode de livraison (id de la grille, sinon libellé historique) :
+      carrierOfOrder désigne le transporteur à qui réclamer. */
+  shippingMethodId?: string;
+  shippingMethod?: string;
+  payout?: OrderPayout;
+  bankDispute?: ApiBankDispute;
+  /** Absent : commande antérieure, sans versement par commande (D-037). */
+  payoutMode?: "manual";
+  simulated?: boolean;
+};
+
+/** Versement à surveiller (D-037) : en erreur, en attente de fonds,
+    remboursé après versement, ou bloqué par une contestation bancaire. */
+export type ModPayoutItem = {
+  id: string;
+  brand: string;
+  name: string;
+  sellerHandle: string;
+  netSellerEUR?: number;
+  /** Statut de la commande, normalisé par le serveur. */
+  status: OrderStatus;
+  payout?: OrderPayout;
+  paidAt?: number;
+  refundAfterPayout?: { at: number };
+  bankDispute?: ApiBankDispute;
+  payoutMode?: "manual";
+  simulated?: boolean;
+  /** Une relance peut-elle agir (terminée, ou expédiée à J+80) ? Calculé
+      par le serveur (adminPayoutRetry). */
+  retryable?: boolean;
 };
 
 export type ModAuditEntry = {
@@ -377,6 +444,8 @@ export const api = {
     priceEUR: number;
     description?: string;
     images: string[];
+    /** Obligatoire : le serveur refuse une annonce sans taille de colis. */
+    packageSize: PackageSizeId;
   }) =>
     request<{ ok: boolean; product: ApiProduct }>("/api/products", {
       method: "POST",
@@ -384,13 +453,17 @@ export const api = {
     }),
   /* acceptCgv : acceptation des CGV pour CETTE vente, exigée par le
      serveur. Elle est horodatée sur la commande, ce qui la garde
-     opposable même si les CGV changent après coup. */
+     opposable même si les CGV changent après coup.
+     expectedShippingCents : port affiché au récapitulatif. Le serveur le
+     compare au sien (grille × taille figée) et répond 409 en cas
+     d'écart ; il ne s'en sert jamais comme montant. */
   order: (
     productId: string,
     shippingMethod?: string,
     relayLabel?: string,
     address?: { name: string; line: string; postal: string; city: string },
     acceptCgv = false,
+    expectedShippingCents?: number,
   ) =>
     request<{ ok: boolean; order: ApiOrder; checkoutUrl?: string | null }>(
       "/api/orders",
@@ -402,6 +475,7 @@ export const api = {
           relayLabel,
           address,
           acceptCgv,
+          expectedShippingCents,
         }),
       },
     ),
@@ -508,9 +582,11 @@ export const api = {
     }),
   /* — Modération (lot 4, admins) — */
   modQueue: (queue: "open" | "done" | "all" = "open") =>
-    request<{ items: ModReportItem[]; disputes: ModDispute[] }>(
-      `/api/admin?queue=${queue}`,
-    ),
+    request<{
+      items: ModReportItem[];
+      disputes: ModDispute[];
+      payouts: ModPayoutItem[];
+    }>(`/api/admin?queue=${queue}`),
   modAudit: () => request<{ audit: ModAuditEntry[] }>("/api/admin?audit=1"),
   modAct: (p: {
     reportId: string;
@@ -534,14 +610,28 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ op: "act", ...p }),
     }),
+  /* « lost » : colis perdu, sur un litige « non reçu » seulement.
+     L'acheteur est remboursé et la pièce n'est PAS remise en vente. */
   modDispute: (
     orderId: string,
-    decision: "cancel" | "close" | "return",
+    decision: "cancel" | "close" | "return" | "lost",
     note?: string,
   ) =>
     request<{ ok: boolean }>("/api/admin", {
       method: "POST",
       body: JSON.stringify({ op: "dispute", orderId, decision, note }),
+    }),
+  /** Relance le versement au vendeur. `overrideBankDispute` : verser
+      malgré une contestation bancaire en cours (décision admin
+      explicite). payout null : commande hors périmètre du versement. */
+  modRetryPayout: (orderId: string, overrideBankDispute?: boolean) =>
+    request<{ ok: boolean; payout: OrderPayout | null }>("/api/admin", {
+      method: "POST",
+      body: JSON.stringify({
+        op: "payout",
+        orderId,
+        ...(overrideBankDispute ? { overrideBankDispute: true } : {}),
+      }),
     }),
 
   /* — Notifications push (lot 3) — */

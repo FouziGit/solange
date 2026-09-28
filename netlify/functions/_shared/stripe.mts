@@ -16,6 +16,12 @@
    prélevée au passage via application_fee_amount. La plateforme ne retient
    jamais l'argent du vendeur : c'est le choix qui évite de faire de SOLANGE
    un intermédiaire qui détient des fonds pour autrui.
+
+   VERSEMENT À LA LIVRAISON (D-037) : les comptes vendeurs sont en
+   versements MANUELS. La part reste sur le solde Stripe DU VENDEUR (pas
+   chez SOLANGE — ce n'est pas un séquestre) jusqu'à ce que la commande
+   soit terminée ; un virement par commande part alors vers sa banque
+   (_shared/payout.mts). Stripe garde ces fonds 90 jours au plus.
    ============================================================ */
 import Stripe from "stripe";
 
@@ -55,11 +61,13 @@ export type Remboursement =
     - clé d'idempotence par commande : rejouer n'émet jamais deux
       remboursements.
 
-    Si la part du vendeur est déjà partie vers sa banque, Stripe REFUSE la
-    requête (il ne la met pas en attente). On renvoie alors l'erreur telle
-    quelle : la commande ne change pas d'état, et un administrateur tranche
-    — rembourser depuis le solde SOLANGE est une décision d'argent, pas un
-    automatisme. */
+    La part du vendeur reste sur son solde Stripe (versements manuels,
+    D-037) jusqu'à la livraison : un remboursement avant le versement la
+    reprend simplement. Après le versement, le reverse_transfer rend ce
+    solde négatif et la plateforme en répond (losses.payments =
+    application) ; order-core le signale aux administrateurs
+    (refundAfterPayout). En cas d'erreur Stripe, on la renvoie telle
+    quelle : la commande ne change pas d'état. */
 export async function rembourser(order: {
   id: string;
   paymentIntentId?: unknown;

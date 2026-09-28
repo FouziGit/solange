@@ -95,6 +95,50 @@ describe("dueActions — automatismes (horloge injectée, idempotents)", () => {
     expect(dueActions(o, t0 + DELAYS.autoCloseMs)).toEqual(["auto_close"]);
   });
 
+  it("dernier rappel acheteur à J+12, une seule fois", () => {
+    const o = {
+      status: "expediee" as const,
+      createdAt: t0,
+      shippedAt: t0,
+      remindReceiveAt: t0 + DELAYS.remindReceiveMs,
+    };
+    expect(DELAYS.lastCallReceiveMs).toBe(12 * 24 * 60 * 60 * 1000);
+    expect(dueActions(o, t0 + DELAYS.lastCallReceiveMs - 1)).toEqual([]);
+    expect(dueActions(o, t0 + DELAYS.lastCallReceiveMs)).toEqual([
+      "remind_receive_last",
+    ]);
+    expect(
+      dueActions(
+        { ...o, remindReceiveLastAt: t0 + DELAYS.lastCallReceiveMs },
+        t0 + DELAYS.lastCallReceiveMs + 60 * 60 * 1000,
+      ),
+    ).toEqual([]);
+  });
+
+  it("la clôture J+14 l'emporte sur le dernier rappel", () => {
+    const o = { status: "expediee" as const, createdAt: t0, shippedAt: t0 };
+    expect(dueActions(o, t0 + DELAYS.autoCloseMs)).toEqual(["auto_close"]);
+    expect(
+      dueActions(
+        { ...o, remindReceiveLastAt: t0 + DELAYS.lastCallReceiveMs },
+        t0 + DELAYS.autoCloseMs,
+      ),
+    ).toEqual(["auto_close"]);
+  });
+
+  it("premier rappel manqué : à J+12, seul le dernier part, et jamais l'inverse", () => {
+    const o = { status: "expediee" as const, createdAt: t0, shippedAt: t0 };
+    expect(dueActions(o, t0 + DELAYS.lastCallReceiveMs)).toEqual([
+      "remind_receive_last",
+    ]);
+    expect(
+      dueActions(
+        { ...o, remindReceiveLastAt: t0 + DELAYS.lastCallReceiveMs },
+        t0 + DELAYS.lastCallReceiveMs + 60 * 60 * 1000,
+      ),
+    ).toEqual([]);
+  });
+
   it("un litige gèle tout", () => {
     expect(
       dueActions(
