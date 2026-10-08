@@ -1,0 +1,280 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Solange — Logo 3D</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    background: #000;
+    color: #fff;
+    font-family: "Helvetica Neue", Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100dvh;
+    padding: 8vh 24px;
+    gap: clamp(40px, 9vh, 90px);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ---- Contexte de démo (ta page connexion) : logo au-dessus du champ e-mail ---- */
+  .auth {
+    width: 100%;
+    max-width: 340px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 26px;
+    text-align: center;
+  }
+  .auth h1 {
+    font-size: .78rem;
+    letter-spacing: .42em;
+    text-transform: uppercase;
+    font-weight: 500;
+    margin: 0;
+    color: rgba(255,255,255,.62);
+  }
+  .auth p {
+    margin: -12px 0 0;
+    font-size: .82rem;
+    line-height: 1.6;
+    color: rgba(255,255,255,.4);
+    max-width: 30ch;
+  }
+  .auth form { width: 100%; display: flex; flex-direction: column; gap: 12px; margin-top: 6px; }
+  .auth input {
+    width: 100%;
+    background: rgba(255,255,255,.04);
+    border: 1px solid rgba(255,255,255,.14);
+    border-radius: 12px;
+    color: #fff;
+    font-size: .95rem;
+    padding: 15px 18px;
+    text-align: center;
+    letter-spacing: .04em;
+    outline: none;
+    transition: border-color .3s ease, background .3s ease;
+  }
+  .auth input::placeholder { color: rgba(255,255,255,.34); }
+  .auth input:focus { border-color: rgba(255,255,255,.4); background: rgba(255,255,255,.06); }
+  .auth button {
+    width: 100%;
+    background: #fff;
+    color: #000;
+    border: 0;
+    border-radius: 12px;
+    padding: 15px 18px;
+    font-size: .74rem;
+    letter-spacing: .22em;
+    text-transform: uppercase;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity .25s ease, transform .25s ease;
+  }
+  .auth button:hover { opacity: .88; }
+  .auth button:active { transform: translateY(1px); }
+  .hint { font-size: .68rem; letter-spacing: .06em; color: rgba(255,255,255,.28); }
+</style>
+</head>
+<body>
+
+  <!-- ================================================================= -->
+  <!--  LOGO 3D — une seule ligne à copier-coller dans ton app           -->
+  <!-- ================================================================= -->
+  <solange-logo style="--size: 168px"></solange-logo>
+
+
+  <!-- Contexte de démonstration : ton écran de connexion existant -->
+  <section class="auth">
+    <h1>Solange</h1>
+    <p>Entrez votre adresse e-mail pour recevoir votre code de vérification.</p>
+    <form onsubmit="return false">
+      <input type="email" inputmode="email" autocomplete="email" placeholder="vous@exemple.com" aria-label="Adresse e-mail">
+      <button type="submit">Recevoir le code</button>
+    </form>
+    <span class="hint">Nous vous enverrons un code à 6 chiffres.</span>
+  </section>
+
+
+  <!-- ================================================================= -->
+  <!--  DÉFINITION DU COMPOSANT — à coller une seule fois dans ton app   -->
+  <!--  (ensuite : <solange-logo></solange-logo> où tu veux)             -->
+  <!-- ================================================================= -->
+  <script>
+  (function () {
+    if (customElements.get('solange-logo')) return;
+
+    // Path EXACT du logo Solange — non modifié.
+    var LOGO_PATH = 'M50 4 A46 46 0 1 0 50 96 A23 23 0 1 1 50 50 A23 23 0 1 0 50 4 Z';
+
+    // Masque SVG (data-URI) pour clipper le reflet à la forme du "S".
+    var MASK = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpath fill='%23fff' d='M50 4 A46 46 0 1 0 50 96 A23 23 0 1 1 50 50 A23 23 0 1 0 50 4 Z'/%3E%3C/svg%3E";
+
+    var LAYERS = 16;   // nombre de tranches d'extrusion (profondeur)
+
+    // --- Construction des tranches d'extrusion (le "corps" du logo) ---
+    var slices = '';
+    for (var i = 0; i < LAYERS; i++) {
+      var t = i / (LAYERS - 1);                     // 0 (arrière) -> 1 (avant)
+      var z = (t - 1) * 100;                         // en % de --depth (voir CSS)
+      // couleur des flancs : noir profond, très légèrement modulé -> lecture métallique
+      var l = 3 + t * 9;                             // 3% -> 12%
+      slices +=
+        '<svg class="slice" viewBox="0 0 100 100" style="--z:' + z.toFixed(2) + ';background:none">' +
+          '<path d="' + LOGO_PATH + '" fill="hsl(240 6% ' + l.toFixed(1) + '%)"/>' +
+        '</svg>';
+    }
+
+    var TPL =
+      '<style>' +
+        ':host{' +
+          '--size:160px;' +           /* taille du logo */
+          '--depth:22px;' +           /* profondeur d\'extrusion (faible = premium) */
+          'display:inline-block;width:var(--size);height:var(--size);' +
+          '-webkit-tap-highlight-color:transparent;' +
+        '}' +
+
+        '.stage{' +
+          'position:relative;width:100%;height:100%;' +
+          'perspective:640px;perspective-origin:50% 42%;' +
+        '}' +
+
+        /* ombre douce et diffuse au sol */
+        '.shadow{' +
+          'position:absolute;left:50%;bottom:-6%;' +
+          'width:70%;height:16%;transform:translateX(-50%);' +
+          'background:radial-gradient(ellipse at center,rgba(0,0,0,.75),rgba(0,0,0,0) 70%);' +
+          'filter:blur(9px);opacity:.85;' +
+          'animation:sol-shadow 9s ease-in-out infinite;' +
+        '}' +
+
+        /* mouvement vertical subtil (flottement) */
+        '.float{' +
+          'position:absolute;inset:0;transform-style:preserve-3d;' +
+          'animation:sol-float 9s ease-in-out infinite;' +
+          'will-change:transform;' +
+        '}' +
+
+        /* rotation 3D lente Y + micro X */
+        '.spin{' +
+          'position:absolute;inset:0;transform-style:preserve-3d;' +
+          'animation:sol-spin 13s cubic-bezier(.45,0,.55,1) infinite;' +
+          'will-change:transform;' +
+        '}' +
+
+        '.solid{position:absolute;inset:0;transform-style:preserve-3d;transform:translateZ(calc(var(--depth)/2));}' +
+
+        '.slice,.face{' +
+          'position:absolute;inset:0;width:100%;height:100%;display:block;' +
+          'backface-visibility:hidden;' +
+        '}' +
+        '.slice{transform:translateZ(calc(var(--z) * var(--depth) / 100));}' +
+
+        /* face avant : noir glossy + contour blanc fin (un seul tracé) */
+        '.face .edge{stroke:rgba(255,255,255,.9);stroke-width:1;stroke-linejoin:round;}' +
+
+        /* reflet spéculaire qui balaie la surface pendant la rotation */
+        '.gloss{' +
+          'position:absolute;inset:0;transform:translateZ(calc(var(--depth)/2 + .4px));' +
+          '-webkit-mask:url("' + MASK + '") center/contain no-repeat;' +
+          'mask:url("' + MASK + '") center/contain no-repeat;' +
+          'background:linear-gradient(105deg,' +
+            'transparent 30%,rgba(255,255,255,.05) 42%,rgba(255,255,255,.55) 50%,' +
+            'rgba(255,255,255,.05) 58%,transparent 70%);' +
+          'background-size:280% 100%;' +
+          'mix-blend-mode:screen;opacity:.9;' +
+          'animation:sol-gloss 13s cubic-bezier(.45,0,.55,1) infinite;' +
+          'will-change:background-position;' +
+        '}' +
+
+        '@keyframes sol-float{' +
+          '0%,100%{transform:translateY(-3.2%)}50%{transform:translateY(3.2%)}' +
+        '}' +
+        '@keyframes sol-spin{' +
+          '0%{transform:rotateY(-12deg) rotateX(4deg)}' +
+          '50%{transform:rotateY(12deg) rotateX(-2.5deg)}' +
+          '100%{transform:rotateY(-12deg) rotateX(4deg)}' +
+        '}' +
+        '@keyframes sol-gloss{' +
+          '0%{background-position:120% 0}' +
+          '50%{background-position:-20% 0}' +
+          '100%{background-position:120% 0}' +
+        '}' +
+        '@keyframes sol-shadow{' +
+          '0%,100%{opacity:.7;transform:translateX(-50%) scale(.92)}' +
+          '50%{opacity:.95;transform:translateX(-50%) scale(1.05)}' +
+        '}' +
+
+        /* accessibilité : on fige un rendu 3D élégant, sans mouvement */
+        '@media (prefers-reduced-motion: reduce){' +
+          '.float,.spin,.gloss,.shadow{animation:none!important}' +
+          '.spin{transform:rotateY(-9deg) rotateX(3deg)}' +
+          '.gloss{background-position:35% 0}' +
+        '}' +
+      '</style>' +
+
+      '<div class="stage" part="stage">' +
+        '<div class="shadow"></div>' +
+        '<div class="float"><div class="spin">' +
+          '<div class="solid">' + slices + '</div>' +
+
+          /* face avant : dégradé noir glossy défini en SVG */
+          '<svg class="face" viewBox="0 0 100 100" style="transform:translateZ(calc(var(--depth)/2))">' +
+            '<defs>' +
+              '<linearGradient id="sol-face" x1="0" y1="0" x2=".35" y2="1">' +
+                '<stop offset="0" stop-color="#3a3a40"/>' +
+                '<stop offset=".28" stop-color="#161618"/>' +
+                '<stop offset=".7" stop-color="#050506"/>' +
+                '<stop offset="1" stop-color="#000000"/>' +
+              '</linearGradient>' +
+              '<radialGradient id="sol-sheen" cx=".32" cy=".24" r=".9">' +
+                '<stop offset="0" stop-color="rgba(255,255,255,.28)"/>' +
+                '<stop offset=".4" stop-color="rgba(255,255,255,0)"/>' +
+              '</radialGradient>' +
+            '</defs>' +
+            '<path d="' + LOGO_PATH + '" fill="url(#sol-face)"/>' +
+            '<path d="' + LOGO_PATH + '" fill="url(#sol-sheen)"/>' +
+            '<path class="edge" d="' + LOGO_PATH + '" fill="none"/>' +   /* contour blanc fin */
+          '</svg>' +
+
+          '<div class="gloss"></div>' +
+        '</div></div>' +
+      '</div>';
+
+    var proto = Object.create(HTMLElement.prototype);
+
+    function Solange() { return Reflect.construct(HTMLElement, [], Solange); }
+    Solange.prototype = Object.create(HTMLElement.prototype);
+    Solange.prototype.constructor = Solange;
+    Solange.prototype.connectedCallback = function () {
+      if (this._built) return;
+      this._built = true;
+      var root = this.attachShadow({ mode: 'open' });
+      root.innerHTML = TPL;
+    };
+
+    // Compat : définition classique via class si dispo (plus propre)
+    try {
+      var C = class extends HTMLElement {
+        connectedCallback() {
+          if (this._built) return;
+          this._built = true;
+          this.attachShadow({ mode: 'open' }).innerHTML = TPL;
+        }
+      };
+      customElements.define('solange-logo', C);
+    } catch (e) {
+      customElements.define('solange-logo', Solange);
+    }
+  })();
+  </script>
+
+</body>
+</html>
