@@ -10,15 +10,17 @@ import {
   sortMemberProducts,
   toDisplayItem,
 } from "@/components/ui/ProductCard";
-import { Chip } from "@/components/ui/Chip";
 import { TogglePill } from "@/components/ui/TogglePill";
 import { FilterDrawer, type Filters } from "@/components/ui/FilterDrawer";
-import { BrandMenu } from "@/components/ui/BrandMenu";
 import { MARQUES_PHARES, suggestions } from "@/lib/brands";
 import { Avatar } from "@/components/chrome/Avatar";
-import { trendingTags } from "@/lib/mock";
-import { categories, conditions } from "@/lib/taxonomie";
-import { catalogSizes, filterCatalog, searchAll } from "@/lib/data";
+import {
+  POINTURES,
+  TAILLES,
+  categories,
+  conditions,
+} from "@/lib/taxonomie";
+import { filterCatalog, searchAll } from "@/lib/data";
 import { useStore } from "@/lib/store";
 import { cn, compact, euro, gradientFor } from "@/lib/utils";
 import { announce } from "@/lib/announce";
@@ -27,7 +29,11 @@ import { imgLook } from "@/lib/img";
 import { Photo } from "@/components/ui/Photo";
 import { Search, Sliders, Verified } from "@/components/chrome/icons";
 
+/** Les vraies catégories, sans « Tout » qui n'en est pas une. */
+const CATS: string[] = categories.filter((c) => c !== "Tout");
+
 const EMPTY_FILTERS: Filters = {
+  cats: CATS,
   priceMin: "",
   priceMax: "",
   sizes: [],
@@ -38,9 +44,6 @@ const EMPTY_FILTERS: Filters = {
 
 type Dimension = "pieces" | "profils" | "contenu";
 
-/** Les vraies catégories, sans « Tout » qui n'en est pas une. */
-const CATS: string[] = categories.filter((c) => c !== "Tout");
-
 const DIMENSIONS: { key: Dimension; label: string }[] = [
   { key: "pieces", label: "Pièces" },
   { key: "profils", label: "Profils" },
@@ -50,25 +53,18 @@ const DIMENSIONS: { key: Dimension; label: string }[] = [
 function DecouvrirInner() {
   // ?q= lets the feed's quiet "pièces similaires" bridge land pre-filtered
   const params = useSearchParams();
-  /* Catégories en choix multiples. « Tout » allume ou éteint toutes les
-     autres d'un coup ; aucune allumée revient à tout montrer. */
-  const [cats, setCats] = useState<string[]>(CATS);
-  const allCats = cats.length === CATS.length;
-  const catFilter = useMemo(
-    () => (allCats || cats.length === 0 ? null : new Set(cats)),
-    [allCats, cats],
-  );
-  const toggleCat = (c: string) =>
-    c === "Tout"
-      ? setCats(allCats ? [] : CATS)
-      : setCats((cur) =>
-          cur.includes(c) ? cur.filter((x) => x !== c) : [...cur, c],
-        );
   const [q, setQ] = useState(() => params.get("q") ?? "");
   const [tab, setTab] = useState<Dimension>("pieces");
-  const [focused, setFocused] = useState(false);
   const [drawer, setDrawer] = useState(false);
   const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS);
+  /* Catégories en choix multiples (tiroir Filtres) : toutes ou aucune
+     allumée revient à tout montrer. */
+  const cats = filters.cats;
+  const partialCats = cats.length > 0 && cats.length < CATS.length;
+  const catFilter = useMemo(
+    () => (partialCats ? new Set(cats) : null),
+    [partialCats, cats],
+  );
   const {
     isFollowing,
     toggleFollow,
@@ -77,26 +73,15 @@ function DecouvrirInner() {
     refreshProducts,
   } = useStore();
 
-  const sizes = useMemo(() => catalogSizes(), []);
-  /* Les marques proposées en filtre sont celles RÉELLEMENT en vente.
-     Elles venaient du catalogue de démonstration : filtrer sur une marque
-     dont aucune pièce n'existe ne rend jamais rien. */
-  const brands = useMemo(
-    () =>
-      [...new Set(serverProducts.map((p) => p.brand).filter(Boolean))].sort(
-        (a, b) => a.localeCompare(b, "fr"),
-      ),
+  // marques cherchables au tiroir : la base, plus celles déjà en vente
+  const brandPool = useMemo(
+    () => [
+      ...new Set([
+        ...suggestions(),
+        ...serverProducts.map((p) => p.brand).filter(Boolean),
+      ]),
+    ],
     [serverProducts],
-  );
-  // toute la base, cherchable dans le menu Marques
-  const brandPool = useMemo(() => suggestions(), []);
-  // le tiroir garde les marques en vente, plus celles choisies au menu
-  const drawerBrands = useMemo(
-    () =>
-      [...new Set([...brands, ...filters.brands])].sort((a, b) =>
-        a.localeCompare(b, "fr"),
-      ),
-    [brands, filters.brands],
   );
 
   const items = useMemo(() => {
@@ -132,7 +117,10 @@ function DecouvrirInner() {
           const hay = `${p.brand} ${p.name} ${p.category}`.toLowerCase();
           if (!hay.includes(qn)) return false;
         }
-        if (filters.sizes.length && !filters.sizes.includes(p.size))
+        if (
+          filters.sizes.length &&
+          !filters.sizes.includes(String(p.size).trim().toUpperCase())
+        )
           return false;
         if (filters.conds.length && !filters.conds.includes(p.condition))
           return false;
@@ -159,6 +147,7 @@ function DecouvrirInner() {
     priceMinNum != null && priceMaxNum != null && priceMinNum > priceMaxNum;
 
   const activeCount =
+    (partialCats ? cats.length : 0) +
     (filters.priceMin ? 1 : 0) +
     (filters.priceMax ? 1 : 0) +
     filters.sizes.length +
@@ -211,8 +200,6 @@ function DecouvrirInner() {
         <input
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          onFocus={() => setFocused(true)}
-          onBlur={() => setFocused(false)}
           placeholder="Rechercher une marque, un profil, un contenu…"
           aria-label="Rechercher dans SOLANGE"
           className="w-full bg-transparent text-base text-bone outline-none placeholder:text-ash md:text-sm"
@@ -263,31 +250,6 @@ function DecouvrirInner() {
         </div>
       )}
 
-      {/* suggestions — visible while the field is focused & empty */}
-      {focused && !hasQuery && (
-        <div
-          className="mt-3 border border-bone/15 p-4"
-          onMouseDown={(e) => e.preventDefault()}
-        >
-          <p className="etiquette mb-2 text-[11px] text-ash">Tendances</p>
-          <div className="flex flex-wrap gap-2">
-            {trendingTags.map((t) => (
-              <Chip key={t} onClick={() => setQ(t.replace("#", ""))}>
-                {t}
-              </Chip>
-            ))}
-          </div>
-          <p className="etiquette mb-2 mt-4 text-[11px] text-ash">Marques</p>
-          <div className="flex flex-wrap gap-2">
-            {brands.slice(0, 8).map((b) => (
-              <Chip key={b} onClick={() => setQ(b)}>
-                {b}
-              </Chip>
-            ))}
-          </div>
-        </div>
-      )}
-
       {/* dimension tabs */}
       <div
         role="tablist"
@@ -333,48 +295,9 @@ function DecouvrirInner() {
         aria-labelledby="tab-pieces"
         hidden={tab !== "pieces"}
       >
-        {/* categories — de simples boutons pressés, pas des onglets : aucun
-            panneau ne leur correspond */}
-        <div
-          role="group"
-          aria-label="Catégories"
-          className="hscroll -mx-5 mt-4 flex gap-2 px-5 pb-1 md:mx-0 md:px-0"
-        >
-          {categories.map((c) => (
-            <Chip
-              key={c}
-              active={c === "Tout" ? allCats : cats.includes(c)}
-              onClick={() => toggleCat(c)}
-            >
-              {c}
-            </Chip>
-          ))}
-        </div>
-
-        <BrandMenu
-          featured={MARQUES_PHARES}
-          all={brandPool}
-          value={filters.brands}
-          onChange={(b) => setFilters((f) => ({ ...f, brands: b }))}
-        />
-
-        {/* trending */}
-        <div className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-1.5">
-          <span className="etiquette text-[11px] text-ash">Tendances</span>
-          {trendingTags.map((t) => (
-            <button
-              key={t}
-              onClick={() => setQ(t.replace("#", ""))}
-              className="text-[12px] text-ash transition-colors hover:text-bone"
-            >
-              {t}
-            </button>
-          ))}
-        </div>
-
         {/* masonry grid — annonces membres en tête, puis catalogue */}
         {allItems.length > 0 ? (
-          <div className="mt-7 columns-2 gap-3 md:columns-3 xl:columns-4">
+          <div className="mt-5 columns-2 gap-3 md:columns-3 xl:columns-4">
             {allItems.map((it, i) => (
               <ProductCard key={it.id} item={it} index={i} />
             ))}
@@ -513,9 +436,12 @@ function DecouvrirInner() {
         onOpenChange={setDrawer}
         value={filters}
         onChange={setFilters}
-        sizes={sizes}
+        categories={CATS}
+        clothingSizes={TAILLES}
+        shoeSizes={POINTURES}
         conditions={conditions}
-        brands={drawerBrands}
+        featuredBrands={MARQUES_PHARES}
+        allBrands={brandPool}
         resultCount={allItems.length}
       />
     </PageShell>

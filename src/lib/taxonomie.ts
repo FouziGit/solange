@@ -37,3 +37,9 @@ export const conditions = [
   "Très bon état",
   "Bon état",
 ] as const;
+
+/** Tailles de vêtements proposées au filtre du Marché. */
+export const TAILLES = ["XXS", "XS", "S", "M", "L", "XL", "XXL"] as const;
+
+/** Pointures proposées au filtre du Marché, du 35 au 50. */
+export const POINTURES = Array.from({ length: 16 }, (_, i) => String(35 + i));
