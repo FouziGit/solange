@@ -1,12 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { AnimatePresence } from "motion/react";
 import { usePathname } from "next/navigation";
 import { useStore } from "@/lib/store";
 import { LEGAL_DOCS } from "@/lib/legal";
 import { AuthScreen } from "./AuthScreen";
 import { LegalGate } from "./LegalGate";
 import { LogoMark } from "./Brandmark";
+import { LaunchScreen } from "./LaunchScreen";
 
 /* Les documents légaux restent atteignables SANS compte : l'article 6-III
    de la LCEN demande un accès « facile, direct et permanent », et l'écran
@@ -19,6 +21,7 @@ const LEGAL_PATHS = new Set<string>([
 ]);
 
 export const ONBOARD_KEY = "solange:onboarded";
+const LAUNCH_KEY = "solange:launched";
 
 /**
  * Gates the whole app behind the onboarding screen. Une vraie session
@@ -32,6 +35,10 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
   // One-time, hydration-safe read of the persisted onboarding flag (localStorage
   // is client-only, so we resolve it after mount rather than during SSR).
   const [state, setState] = useState({ ready: false, authed: false });
+  /* Écran de lancement (maillage 3D) : app installée ou téléphone, une
+     fois par session — à chaque ouverture de l'app, pas à chaque page. */
+  const [launch, setLaunch] = useState(false);
+  const endLaunch = useCallback(() => setLaunch(false), []);
   /* `authReady` attendait la fin de refreshSession() — un fetch /api/me
      mesuré à 717 ms à froid en production. Le splash restait donc affiché
      le temps d'un aller-retour réseau, sur TOUTES les routes. Le drapeau
@@ -42,16 +49,25 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     let onboarded = false;
+    let showLaunch = false;
     try {
       // outillage (Lighthouse/captures) : ?e2e=1 == « Passer » (mode invité)
-      if (new URLSearchParams(location.search).get("e2e") === "1")
-        onboarded = true;
+      const e2e = new URLSearchParams(location.search).get("e2e") === "1";
+      if (e2e) onboarded = true;
+      const mobileApp =
+        matchMedia("(display-mode: standalone)").matches ||
+        matchMedia("(max-width: 767px)").matches;
+      if (mobileApp && !e2e && sessionStorage.getItem(LAUNCH_KEY) !== "1") {
+        sessionStorage.setItem(LAUNCH_KEY, "1");
+        showLaunch = true;
+      }
       onboarded = onboarded || localStorage.getItem(ONBOARD_KEY) === "1";
     } catch {
       /* storage blocked — treat as not onboarded */
     }
     // eslint-disable-next-line -- one-shot external-state read on mount
     setState({ ready: true, authed: onboarded });
+    setLaunch(showLaunch);
   }, []);
 
   const complete = () => {
@@ -80,8 +96,16 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
     );
   }
 
-  if (!authed && !LEGAL_PATHS.has(pathname))
-    return <AuthScreen onComplete={complete} />;
-
-  return <LegalGate>{children}</LegalGate>;
+  return (
+    <>
+      {!authed && !LEGAL_PATHS.has(pathname) ? (
+        <AuthScreen onComplete={complete} />
+      ) : (
+        <LegalGate>{children}</LegalGate>
+      )}
+      <AnimatePresence>
+        {launch && <LaunchScreen key="launch" onDone={endLaunch} />}
+      </AnimatePresence>
+    </>
+  );
 }

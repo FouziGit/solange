@@ -165,7 +165,7 @@ function DecouvrirInner() {
       <PageHeader
         eyebrow="Seconde main"
         title="Marché"
-        subtitle="Le moteur de recherche de la mode de seconde main. Pièces, profils, contenus — filtre, chine, achète."
+        subtitle="Ce que les membres mettent en vente en ce moment."
         right={
           <span className="hidden text-sm text-ash md:block">
             {allItems.length} pièces

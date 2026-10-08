@@ -3,7 +3,7 @@ import { catalog } from "@/lib/mock";
 
 const title = "Marché";
 const description =
-  "Le moteur de recherche de la mode de seconde main. Marques, styles, archives : filtre, chine, achète.";
+  "Les pièces que les membres de SOLANGE mettent en vente en ce moment.";
 
 export const metadata: Metadata = {
   title,
