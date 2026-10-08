@@ -18,6 +18,7 @@ import {
 } from "@/lib/auth-form";
 import { LogoMark } from "./Brandmark";
 import { Check } from "./icons";
+import { MeshBackground } from "./MeshBackground";
 
 type Step = "email" | "code" | "success";
 
@@ -147,11 +148,17 @@ export function AuthScreen({ onComplete }: { onComplete: () => void }) {
     /* Défile : en paysage ou avec le texte agrandi, le formulaire dépasse
        la hauteur de l'écran et ne doit jamais être rogné. */
     <div className="theme-dark fixed inset-0 z-[100] overflow-y-auto overscroll-contain bg-noir text-bone">
-      {/* vignette */}
+      {/* maillage 3D filaire réactif (design/login-3d) — fixe, le
+          formulaire défile par-dessus */}
+      <MeshBackground className="pointer-events-none fixed inset-0 size-full" />
+      {/* voile : profondeur + lisibilité du formulaire */}
       <div
         aria-hidden
         className="pointer-events-none fixed inset-0"
-        style={{ boxShadow: "inset 0 0 220px 60px rgba(0,0,0,0.7)" }}
+        style={{
+          background:
+            "radial-gradient(min(70vw, 34rem) 46% at 50% 64%, rgba(0,0,0,.62) 0%, rgba(0,0,0,.35) 55%, rgba(0,0,0,0) 100%), radial-gradient(120% 80% at 50% 38%, rgba(0,0,0,0) 34%, rgba(0,0,0,.72) 100%), linear-gradient(180deg, rgba(0,0,0,.55) 0%, rgba(0,0,0,0) 22%, rgba(0,0,0,0) 62%, rgba(0,0,0,.85) 100%)",
+        }}
       />
 
       {/* mt-auto (logo) + mb-auto (étapes) : le bloc reste centré, et
@@ -173,7 +180,7 @@ export function AuthScreen({ onComplete }: { onComplete: () => void }) {
             transition={{ duration: 1.9, ease: "easeOut" }}
           />
           {/* the mark — gentle breathing loop once it has arrived */}
-          <LogoMark variant="white" className="size-20" />
+          <LogoMark variant="white" className="size-28 sm:size-32" />
         </motion.div>
 
         {/* wordmark — thin, wide-tracked Montserrat (refined / luxe), revealed
