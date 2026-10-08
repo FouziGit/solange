@@ -68,6 +68,8 @@ const LUXE = [
   "Schiaparelli",
   "Thom Browne",
   "Valentino",
+  "Valentino Garavani",
+  "Yves Saint Laurent",
   "Versace",
   "Vetements",
   "Vivienne Westwood",
@@ -169,6 +171,7 @@ const SNEAKERS = [
 ];
 
 const CONTEMPORAIN = [
+  "Zadig & Voltaire",
   "& Other Stories",
   "A.P.C.",
   "Acne Studios",
@@ -217,6 +220,8 @@ const MAROQUINERIE = [
   "Polène",
   "Strathberry",
 ];
+
+const JOAILLERIE = ["Fred", "Messika", "Pomellato"];
 
 /* ---------- Parfum ---------- */
 
@@ -497,6 +502,7 @@ export const MARQUES: Marque[] = [
       ...CONTEMPORAIN,
       ...OUTDOOR,
       ...MAROQUINERIE,
+      ...JOAILLERIE,
     ],
     "mode",
   ),
@@ -530,3 +536,44 @@ export function normaliserMarque(saisie: string): string {
   if (!k) return "";
   return MARQUES.find((m) => cle(m.nom) === k)?.nom ?? saisie.trim();
 }
+
+/** Les maisons mises en avant dans le menu Marques du Marché, dans
+    l'ordre de la liste fournie par l'équipe. Le reste de la base reste
+    accessible par la recherche du menu. */
+export const MARQUES_PHARES = [
+  "Acne Studios",
+  "Alexander McQueen",
+  "Balenciaga",
+  "Balmain",
+  "Bottega Veneta",
+  "Burberry",
+  "Bvlgari",
+  "Cartier",
+  "Celine",
+  "Chanel",
+  "Chloé",
+  "Christian Louboutin",
+  "Dior",
+  "Dolce & Gabbana",
+  "Fendi",
+  "Fred",
+  "Givenchy",
+  "Gucci",
+  "Hermès",
+  "Isabel Marant",
+  "Jimmy Choo",
+  "Longchamp",
+  "Louis Vuitton",
+  "Messika",
+  "Michael Kors",
+  "Miu Miu",
+  "Nike",
+  "Pomellato",
+  "Prada",
+  "Saint Laurent",
+  "Stella McCartney",
+  "Valentino Garavani",
+  "Versace",
+  "Yves Saint Laurent",
+  "Zadig & Voltaire",
+];

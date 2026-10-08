@@ -13,6 +13,8 @@ import {
 import { Chip } from "@/components/ui/Chip";
 import { TogglePill } from "@/components/ui/TogglePill";
 import { FilterDrawer, type Filters } from "@/components/ui/FilterDrawer";
+import { BrandMenu } from "@/components/ui/BrandMenu";
+import { MARQUES_PHARES, suggestions } from "@/lib/brands";
 import { Avatar } from "@/components/chrome/Avatar";
 import { trendingTags } from "@/lib/mock";
 import { categories, conditions } from "@/lib/taxonomie";
@@ -36,6 +38,9 @@ const EMPTY_FILTERS: Filters = {
 
 type Dimension = "pieces" | "profils" | "contenu";
 
+/** Les vraies catégories, sans « Tout » qui n'en est pas une. */
+const CATS: string[] = categories.filter((c) => c !== "Tout");
+
 const DIMENSIONS: { key: Dimension; label: string }[] = [
   { key: "pieces", label: "Pièces" },
   { key: "profils", label: "Profils" },
@@ -45,7 +50,20 @@ const DIMENSIONS: { key: Dimension; label: string }[] = [
 function DecouvrirInner() {
   // ?q= lets the feed's quiet "pièces similaires" bridge land pre-filtered
   const params = useSearchParams();
-  const [cat, setCat] = useState<string>("Tout");
+  /* Catégories en choix multiples. « Tout » allume ou éteint toutes les
+     autres d'un coup ; aucune allumée revient à tout montrer. */
+  const [cats, setCats] = useState<string[]>(CATS);
+  const allCats = cats.length === CATS.length;
+  const catFilter = useMemo(
+    () => (allCats || cats.length === 0 ? null : new Set(cats)),
+    [allCats, cats],
+  );
+  const toggleCat = (c: string) =>
+    c === "Tout"
+      ? setCats(allCats ? [] : CATS)
+      : setCats((cur) =>
+          cur.includes(c) ? cur.filter((x) => x !== c) : [...cur, c],
+        );
   const [q, setQ] = useState(() => params.get("q") ?? "");
   const [tab, setTab] = useState<Dimension>("pieces");
   const [focused, setFocused] = useState(false);
@@ -70,12 +88,22 @@ function DecouvrirInner() {
       ),
     [serverProducts],
   );
+  // toute la base, cherchable dans le menu Marques
+  const brandPool = useMemo(() => suggestions(), []);
+  // le tiroir garde les marques en vente, plus celles choisies au menu
+  const drawerBrands = useMemo(
+    () =>
+      [...new Set([...brands, ...filters.brands])].sort((a, b) =>
+        a.localeCompare(b, "fr"),
+      ),
+    [brands, filters.brands],
+  );
 
   const items = useMemo(() => {
     const priceMax = filters.priceMax ? Number(filters.priceMax) : undefined;
     const priceMin = filters.priceMin ? Number(filters.priceMin) : undefined;
     const out = filterCatalog({
-      category: cat,
+      category: "Tout",
       query: q,
       sizes: filters.sizes,
       conds: filters.conds,
@@ -84,8 +112,12 @@ function DecouvrirInner() {
       sort: filters.sort,
     });
     // priceMin isn't a filterCatalog field — apply locally to keep SSOT intact.
-    return priceMin != null ? out.filter((it) => it.priceEUR >= priceMin) : out;
-  }, [cat, q, filters]);
+    return out.filter(
+      (it) =>
+        (priceMin == null || it.priceEUR >= priceMin) &&
+        (!catFilter || catFilter.has(it.category)),
+    );
+  }, [catFilter, q, filters]);
 
   // Annonces membres (backend) : mêmes filtres que le catalogue, disponibles
   // d'abord, injectées EN TÊTE de la grille Pièces.
@@ -95,7 +127,7 @@ function DecouvrirInner() {
     const qn = q.trim().toLowerCase();
     return sortMemberProducts(serverProducts)
       .filter((p) => {
-        if (cat !== "Tout" && p.category !== cat) return false;
+        if (catFilter && !catFilter.has(p.category)) return false;
         if (qn) {
           const hay = `${p.brand} ${p.name} ${p.category}`.toLowerCase();
           if (!hay.includes(qn)) return false;
@@ -111,7 +143,7 @@ function DecouvrirInner() {
         return true;
       })
       .map(toDisplayItem);
-  }, [serverProducts, cat, q, filters]);
+  }, [serverProducts, catFilter, q, filters]);
 
   const allItems = useMemo(
     () => [...memberItems, ...items],
@@ -149,7 +181,7 @@ function DecouvrirInner() {
     content: counts.contenu,
     invertedRange,
   });
-  const criteria = JSON.stringify([q.trim(), cat, filters]);
+  const criteria = JSON.stringify([q.trim(), cats, filters]);
   const announcedCriteria = useRef(criteria);
   useEffect(() => {
     if (announcedCriteria.current === criteria) return;
@@ -165,7 +197,7 @@ function DecouvrirInner() {
       <PageHeader
         eyebrow="Seconde main"
         title="Marché"
-        subtitle="Ce que les membres mettent en vente en ce moment."
+        subtitle="Les belles pièces ne restent jamais longtemps ici."
         right={
           <span className="hidden text-sm text-ash md:block">
             {allItems.length} pièces
@@ -309,11 +341,22 @@ function DecouvrirInner() {
           className="hscroll -mx-5 mt-4 flex gap-2 px-5 pb-1 md:mx-0 md:px-0"
         >
           {categories.map((c) => (
-            <Chip key={c} active={c === cat} onClick={() => setCat(c)}>
+            <Chip
+              key={c}
+              active={c === "Tout" ? allCats : cats.includes(c)}
+              onClick={() => toggleCat(c)}
+            >
               {c}
             </Chip>
           ))}
         </div>
+
+        <BrandMenu
+          featured={MARQUES_PHARES}
+          all={brandPool}
+          value={filters.brands}
+          onChange={(b) => setFilters((f) => ({ ...f, brands: b }))}
+        />
 
         {/* trending */}
         <div className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-1.5">
@@ -472,7 +515,7 @@ function DecouvrirInner() {
         onChange={setFilters}
         sizes={sizes}
         conditions={conditions}
-        brands={brands}
+        brands={drawerBrands}
         resultCount={allItems.length}
       />
     </PageShell>
