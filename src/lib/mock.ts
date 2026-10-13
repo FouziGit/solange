@@ -5,6 +5,7 @@
    ============================================================ */
 
 import { ANNONCES_DEMO } from "./annonces-demo";
+import { POSTS_DEMO } from "./posts-demo";
 
 /** Shared base for every sellable piece (feed product or catalog tile). */
 export type Item = {
@@ -106,7 +107,10 @@ const creators: Record<string, Creator> = {
   },
 };
 
-export const looks: Look[] = [];
+/* Vide en production (V1). Les publications de démonstration n'y entrent
+   que sur une construction locale avec NEXT_PUBLIC_DEMO_ANNONCES=1. */
+export const looks: Look[] =
+  process.env.NEXT_PUBLIC_DEMO_ANNONCES === "1" ? POSTS_DEMO : [];
 
 export const feedTabs = ["Pour vous", "Abonnements"] as const;
 

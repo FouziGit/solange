@@ -456,8 +456,9 @@ export function SolangeProvider({ children }: { children: ReactNode }) {
       refreshProducts,
       memberPosts,
       refreshPosts,
-      productsError,
-      postsError,
+      // démo locale : pas de serveur, donc pas de bandeau d'échec réseau
+      productsError: productsError && !DEMO_LOCALE,
+      postsError: postsError && !DEMO_LOCALE,
       circlesUnread,
       refreshCirclesUnread,
       isSold,
