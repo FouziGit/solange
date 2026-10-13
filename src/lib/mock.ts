@@ -4,6 +4,8 @@
    Every "look" is a video-style clip with shoppable products.
    ============================================================ */
 
+import { ANNONCES_DEMO } from "./annonces-demo";
+
 /** Shared base for every sellable piece (feed product or catalog tile). */
 export type Item = {
   id: string;
@@ -141,9 +143,19 @@ export type CatalogItem = Item & {
   sellerAvatar?: string | null;
   likes: number;
   span?: boolean; // tall tile in the masonry
+  /** Vraies photos de la pièce, la première en couverture. */
+  images?: string[];
+  description?: string;
+  color?: string;
+  material?: string;
+  /** « il y a 2 jours » — date de mise en ligne lisible. */
+  postedAgo?: string;
 };
 
-export const catalog: CatalogItem[] = [];
+/* Vide en production (V1). Les annonces de démonstration n'y entrent que
+   sur une construction locale avec NEXT_PUBLIC_DEMO_ANNONCES=1. */
+export const catalog: CatalogItem[] =
+  process.env.NEXT_PUBLIC_DEMO_ANNONCES === "1" ? ANNONCES_DEMO : [];
 
 export const conditions = [
   "Neuf avec étiquette",

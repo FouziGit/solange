@@ -99,7 +99,7 @@ export function ProductCard({
         {/* media (scales on hover) — quieter take on the KenBurns luxury still */}
         <LuxeMedia
           seed={item.seed}
-          image={item.image ?? imgItem(item.id)}
+          image={item.image ?? item.images?.[0] ?? imgItem(item.id)}
           brand={item.brand}
           alt=""
           eager={index < 2}

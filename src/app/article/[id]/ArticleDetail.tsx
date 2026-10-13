@@ -37,6 +37,9 @@ export function ArticleDetail({
 
   // deterministic thumbnail variants off the base seed
   const thumbs = [`${item.seed}-a`, `${item.seed}-b`];
+  // vraies photos de l'annonce : la vignette touchée passe en grand
+  const photos = item.images ?? [];
+  const [shown, setShown] = useState(0);
 
   return (
     <div>
@@ -53,26 +56,58 @@ export function ArticleDetail({
             <LuxeMedia
               seed={item.seed}
               brand={item.brand}
-              image={imgItem(item.id)}
+              image={photos[shown] ?? imgItem(item.id)}
               eager
               className="theme-dark"
             />
+            {photos.length > 1 && (
+              <span className="absolute bottom-3 right-3 rounded-full bg-ink/60 px-2.5 py-1 text-[11px] tabular-nums text-bone backdrop-blur">
+                {shown + 1} / {photos.length}
+              </span>
+            )}
           </div>
-          <div className="mt-3 grid grid-cols-2 gap-3">
-            {thumbs.map((t) => (
-              <div
-                key={t}
-                className="relative aspect-[4/3] overflow-hidden rounded-3xl ring-1 ring-bone/10"
-              >
-                <LuxeMedia
-                  seed={t}
-                  brand={item.brand}
-                  small
-                  className="theme-dark"
-                />
-              </div>
-            ))}
-          </div>
+          {photos.length > 1 ? (
+            <div className="mt-3 grid grid-cols-3 gap-2.5">
+              {photos.map((src, i) => (
+                <button
+                  key={src}
+                  type="button"
+                  onClick={() => setShown(i)}
+                  aria-label={`Photo ${i + 1} sur ${photos.length}`}
+                  aria-pressed={shown === i}
+                  data-cursor="link"
+                  className={`relative aspect-square overflow-hidden rounded-2xl ring-1 transition ${
+                    shown === i
+                      ? "ring-bone"
+                      : "opacity-60 ring-bone/10 hover:opacity-100"
+                  }`}
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element -- vignette locale */}
+                  <img
+                    src={src}
+                    alt=""
+                    className="absolute inset-0 size-full object-cover"
+                  />
+                </button>
+              ))}
+            </div>
+          ) : (
+            <div className="mt-3 grid grid-cols-2 gap-3">
+              {thumbs.map((t) => (
+                <div
+                  key={t}
+                  className="relative aspect-[4/3] overflow-hidden rounded-3xl ring-1 ring-bone/10"
+                >
+                  <LuxeMedia
+                    seed={t}
+                    brand={item.brand}
+                    small
+                    className="theme-dark"
+                  />
+                </div>
+              ))}
+            </div>
+          )}
         </motion.div>
 
         {/* RIGHT — details */}
@@ -137,6 +172,37 @@ export function ArticleDetail({
               {item.category}
             </span>
           </div>
+
+          {item.description && (
+            <div className="mt-7">
+              <p className="etiquette text-[11px] text-ash">Description</p>
+              <div className="mt-2.5 space-y-3 text-[14px] leading-relaxed text-bone/85">
+                {item.description.split("\n\n").map((para) => (
+                  <p key={para.slice(0, 24)}>{para}</p>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {(item.color || item.material) && (
+            <dl className="mt-6 divide-y divide-bone/10 border-y border-bone/10 text-[13px]">
+              {[
+                ["Marque", item.brand],
+                ["Taille", item.size],
+                ["État", item.condition],
+                ["Couleur", item.color],
+                ["Matière", item.material],
+                ["En ligne", item.postedAgo],
+              ]
+                .filter(([, v]) => v)
+                .map(([k, v]) => (
+                  <div key={k} className="flex justify-between gap-4 py-2.5">
+                    <dt className="text-ash">{k}</dt>
+                    <dd className="text-right text-bone">{v}</dd>
+                  </div>
+                ))}
+            </dl>
+          )}
 
           {/* seller row — handle réel cliquable → profil public ; le lien
               messages reste porté par « Contacter le vendeur » */}

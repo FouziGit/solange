@@ -15,6 +15,7 @@ import { useParams, useRouter } from "next/navigation";
 import { motion } from "motion/react";
 import { api, type PublicProfile } from "@/lib/api";
 import { catalog, looks, me } from "@/lib/mock";
+import { VENDEURS_DEMO } from "@/lib/annonces-demo";
 import { imgItem, imgLook } from "@/lib/img";
 import { EASE, compact, gradientFor } from "@/lib/utils";
 import { normalizeHandle, profileRedirect } from "@/lib/handle";
@@ -75,6 +76,14 @@ function demoCreator(handle: string) {
       followers: me.followers,
       verified: me.verified === true,
     };
+  const v = VENDEURS_DEMO.find((d) => d.handle === handle);
+  if (v && catalog.some((it) => it.seller === handle))
+    return {
+      name: v.name,
+      seed: v.seed,
+      followers: v.followers,
+      verified: v.verified,
+    };
   const c = looks.find((l) => l.creator.handle === handle)?.creator;
   return c
     ? {
@@ -99,7 +108,7 @@ function demoProfile(handle: string): Profile | null {
     followers: c.followers,
     products: catalog
       .filter((it) => it.seller === handle)
-      .map((it) => ({ ...it, image: imgItem(it.id) })),
+      .map((it) => ({ ...it, image: it.images?.[0] ?? imgItem(it.id) })),
     posts: looks
       .filter((l) => l.creator.handle === handle)
       .map((l) => ({
