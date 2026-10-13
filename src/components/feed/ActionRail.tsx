@@ -22,6 +22,7 @@ export function ActionRail({
   onSave,
   onComment,
   onShare,
+  shareLabel = "Partager",
   onShop,
   shopCount,
   creatorSeed,
@@ -37,6 +38,8 @@ export function ActionRail({
   onComment?: () => void;
   /** Partager n'apparaît que branché : un bouton inerte ne sert à personne. */
   onShare?: () => void;
+  /** « Copié » un instant quand le lien a été copié faute de feuille de partage. */
+  shareLabel?: string;
   /** Opens the Shop-the-look drawer. When set, a cart bubble tops the rail. */
   onShop?: () => void;
   shopCount?: number;
@@ -92,7 +95,7 @@ export function ActionRail({
       </RailAction>
 
       {onShare && (
-        <RailAction label="Partager" onClick={onShare}>
+        <RailAction label={shareLabel} onClick={onShare}>
           <Share className="size-[22px] text-bone" />
         </RailAction>
       )}

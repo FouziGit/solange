@@ -20,7 +20,8 @@ import { RailAction } from "./RailAction";
 import { ShopTheLook } from "./ShopTheLook";
 import { ReportSheet } from "../ui/ReportSheet";
 import { Avatar } from "../chrome/Avatar";
-import { Heart, Bookmark, Hanger, ChevronRight } from "../chrome/icons";
+import { Heart, Bookmark, Hanger, ChevronRight, Share } from "../chrome/icons";
+import { sharePost } from "@/lib/share";
 
 const group: Variants = {
   hide: {},
@@ -121,6 +122,20 @@ export function MemberPostCard({
   // lignes, le toggle n'apparaît que si le texte déborde réellement.
   const [captionExpanded, setCaptionExpanded] = useState(false);
   const [captionOverflows, setCaptionOverflows] = useState(false);
+  // les marques citées ne se montrent qu'une fois la légende dépliée
+  const hasMore = captionOverflows || post.brandTags.length > 0;
+  const [shareLabel, setShareLabel] = useState("Partager");
+  const share = async () => {
+    const r = await sharePost({
+      title: `@${post.authorHandle} sur SOLANGE`,
+      text: (post.caption ?? "").slice(0, 120),
+      path: `/membre/${encodeURIComponent(post.authorHandle)}`,
+    });
+    if (r === "copied") {
+      setShareLabel("Copié");
+      setTimeout(() => setShareLabel("Partager"), 1800);
+    }
+  };
   const captionRef = useRef<HTMLParagraphElement>(null);
 
   useEffect(() => {
@@ -235,7 +250,7 @@ export function MemberPostCard({
                 ease: [0.16, 1, 0.3, 1],
                 delay: active ? 0.18 : 0,
               }}
-              style={{ bottom: "calc(var(--tabbar-clearance) + 4.5rem)" }}
+              style={{ bottom: "calc(var(--tabbar-clearance) + 0.75rem)" }}
               className="absolute right-[max(0.75rem,env(safe-area-inset-right))] z-20 md:!bottom-40 md:right-3"
             >
               {/* écran court : rail resserré, il ne sort plus de la carte */}
@@ -263,6 +278,10 @@ export function MemberPostCard({
                   >
                     <Heart filled={liked} className="size-6 text-bone" />
                   </motion.span>
+                </RailAction>
+
+                <RailAction label={shareLabel} onClick={() => void share()}>
+                  <Share className="size-[22px] text-bone" />
                 </RailAction>
 
                 {/* libellé fixe, état par aria-pressed et le signet plein */}
@@ -296,9 +315,9 @@ export function MemberPostCard({
               initial="hide"
               animate={active ? "show" : "hide"}
               style={{
-                paddingBottom: "calc(var(--tabbar-clearance) + 1rem)",
+                paddingBottom: "calc(var(--tabbar-clearance) + 0.5rem)",
               }}
-              className="absolute inset-x-0 bottom-0 z-20 space-y-3 p-4 pl-[max(1rem,env(safe-area-inset-left))] pr-[calc(5rem+env(safe-area-inset-right))] md:!pb-9 md:pl-4 md:pr-20"
+              className="absolute inset-x-0 bottom-0 z-20 space-y-1 p-4 pl-[max(1rem,env(safe-area-inset-left))] pr-[calc(5rem+env(safe-area-inset-right))] md:!pb-9 md:pl-4 md:pr-20"
             >
               {/* auteur — rangée compacte en bas (mobile), profil cliquable ;
                   un compte supprimé n'a plus de profil vers lequel mener */}
@@ -329,17 +348,17 @@ export function MemberPostCard({
                   <p
                     ref={captionRef}
                     className={`text-[13.5px] leading-relaxed text-bone/95 ${
-                      captionExpanded ? "" : "line-clamp-2"
+                      captionExpanded ? "" : "line-clamp-1"
                     }`}
                   >
                     {post.caption}
                   </p>
-                  {captionOverflows && (
+                  {hasMore && (
                     <button
                       type="button"
                       onClick={() => setCaptionExpanded((v) => !v)}
                       aria-expanded={captionExpanded}
-                      className="mt-0.5 inline-flex min-h-9 items-center text-[12px] font-medium tracking-wide text-ash transition-colors hover:text-bone"
+                      className="inline-flex min-h-8 items-center text-[12px] font-medium tracking-wide text-ash transition-colors hover:text-bone"
                     >
                       {captionExpanded ? "afficher moins" : "afficher plus"}
                     </button>
@@ -362,21 +381,22 @@ export function MemberPostCard({
                 </motion.div>
               ) : null}
 
-              {post.brandTags.length > 0 && (
-                <motion.div
-                  variants={item}
-                  className="flex flex-wrap gap-x-1.5 gap-y-1"
-                >
-                  {post.brandTags.map((b) => (
-                    <span
-                      key={b}
-                      className="border border-bone/20 px-2.5 py-1 text-[11px] font-medium text-bone/75"
-                    >
-                      #{b}
-                    </span>
-                  ))}
-                </motion.div>
-              )}
+              {post.brandTags.length > 0 &&
+                (captionExpanded || !post.caption) && (
+                  <motion.div
+                    variants={item}
+                    className="flex flex-wrap gap-x-1.5 gap-y-1"
+                  >
+                    {post.brandTags.map((b) => (
+                      <span
+                        key={b}
+                        className="border border-bone/20 px-2.5 py-1 text-[11px] font-medium text-bone/75"
+                      >
+                        #{b}
+                      </span>
+                    ))}
+                  </motion.div>
+                )}
             </motion.div>
 
             {/* toast éphémère (confirmation signalement) */}

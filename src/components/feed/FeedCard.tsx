@@ -22,6 +22,7 @@ import {
 import { Avatar } from "../chrome/Avatar";
 import { TogglePill } from "../ui/TogglePill";
 import { ActionRail } from "./ActionRail";
+import { sharePost } from "@/lib/share";
 import { CommentSheet } from "./CommentSheet";
 import { ShopTheLook } from "./ShopTheLook";
 import { Heart, Play } from "../chrome/icons";
@@ -75,11 +76,6 @@ export function FeedCard({
     isPost && look.linkedProductIds?.length
       ? imgItem(look.linkedProductIds[0])
       : undefined;
-  // Discreet content→marketplace bridge: the feed carries no prices or
-  // transactions — just one quiet link towards similar pieces for sale.
-  const bridgeBrand =
-    look.products[0]?.brand ?? look.brandTags?.[0] ?? undefined;
-
   const headingId = useId();
   const [commentsOpen, setCommentsOpen] = useState(false);
   const [bursts, setBursts] = useState<Burst[]>([]);
@@ -133,6 +129,20 @@ export function FeedCard({
   // shows when the text actually overflows (measured in the clamped state).
   const [captionExpanded, setCaptionExpanded] = useState(false);
   const [captionOverflows, setCaptionOverflows] = useState(false);
+  // les hashtags ne se montrent qu'une fois la légende dépliée
+  const hasMore = captionOverflows || look.tags.length > 0;
+  const [shareLabel, setShareLabel] = useState("Partager");
+  const share = async () => {
+    const r = await sharePost({
+      title: `@${look.creator.handle} sur SOLANGE`,
+      text: look.caption.slice(0, 120),
+      path: `/membre/${look.creator.handle}`,
+    });
+    if (r === "copied") {
+      setShareLabel("Copié");
+      setTimeout(() => setShareLabel("Partager"), 1800);
+    }
+  };
   const captionRef = useRef<HTMLParagraphElement>(null);
 
   const clickTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -318,10 +328,9 @@ export function FeedCard({
                 ease: [0.16, 1, 0.3, 1],
                 delay: active ? 0.18 : 0,
               }}
-              style={{ bottom: "calc(var(--tabbar-clearance) + 4.5rem)" }}
+              style={{ bottom: "calc(var(--tabbar-clearance) + 0.75rem)" }}
               className="absolute right-[max(0.75rem,env(safe-area-inset-right))] z-20 md:!bottom-40 md:right-3"
             >
-              {/* pas de Partager : un look n'a pas encore d'adresse à lui */}
               <ActionRail
                 liked={liked}
                 saved={saved}
@@ -330,6 +339,8 @@ export function FeedCard({
                 onLike={() => toggleLike(look.id)}
                 onSave={() => toggleSave(look.id)}
                 onComment={() => setCommentsOpen(true)}
+                onShare={() => void share()}
+                shareLabel={shareLabel}
                 onShop={hasShop ? () => openShop(null) : undefined}
                 shopCount={look.products.length}
                 active={active}
@@ -343,9 +354,9 @@ export function FeedCard({
               initial="hide"
               animate={active ? "show" : "hide"}
               style={{
-                paddingBottom: "calc(var(--tabbar-clearance) + 1rem)",
+                paddingBottom: "calc(var(--tabbar-clearance) + 0.5rem)",
               }}
-              className="absolute inset-x-0 bottom-0 z-20 space-y-3 p-4 pl-[max(1rem,env(safe-area-inset-left))] pr-[calc(5rem+env(safe-area-inset-right))] md:!pb-9 md:pl-4 md:pr-20"
+              className="absolute inset-x-0 bottom-0 z-20 space-y-1 p-4 pl-[max(1rem,env(safe-area-inset-left))] pr-[calc(5rem+env(safe-area-inset-right))] md:!pb-9 md:pl-4 md:pr-20"
             >
               {/* Créateur — rangée compacte au-dessus de la légende, sur
                   TOUTES les tailles. Rien ne flotte plus en haut : le média
@@ -381,74 +392,29 @@ export function FeedCard({
                 <p
                   ref={captionRef}
                   className={`text-[13.5px] leading-relaxed text-bone/95 ${
-                    captionExpanded ? "" : "line-clamp-2"
+                    captionExpanded ? "" : "line-clamp-1"
                   }`}
                 >
                   {look.caption}
                 </p>
-                {captionOverflows && (
+                {captionExpanded && look.tags.length > 0 && (
+                  <p className="mt-1.5 flex flex-wrap gap-x-2 gap-y-0.5 text-[12.5px] font-medium text-bone/70">
+                    {look.tags.map((t) => (
+                      <span key={t}>{t}</span>
+                    ))}
+                  </p>
+                )}
+                {hasMore && (
                   <button
                     type="button"
                     onClick={() => setCaptionExpanded((v) => !v)}
                     aria-expanded={captionExpanded}
-                    className="mt-0.5 inline-flex min-h-9 items-center text-[12px] font-medium tracking-wide text-ash transition-colors hover:text-bone"
+                    className="inline-flex min-h-8 items-center text-[12px] font-medium tracking-wide text-ash transition-colors hover:text-bone"
                   >
                     {captionExpanded ? "afficher moins" : "afficher plus"}
                   </button>
                 )}
               </motion.div>
-
-              {/* brands discussed in the post — sharp outline chips */}
-              {isPost && look.brandTags?.length ? (
-                <motion.div
-                  variants={item}
-                  className="flex flex-wrap gap-x-1.5 gap-y-1"
-                >
-                  {look.brandTags.map((b) => (
-                    <span
-                      key={b}
-                      className="border border-bone/20 px-2.5 py-1 text-[11px] font-medium text-bone/75"
-                    >
-                      #{b}
-                    </span>
-                  ))}
-                </motion.div>
-              ) : null}
-
-              <motion.div
-                variants={item}
-                className="flex flex-wrap items-center gap-x-2 gap-y-1"
-              >
-                <span className="etiquette border border-bone/25 px-2 py-1 text-[11px] leading-none text-bone/80">
-                  N°{String(index + 1).padStart(2, "0")}
-                </span>
-                {look.tags.map((t) => (
-                  <span key={t} className="text-[12px] font-medium text-ash">
-                    {t}
-                  </span>
-                ))}
-              </motion.div>
-
-              {/* Shoppable posts open the Shop-the-look drawer from the round
-                  cart bubble in the action rail (freeing space here). Only
-                  content-only posts keep a quiet marketplace text link. */}
-              {!hasShop && bridgeBrand ? (
-                <motion.div variants={item}>
-                  <Link
-                    href={`/decouvrir?q=${encodeURIComponent(bridgeBrand)}`}
-                    data-cursor="link"
-                    className="group inline-flex min-h-11 items-center gap-1.5 text-[12.5px] tracking-wide text-ash transition-colors hover:text-bone"
-                  >
-                    Voir des pièces similaires en vente
-                    <span
-                      aria-hidden="true"
-                      className="transition-transform duration-300 group-hover:translate-x-1"
-                    >
-                      →
-                    </span>
-                  </Link>
-                </motion.div>
-              ) : null}
             </motion.div>
 
             {/* Shop-the-look drawer — mounted at the card root so it fills the
