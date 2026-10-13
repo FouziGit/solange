@@ -4,7 +4,7 @@ import { useId, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { Sheet } from "./Sheet";
 import { Button } from "./Button";
-import { Check, Search } from "@/components/chrome/icons";
+import { Check, Search, X } from "@/components/chrome/icons";
 import { cn } from "@/lib/utils";
 import type { SortKey } from "@/lib/data";
 
@@ -136,7 +136,9 @@ export function FilterDrawer({
       desktopSide
       maxHeight="90%"
     >
-      <div className="flex-1 overflow-y-auto overscroll-contain px-5 pb-4">
+      {/* min-h-0 : sans lui, la zone ne rétrécit pas sous son contenu et
+          ne défile jamais — la liste des marques sortait de l'écran */}
+      <div className="min-h-0 flex-1 touch-pan-y overflow-y-auto overscroll-contain px-5 pb-4">
         <Row
           label="Trier par"
           summary={SORTS.find((s) => s.key === value.sort)?.label ?? ""}
@@ -188,15 +190,37 @@ export function FilterDrawer({
           active={value.brands.length > 0}
           {...sec("marques")}
         >
-          <div className="flex items-center gap-3 border border-bone/15 px-3.5 py-2.5 focus-within:border-bone/40">
-            <Search className="size-4 shrink-0 text-ash" />
-            <input
-              value={brandQ}
-              onChange={(e) => setBrandQ(e.target.value)}
-              placeholder="Chercher une maison…"
-              aria-label="Chercher une marque"
-              className="w-full bg-transparent text-base text-bone outline-none placeholder:text-ash md:text-sm"
-            />
+          {/* collée en haut pendant qu'on parcourt la liste */}
+          <div className="sticky top-0 z-10 -mx-5 bg-coal px-5 pb-2 pt-1">
+            <div className="flex items-center gap-3 border border-bone/25 bg-ink/40 px-3.5 focus-within:border-bone/60">
+              <Search className="size-4 shrink-0 text-ash" />
+              <input
+                type="search"
+                enterKeyHint="search"
+                value={brandQ}
+                onChange={(e) => setBrandQ(e.target.value)}
+                placeholder="Rechercher une marque…"
+                aria-label="Rechercher une marque"
+                className="min-h-11 w-full bg-transparent text-base text-bone outline-none placeholder:text-ash md:text-sm [&::-webkit-search-cancel-button]:hidden"
+              />
+              {brandQ && (
+                <button
+                  type="button"
+                  onClick={() => setBrandQ("")}
+                  aria-label="Effacer la recherche"
+                  className="-mr-2 grid size-11 shrink-0 place-items-center text-ash hover:text-bone"
+                >
+                  <X className="size-4" />
+                </button>
+              )}
+            </div>
+            <p className="mt-1.5 text-[11px] text-ash">
+              {brandQ.trim()
+                ? `${brandList.length} résultat${brandList.length > 1 ? "s" : ""} dans toute la base`
+                : `${featuredBrands.length} maisons phares · tape pour chercher parmi ${allBrands.length}`}
+              {value.brands.length > 0 &&
+                ` · ${value.brands.length} sélectionnée${value.brands.length > 1 ? "s" : ""}`}
+            </p>
           </div>
           <ul
             aria-label="Marques"
@@ -347,6 +371,9 @@ function Row({
   children: React.ReactNode;
 }) {
   const id = useId();
+  // overflow-hidden le temps du dépliage seulement : ouvert, il casserait
+  // la recherche collante des marques
+  const [settled, setSettled] = useState(false);
   return (
     <section className="border-b border-bone/10">
       <button
@@ -396,7 +423,9 @@ function Row({
             animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
             transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
-            className="overflow-hidden"
+            onAnimationStart={() => setSettled(false)}
+            onAnimationComplete={() => setSettled(open)}
+            className={settled && open ? "overflow-visible" : "overflow-hidden"}
           >
             <div className="pb-5">{children}</div>
           </motion.div>

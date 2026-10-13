@@ -148,10 +148,14 @@ export function Sheet({
             animate={{ y: 0 }}
             exit={{ y: "100%" }}
             transition={{ type: "spring", stiffness: 360, damping: 36 }}
-            style={{ maxHeight: desktopSide ? undefined : maxHeight }}
+            /* Plafond TOUJOURS posé sur mobile. Le variant desktopSide le
+               retirait aussi sur téléphone : la feuille Filtres dépassait
+               alors l'écran par le haut et ne défilait plus. Le panneau
+               droit desktop l'annule seul (md:max-h-none). */
+            style={{ "--sheet-max": maxHeight } as React.CSSProperties}
             className={`${pos} inset-x-0 bottom-0 ${zPanel} ${
               open ? "" : "pointer-events-none"
-            } flex flex-col overflow-hidden overscroll-contain rounded-t-stage border-t border-bone/15 bg-coal/95 outline-none backdrop-blur-2xl ${
+            } flex max-h-[var(--sheet-max)] flex-col overflow-hidden overscroll-contain rounded-t-stage border-t border-bone/15 bg-coal/95 outline-none backdrop-blur-2xl ${
               desktopSide
                 ? "md:inset-y-0 md:left-auto md:right-0 md:max-h-none md:w-[400px] md:rounded-none md:rounded-l-stage md:border-l md:border-t-0"
                 : ""
