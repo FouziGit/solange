@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { api } from "@/lib/api";
+import { catalogItem } from "@/lib/mock";
 import { toDisplayItem, type DisplayItem } from "@/components/ui/ProductCard";
 import { PageShell } from "@/components/ui/PageShell";
 import { Skeleton } from "@/components/ui/Skeleton";
@@ -19,6 +20,14 @@ export function MemberCheckout({ id }: { id: string }) {
 
   useEffect(() => {
     let vivant = true;
+    // pièce de démonstration (local) : connue sans serveur
+    const demo = catalogItem(id);
+    if (demo) {
+      queueMicrotask(() => vivant && setEtat({ kind: "pret", item: demo }));
+      return () => {
+        vivant = false;
+      };
+    }
     void api.product(id).then((r) => {
       if (!vivant) return;
       if (r.ok) setEtat({ kind: "pret", item: toDisplayItem(r.data.product) });

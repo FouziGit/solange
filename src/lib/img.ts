@@ -1,6 +1,12 @@
+import { ANNONCES_DEMO } from "./annonces-demo";
+
 /** Local image paths (downloaded into /public/img, B&W-treated at render). */
 export const imgLook = (id: string) => `/img/looks/${id}.jpg`;
-export const imgItem = (id: string) => `/img/catalog/${id}.jpg`;
+/** Couverture d'une pièce : la vraie photo d'une annonce de démonstration
+    si elle en a une, sinon l'image du catalogue. */
+export const imgItem = (id: string) =>
+  ANNONCES_DEMO.find((a) => a.id === id)?.images?.[0] ??
+  `/img/catalog/${id}.jpg`;
 export const imgPerson = (seed: string) => `/img/people/${seed}.jpg`;
 
 /** Les seules graines qui ont un portrait dans /public/img/people. Hors

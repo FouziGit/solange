@@ -357,8 +357,9 @@ export function CheckoutView({
           </p>
           {!serverOrder && (
             <p className="mt-1.5 text-center text-[11.5px] text-ash">
-              Démo locale (non sauvegardée) — cette commande disparaîtra au
-              rechargement.
+              {process.env.NEXT_PUBLIC_DEMO_ANNONCES === "1"
+                ? "Démo locale — la commande est gardée sur cet appareil, dans ton profil."
+                : "Démo locale (non sauvegardée) — cette commande disparaîtra au rechargement."}
             </p>
           )}
 

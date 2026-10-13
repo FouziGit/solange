@@ -96,6 +96,12 @@ type Store = {
 
 const StoreContext = createContext<Store | null>(null);
 
+/* Démo LOCALE (NEXT_PUBLIC_DEMO_ANNONCES=1, jamais en production) : les
+   commandes d'invité sont gardées sur l'appareil, et la pièce achetée
+   passe « vendue », pour un parcours d'achat complet sans serveur. */
+const DEMO_LOCALE = process.env.NEXT_PUBLIC_DEMO_ANNONCES === "1";
+const DEMO_ORDERS_KEY = "solange:demo-orders";
+
 /** Immutably toggle membership of `key` in a Set, returning a new Set. */
 function toggle<T>(set: Set<T>, key: T): Set<T> {
   const next = new Set(set);
@@ -264,9 +270,40 @@ export function SolangeProvider({ children }: { children: ReactNode }) {
   }, [refreshSession, refreshProducts, refreshPosts, refreshCirclesUnread]);
 
   const addOrder = useCallback(
-    (order: Order) => setOrders((cur) => [order, ...cur]),
+    (order: Order) =>
+      setOrders((cur) => {
+        const next = [order, ...cur];
+        if (DEMO_LOCALE && !order.status)
+          try {
+            localStorage.setItem(
+              DEMO_ORDERS_KEY,
+              JSON.stringify(next.filter((o) => !o.status)),
+            );
+          } catch {
+            /* stockage indisponible : la commande vit le temps de la page */
+          }
+        return next;
+      }),
     [],
   );
+
+  useEffect(() => {
+    if (!DEMO_LOCALE) return;
+    queueMicrotask(() => {
+      try {
+        const saved = JSON.parse(
+          localStorage.getItem(DEMO_ORDERS_KEY) ?? "[]",
+        ) as Order[];
+        if (saved.length)
+          setOrders((cur) => [
+            ...saved.filter((s) => !cur.some((c) => c.id === s.id)),
+            ...cur,
+          ]);
+      } catch {
+        /* rien à reprendre */
+      }
+    });
+  }, []);
 
   /* Numéro du dernier toggle envoyé, par pièce : seul le plus récent peut
      annuler l'affichage s'il échoue. */
@@ -391,8 +428,9 @@ export function SolangeProvider({ children }: { children: ReactNode }) {
   const isSold = useCallback(
     (id: string) =>
       soldSeeds.includes(id) ||
-      serverProducts.some((p) => p.id === id && p.status === "sold"),
-    [soldSeeds, serverProducts],
+      serverProducts.some((p) => p.id === id && p.status === "sold") ||
+      (DEMO_LOCALE && orders.some((o) => !o.status && o.item.id === id)),
+    [soldSeeds, serverProducts, orders],
   );
 
   const value = useMemo<Store>(

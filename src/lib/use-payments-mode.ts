@@ -78,7 +78,17 @@ export function createPaymentsModeStore(fetcher: Fetcher) {
   };
 }
 
-const store = createPaymentsModeStore(() => api.paymentsConfig());
+/* Démo LOCALE (NEXT_PUBLIC_DEMO_ANNONCES=1, jamais posé en production) :
+   sans serveur, la question reste sans réponse. On répond « simulé » pour
+   que le parcours d'achat aille jusqu'au bout, sans aucun débit. */
+const DEMO_LOCALE = process.env.NEXT_PUBLIC_DEMO_ANNONCES === "1";
+
+const store = createPaymentsModeStore(async () => {
+  const r = await api.paymentsConfig().catch(() => ({ ok: false }) as const);
+  return !r.ok && DEMO_LOCALE
+    ? { ok: true, data: { live: false, test: false } }
+    : r;
+});
 
 /** Mode de paiement, lu une fois pour toute la page. */
 export function usePaymentsMode(): PaymentsMode {
