@@ -14,9 +14,19 @@ import {
 
 export const dynamic = "force-dynamic";
 
-/** Ne renvoie que vers une page du site, jamais vers un autre domaine. */
+/** Ne renvoie que vers une page du site, jamais vers un autre domaine.
+    L'adresse est résolue comme le fait un navigateur : « /\site » et
+    « /<tab>/site » y deviennent « //site », donc un autre domaine. */
 function safeNext(raw: string | null): string {
-  return raw && raw.startsWith("/") && !raw.startsWith("//") ? raw : "/";
+  if (!raw || !raw.startsWith("/")) return "/";
+  const ICI = "https://solange.invalid";
+  try {
+    const u = new URL(raw, ICI);
+    return u.origin === ICI ? u.pathname + u.search : "/";
+  } catch (e) {
+    if (e instanceof TypeError) return "/";
+    throw e;
+  }
 }
 
 const esc = (s: string) =>
@@ -88,7 +98,7 @@ function html(body: string, status = 200) {
 
 export async function GET(request: NextRequest) {
   const next = safeNext(request.nextUrl.searchParams.get("suite"));
-  if (!accessCode()) return relativeRedirect(next);
+  if (!accessCode()) return relativeRedirect("/");
   return html(page(next, false));
 }
 
@@ -96,7 +106,7 @@ export async function POST(request: NextRequest) {
   const code = accessCode();
   const form = await request.formData();
   const next = safeNext(String(form.get("suite") ?? "/"));
-  if (!code) return relativeRedirect(next, 303);
+  if (!code) return relativeRedirect("/", 303);
 
   if (!sameCode(String(form.get("code") ?? ""), code))
     return html(page(next, true), 401);
