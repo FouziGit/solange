@@ -4,15 +4,17 @@ import { Button } from "@/components/ui/Button";
 import { useEffect, useId, useRef, useState } from "react";
 import Link from "next/link";
 import { AnimatePresence, motion } from "motion/react";
-import type { CatalogItem } from "@/lib/mock";
 import { useStore } from "@/lib/store";
 import { api, type ApiOrder } from "@/lib/api";
 import { usePaymentsMode, retryPaymentsMode } from "@/lib/use-payments-mode";
 import { PageShell } from "@/components/ui/PageShell";
+import { Etiquette } from "@/components/ui/Etiquette";
+import { Photo } from "@/components/ui/Photo";
+import type { DisplayItem } from "@/components/ui/ProductCard";
 import { Stamp } from "@/components/ui/Stamp";
 import { FieldLabel } from "@/components/ui/FieldLabel";
 import { imgItem } from "@/lib/img";
-import { euro, gradientFor } from "@/lib/utils";
+import { cn, euro, gradientFor } from "@/lib/utils";
 import { montants } from "@/lib/payments";
 import { toCents, toEur } from "@/lib/fees";
 import {
@@ -25,7 +27,6 @@ import {
   weightLabel,
   relayAddressLine,
   relayLabelFor,
-  type PackageSizeId,
   type ShipMethodId,
   type RelayChoice,
 } from "@/lib/shipping";
@@ -77,7 +78,7 @@ export function CheckoutView({
 }: {
   /** packageSize : taille du colis figée par le vendeur au dépôt ; absente
       (annonce antérieure) → « Moyen », comme côté serveur. */
-  item: CatalogItem & { packageSize?: PackageSizeId };
+  item: DisplayItem;
 }) {
   const { addOrder, user, authReady, refreshProducts, refreshSession, isSold } =
     useStore();
@@ -198,6 +199,8 @@ export function CheckoutView({
   const portPerime = error !== null && /prix du port/.test(error);
 
   const alreadySold = isSold(item.id);
+  // une pièce de membre n'a pas de fiche : le retour mène au Marché
+  const retour = item.member ? "/decouvrir" : `/article/${item.id}`;
 
   /* Commande enregistrée : le bouton Payer, qui avait le focus, disparaît.
      Le titre le reprend, pour que VoiceOver lise la confirmation au lieu
@@ -363,32 +366,11 @@ export function CheckoutView({
             </p>
           )}
 
-          <div className="glass mt-7 flex items-center gap-3 rounded-2xl p-3">
-            <span
-              className="grid size-16 shrink-0 place-items-center overflow-hidden rounded-xl ring-1 ring-bone/10"
-              style={{ background: gradientFor(item.id) }}
-            >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={imgItem(item.id)}
-                alt={item.name}
-                className="size-full object-cover"
-              />
-            </span>
-            <div className="min-w-0 flex-1">
-              <p className="text-[12px] text-ash">{item.brand}</p>
-              <p className="font-display truncate text-[15px] font-semibold tracking-tight text-bone">
-                {item.name}
-              </p>
-              <p className="mt-0.5 text-[11px] text-ash">
-                Taille {item.size} · {item.condition}
-              </p>
-            </div>
-          </div>
+          <PieceRecap item={item} priceEUR={paidPrice} className="mt-7" />
 
           {/* montants (serveur si connecté, locaux en démo invité) */}
           <dl className="mt-4 space-y-2 rounded-2xl border border-bone/10 p-4 text-[13px]">
-            <Row label="Article">{euro(paidPrice)}</Row>
+            <Row label="Pièce">{euro(paidPrice)}</Row>
             <Row label="Protection acheteur">{euro(paidProtection)}</Row>
             <Row label={`Livraison · ${methodLabel}`}>{euro(paidShipping)}</Row>
             {relayLabel && (
@@ -427,7 +409,7 @@ export function CheckoutView({
               href="/"
               className="glass rounded-full py-3.5 text-center text-sm font-semibold text-bone transition-colors hover:bg-bone/10"
             >
-              Retour au feed
+              Retour aux looks
             </Link>
           </div>
         </div>
@@ -440,10 +422,10 @@ export function CheckoutView({
     return (
       <PageShell>
         <Link
-          href={`/article/${item.id}`}
+          href={retour}
           data-cursor="link"
           aria-label="Retour"
-          className="glass mb-5 inline-grid size-11 place-items-center rounded-full text-bone transition-transform active:scale-90"
+          className="glass mb-5 inline-grid size-11 place-items-center rounded-none text-bone transition-transform active:scale-90"
         >
           <ArrowLeft className="size-5" />
         </Link>
@@ -457,42 +439,20 @@ export function CheckoutView({
             disponible à l&apos;achat.
           </p>
 
-          <div className="glass mt-6 flex items-center gap-3 rounded-2xl p-3 opacity-70">
-            <span
-              className="grid size-20 shrink-0 place-items-center overflow-hidden rounded-xl ring-1 ring-bone/10"
-              style={{ background: gradientFor(item.id) }}
-            >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={imgItem(item.id)}
-                alt={item.name}
-                className="size-full object-cover"
-              />
-            </span>
-            <div className="min-w-0 flex-1">
-              <p className="text-[12px] text-ash">{item.brand}</p>
-              <p className="font-display truncate text-[16px] font-semibold tracking-tight text-bone">
-                {item.name}
-              </p>
-              <p className="mt-0.5 text-[11px] text-ash">
-                Taille {item.size} · {euro(price)}
-              </p>
-            </div>
-            <span className="shrink-0 rounded-full border border-bone/20 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wider text-ash">
-              Vendue
-            </span>
-          </div>
+          <PieceRecap item={item} className="mt-6" />
 
           <div className="mt-7 flex flex-col gap-3">
             <Button href="/" size="lg">
-              Retour au feed
+              Retour aux looks
             </Button>
-            <Link
-              href={`/article/${item.id}`}
-              className="glass rounded-full py-3.5 text-center text-sm font-semibold text-bone transition-colors hover:bg-bone/10"
-            >
-              Revoir la pièce
-            </Link>
+            {!item.member && (
+              <Link
+                href={retour}
+                className="glass rounded-full py-3.5 text-center text-sm font-semibold text-bone transition-colors hover:bg-bone/10"
+              >
+                Revoir la pièce
+              </Link>
+            )}
           </div>
         </div>
       </PageShell>
@@ -503,10 +463,10 @@ export function CheckoutView({
   return (
     <PageShell>
       <Link
-        href={`/article/${item.id}`}
+        href={retour}
         data-cursor="link"
         aria-label="Retour"
-        className="glass mb-5 inline-grid size-11 place-items-center rounded-full text-bone transition-transform active:scale-90"
+        className="glass mb-5 inline-grid size-11 place-items-center rounded-none text-bone transition-transform active:scale-90"
       >
         <ArrowLeft className="size-5" />
       </Link>
@@ -542,32 +502,7 @@ export function CheckoutView({
       <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_minmax(0,380px)]">
         {/* ---- order summary + livraison (avant le paiement) ---- */}
         <section className="order-1 min-w-0 lg:order-1">
-          <div className="glass flex items-center gap-3 rounded-2xl p-3">
-            <span
-              className="grid size-20 shrink-0 place-items-center overflow-hidden rounded-xl ring-1 ring-bone/10"
-              style={{ background: gradientFor(item.id) }}
-            >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={imgItem(item.id)}
-                alt={item.name}
-                className="size-full object-cover"
-              />
-            </span>
-            <div className="min-w-0 flex-1">
-              <p className="text-[12px] text-ash">{item.brand}</p>
-              <p className="font-display truncate text-[16px] font-semibold tracking-tight text-bone">
-                {item.name}
-              </p>
-              <p className="mt-0.5 text-[11px] text-ash">
-                Taille {item.size} · {item.condition}
-              </p>
-              <p className="mt-1 flex items-center gap-1 text-[11px] text-ash">
-                Vendu par <span className="text-bone">@{item.seller}</span>
-                <Verified className="size-3 text-bone" />
-              </p>
-            </div>
-          </div>
+          <PieceRecap item={item} priceEUR={price} />
 
           {/* ---- livraison : choix du transporteur ---- */}
           <div className="mt-4 rounded-2xl border border-bone/10 p-4">
@@ -721,7 +656,7 @@ export function CheckoutView({
 
           {/* breakdown */}
           <dl className="mt-4 space-y-2 rounded-2xl border border-bone/10 p-4 text-[13px]">
-            <Row label="Article">{euro(price)}</Row>
+            <Row label="Pièce">{euro(price)}</Row>
             <Row label="Protection acheteur">{euro(protection)}</Row>
             <Row label={`Livraison · ${methodLabel}`}>{euro(shipping)}</Row>
             <div className="flex items-center justify-between border-t border-bone/10 pt-1">
@@ -964,9 +899,7 @@ export function CheckoutView({
                     className="flex items-center gap-2"
                   >
                     <span className="size-4 animate-spin rounded-full border-2 border-ink/30 border-t-ink" />
-                    {paiementReel
-                      ? "Ouverture du paiement…"
-                      : "Enregistrement…"}
+                    {paiementReel ? "Ouverture du paiement…" : "Paiement…"}
                   </motion.span>
                 ) : (
                   <motion.span
@@ -1049,6 +982,57 @@ export function CheckoutView({
         onSelect={(point) => setRelayPick({ method, point })}
       />
     </PageShell>
+  );
+}
+
+/** La pièce qu'on paie : photo, marque, nom, état, vendeur·se, puis son
+    étiquette. Sans `priceEUR` elle est vendue : aucun prix, et la photo seule
+    passe à 40 % (jamais le texte ni l'étiquette). */
+function PieceRecap({
+  item,
+  priceEUR,
+  className,
+}: {
+  item: DisplayItem;
+  priceEUR?: number;
+  className?: string;
+}) {
+  const vendue = priceEUR === undefined;
+  return (
+    <div className={className}>
+      <div className="flex items-center gap-3">
+        <span
+          className={cn(
+            "relative size-20 shrink-0 overflow-hidden",
+            vendue && "opacity-40",
+          )}
+          style={{ background: gradientFor(item.id) }}
+        >
+          {/* décorative : le nom est écrit juste à côté */}
+          <Photo src={item.image ?? imgItem(item.id)} />
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="text-[12px] text-ash">{item.brand}</p>
+          <p className="font-display truncate text-[15px] font-semibold tracking-tight text-bone">
+            {item.name}
+          </p>
+          <p className="mt-0.5 text-[11px] text-ash">{item.condition}</p>
+          <p className="mt-1 flex items-center gap-1 text-[11px] text-ash">
+            Vendue par <span className="text-bone">@{item.seller}</span>
+            <Verified className="size-3 text-bone" />
+          </p>
+        </div>
+      </div>
+      {vendue ? (
+        <Etiquette variant="vendue" item={item} className="mt-3" />
+      ) : (
+        <Etiquette
+          variant="carte"
+          item={{ size: item.size, priceEUR }}
+          className="mt-3"
+        />
+      )}
+    </div>
   );
 }
 

@@ -6,7 +6,7 @@ import { describe, expect, it } from "vitest";
    traitement qu'il vient de lancer : le navigateur renvoie alors le focus
    sur <body>, et le clavier (ou VoiceOver) repart du haut de la page.
    C'est ce qui arrivait à chaque photo ajoutée sur /vendre et /creer, et
-   à « Mettre en vente » quand la publication échouait. Ces boutons passent
+   à « Déposer la pièce » quand la publication échouait. Ces boutons passent
    par aria-disabled + une garde dans le gestionnaire.
 
    Pas de DOM dans la suite : on lit les vrais fichiers et on vérifie

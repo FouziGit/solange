@@ -41,9 +41,6 @@ export default function Home() {
         <span className="absolute right-1 top-1/2 -translate-y-1/2 rotate-90 whitespace-nowrap font-editorial text-[7.5rem] font-medium italic leading-none tracking-tight text-bone/[0.05]">
           Circular
         </span>
-        <span className="eyebrow absolute bottom-8 left-[7rem] text-sm text-bone/20">
-          édition Nº1 · Paris
-        </span>
       </div>
 
       <FeedModeShell />

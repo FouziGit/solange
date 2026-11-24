@@ -15,11 +15,6 @@ const KIND_LABEL: Record<Article["kind"], string> = {
   entretien: "Entretien",
 };
 
-/** Editorial folio: index 0 → "Nº 01". */
-export function folio(index: number): string {
-  return `Nº ${String(index + 1).padStart(2, "0")}`;
-}
-
 /** "2026-07-08" → "8 juillet 2026" (UTC, deterministic SSR/CSR). */
 export function frDate(iso: string): string {
   return new Intl.DateTimeFormat("fr-FR", {
@@ -39,7 +34,6 @@ export function JournalView({ articles }: { articles: Article[] }) {
         eyebrow="Éditorial"
         title="Journal"
         subtitle="Le magazine de la seconde main. Maisons d'archive, vestiaires construits pour durer et entretiens avec celles et ceux qui chinent."
-        sectionNo={folio(0)}
       />
 
       {/* ---------- Cover story ---------- */}
@@ -67,14 +61,14 @@ export function JournalView({ articles }: { articles: Article[] }) {
                 className="transition-transform duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-[1.03]"
               />
 
-              {/* kicker row — top hairline, rubrique + folio. theme-dark :
+              {/* kicker row — top hairline, rubrique. theme-dark :
                   texte posé sur la photo, clair dans tous les thèmes */}
               <div className="theme-dark absolute inset-x-0 top-0 flex items-center justify-between border-b border-bone/15 px-5 py-3 md:px-8">
                 <span className="etiquette text-[11px] text-bone/80">
                   {KIND_LABEL[cover.kind]}
                 </span>
                 <span className="etiquette text-[11px] text-bone/75">
-                  {folio(0)} — À la une
+                  À la une
                 </span>
               </div>
 
@@ -134,13 +128,10 @@ export function JournalView({ articles }: { articles: Article[] }) {
                   aria-label={`${KIND_LABEL[a.kind]} — ${a.title}`}
                   className="group block"
                 >
-                  {/* thin top rule + rubrique + folio */}
-                  <div className="flex items-baseline justify-between border-t border-bone/25 pt-3">
+                  {/* thin top rule + rubrique */}
+                  <div className="border-t border-bone/25 pt-3">
                     <span className="etiquette text-[11px] text-ash">
                       {KIND_LABEL[a.kind]}
-                    </span>
-                    <span className="etiquette text-[11px] text-ash">
-                      {folio(i + 1)}
                     </span>
                   </div>
 

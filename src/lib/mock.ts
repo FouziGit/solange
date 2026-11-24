@@ -13,7 +13,6 @@ export type Item = {
   name: string;
   brand: string;
   priceEUR: number;
-  originalEUR?: number;
   size: string;
   condition: string;
 };
@@ -176,10 +175,6 @@ export function catalogItem(id: string): CatalogItem | undefined {
 /** Pieces the current user has saved (favoris). */
 export const savedIds: string[] = [];
 
-export const savedItems: CatalogItem[] = savedIds
-  .map((id) => catalogItem(id))
-  .filter((it): it is CatalogItem => it !== undefined);
-
 /** Handles the current user follows (drives the "Suivis" feed tab). */
 export const followedHandles: string[] = [];
 
@@ -274,7 +269,7 @@ export const plans: Plan[] = [
       "Commission dégressive 2 à 4 %",
       "Mises en avant à la carte (2 € / 72 h)",
       "Messagerie acheteurs / vendeurs",
-      "Favoris & suivi de vendeurs",
+      "Gardées et membres suivis",
     ],
     cta: "Plan actuel",
   },

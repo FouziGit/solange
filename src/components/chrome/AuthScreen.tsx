@@ -16,9 +16,10 @@ import {
   missingMessage,
   resendWait,
 } from "@/lib/auth-form";
+import { DUR, EASE } from "@/lib/utils";
+import { Button } from "../ui/Button";
 import { LogoMark } from "./Brandmark";
 import { Check } from "./icons";
-import { MeshBackground } from "./MeshBackground";
 
 type Step = "email" | "code" | "success";
 
@@ -71,8 +72,6 @@ export function AuthScreen({ onComplete }: { onComplete: () => void }) {
   // Aide du bouton : le message visible s'il l'affiche déjà, sinon sr-only
   const hintVisible = !!hint && shownError === hint;
   const invalid = (m: Missing) => tried && missing.includes(m);
-  // Le flou n'est pas coupé par MotionRoot (reducedMotion="user")
-  const blur = (px: number) => (reduce ? "blur(0px)" : `blur(${px}px)`);
 
   useEffect(() => {
     if (step !== "code" || sends === 0) return;
@@ -148,70 +147,33 @@ export function AuthScreen({ onComplete }: { onComplete: () => void }) {
     /* Défile : en paysage ou avec le texte agrandi, le formulaire dépasse
        la hauteur de l'écran et ne doit jamais être rogné. */
     <div className="theme-dark fixed inset-0 z-[100] overflow-y-auto overscroll-contain bg-noir text-bone">
-      {/* maillage 3D filaire réactif (design/login-3d) — fixe, le
-          formulaire défile par-dessus */}
-      <MeshBackground className="pointer-events-none fixed inset-0 size-full" />
-      {/* voile : profondeur + lisibilité du formulaire */}
-      <div
-        aria-hidden
-        className="pointer-events-none fixed inset-0"
-        style={{
-          background:
-            "radial-gradient(min(70vw, 34rem) 46% at 50% 64%, rgba(0,0,0,.62) 0%, rgba(0,0,0,.35) 55%, rgba(0,0,0,0) 100%), radial-gradient(120% 80% at 50% 38%, rgba(0,0,0,0) 34%, rgba(0,0,0,.72) 100%), linear-gradient(180deg, rgba(0,0,0,.55) 0%, rgba(0,0,0,0) 22%, rgba(0,0,0,0) 62%, rgba(0,0,0,.85) 100%)",
-        }}
-      />
-
       {/* mt-auto (logo) + mb-auto (étapes) : le bloc reste centré, et
           « Passer » suit dans le flux, en bas */}
-      <div className="relative z-10 mx-auto flex min-h-[100dvh] max-w-md flex-col items-center px-7 pt-12 pb-6">
-        {/* logo — materialises out of blur, with a halo pulse + soft breathing */}
+      <div className="mx-auto flex min-h-[100dvh] max-w-md flex-col items-center px-7 pt-12 pb-6">
+        {/* fond uni, un seul geste : l'émergence du logo (DA §7) */}
         <motion.div
-          initial={{ scale: 0.55, opacity: 0, filter: blur(18) }}
-          animate={{ scale: 1, opacity: 1, filter: "blur(0px)" }}
-          transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1] }}
-          className="relative mt-auto"
+          initial={{ scale: 0.55, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ duration: DUR.set, ease: EASE.luxe }}
+          className="mt-auto"
         >
-          {/* halo bloom behind the mark */}
-          <motion.span
-            aria-hidden
-            className="absolute inset-0 -z-10 rounded-full bg-bone/30 blur-2xl"
-            initial={{ opacity: 0, scale: 0.5 }}
-            animate={{ opacity: [0, 0.55, 0.22], scale: [0.5, 1.5, 1.15] }}
-            transition={{ duration: 1.9, ease: "easeOut" }}
-          />
-          {/* the mark — gentle breathing loop once it has arrived */}
           <LogoMark variant="white" className="size-28 sm:size-32" />
         </motion.div>
 
-        {/* wordmark — thin, wide-tracked Montserrat (refined / luxe), revealed
-            letter by letter. Left inset balances the last letter's trailing
-            tracking so the word stays optically centred. */}
-        <h1 className="mt-7 flex pl-[0.42em]">
+        {/* wordmark — thin, wide-tracked Montserrat. Left inset balances the
+            last letter's trailing tracking so the word stays optically
+            centred. */}
+        <h1 className="font-display mt-7 pl-[0.42em] text-[1.7rem] font-light tracking-[0.42em] text-bone">
           <span className="sr-only">SOLANGE, connexion</span>
-          {"SOLANGE".split("").map((ch, i) => (
-            <motion.span
-              key={i}
-              aria-hidden
-              initial={{ opacity: 0, y: 14, filter: blur(8) }}
-              animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-              transition={{
-                delay: 0.55 + i * 0.09,
-                duration: 0.6,
-                ease: [0.16, 1, 0.3, 1],
-              }}
-              className="font-display text-[1.7rem] font-light tracking-[0.42em] text-bone"
-            >
-              {ch}
-            </motion.span>
-          ))}
+          <span aria-hidden>SOLANGE</span>
         </h1>
 
-        {/* steps — the whole block cascades in once, after the intro */}
+        {/* steps */}
         <motion.div
           /* naît visible : c'est l'élément LCP du premier écran (mesuré) */
           initial={{ y: 14 }}
           animate={{ y: 0 }}
-          transition={{ delay: 0.5, duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+          transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
           className="mt-10 mb-auto w-full"
         >
           <AnimatePresence mode="wait">
@@ -243,7 +205,7 @@ export function AuthScreen({ onComplete }: { onComplete: () => void }) {
                   autoFocus={editingEmail}
                   aria-invalid={invalid("email") || undefined}
                   aria-describedby={shownError ? errId : undefined}
-                  className={`field mt-2 rounded-full text-center text-base md:text-[15px] ${
+                  className={`field mt-2 text-center text-base md:text-[15px] ${
                     error || invalid("email") ? "border-bone/70" : ""
                   }`}
                 />
@@ -317,19 +279,18 @@ export function AuthScreen({ onComplete }: { onComplete: () => void }) {
                   </label>
                 </div>
 
-                <motion.button
+                <Button
+                  size="lg"
                   onClick={() => void sendCode()}
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.97 }}
                   disabled={busy}
                   aria-disabled={!canSend || undefined}
                   aria-describedby={
                     hint ? (hintVisible ? errId : hintId) : undefined
                   }
-                  className="mt-1 rounded-full bg-bone py-3.5 text-sm font-semibold text-ink transition-opacity disabled:opacity-40 aria-disabled:opacity-40"
+                  className="mt-1 aria-disabled:opacity-40"
                 >
                   {busy ? "Envoi…" : "Recevoir le code"}
-                </motion.button>
+                </Button>
                 {hint && !hintVisible && (
                   <span id={hintId} className="sr-only">
                     {hint}
@@ -384,7 +345,7 @@ export function AuthScreen({ onComplete }: { onComplete: () => void }) {
                     return (
                       <div
                         key={i}
-                        className={`font-display grid size-12 place-items-center rounded-xl border text-xl font-bold tabular-nums transition-colors ${
+                        className={`font-display grid size-12 place-items-center border text-xl font-bold tabular-nums transition-colors ${
                           codeErr
                             ? "border-bone/60"
                             : active

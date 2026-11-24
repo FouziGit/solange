@@ -24,10 +24,12 @@ export function compact(n: number): string {
   return String(n);
 }
 
-/** 129 -> "129 €" · 24.99 -> "24,99 €" */
+/** 290 -> « 290 € » · 5.99 -> « 5,99 € » · 12642 -> « 12 642 € ». Toutes les
+    espaces sont insécables (U+00A0) : un prix ne se coupe jamais. Sans Intl,
+    pour que le serveur et le navigateur rendent la même chaîne. */
 export function euro(n: number): string {
   const s = Number.isInteger(n) ? String(n) : n.toFixed(2).replace(".", ",");
-  return `${s} €`;
+  return `${s.replace(/\B(?=(\d{3})+(?!\d))/g, "\u00a0")}\u00a0€`;
 }
 
 /** Stable 32-bit FNV-1a hash of a string. */

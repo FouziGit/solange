@@ -38,14 +38,18 @@ surtitre serif + H1 griffe. Ne jamais recréer un header de page à la main.
 ### `ui/ProductCard` (+ `toDisplayItem`, `sortMemberProducts`)
 
 La tuile pièce des grilles (Marché, profil, profils publics). Gère
-photo/fallback, badge Vendu (`soldBase` de la donnée source + `isSold()` du
-store), CTA Contacter des annonces membres. Ne pas dupliquer en tuile
-locale (le doublon `ProductTile` de /membre est résorbé au lot 0).
+photo/fallback, l'état vendu (`soldBase` de la donnée source + `isSold()` du
+store) et le CTA des pièces de membres. Taille et prix passent par
+`ui/Etiquette` : « Vendue » est l'étiquette `vendue`, plus un badge. Ne pas
+dupliquer en tuile locale (le doublon `ProductTile` de /membre est résorbé au
+lot 0).
 
 ### `ui/Chip`
 
-Sélecteur rectangulaire brutaliste (catégories, tailles, états). Pas pour de
-la navigation (onglets) ni des tags décoratifs.
+Sélecteur rectangulaire brutaliste (catégories, tailles, états). Choisi =
+filet fort + point plein à gauche du mot, jamais le renversement (réservé à
+l'action primaire de l'écran). Pas pour de la navigation (onglets) ni des
+tags décoratifs.
 
 ### `ui/Photo` / `chrome/Avatar` / `ui/LuxeMedia`
 
@@ -73,7 +77,7 @@ aucun emoji.
   profil et le NotifySwitch de Drops restent des interrupteurs — candidats
   à une primitive `Switch` quand les préférences de notification du Lot 3
   en créeront un 3ᵉ usage).
-- Migré sur : CreatorHeader, FeedCard, favoris, membre, decouvrir (seule
+- Migré sur : FeedCard, favoris, membre, decouvrir (seule
   version carrée, normalisée), CommunityView, CommunityDetail, Drops
   (Réserver), Live (Me prévenir). Zéro implémentation locale restante.
 
@@ -100,12 +104,28 @@ aucun emoji.
   « Chargement… » seul. `aria-busy` sur le conteneur.
 - **Ne pas utiliser pour** : du contenu instantané (mock statique).
 
+### `ui/Etiquette` — l'étiquette (signature, DA §9)
+
+- **Utiliser pour** : tout ce qui décrit une pièce ou un look — taille, prix,
+  état, « Vendue », numéro de passage. Cinq variantes : `carte` (bande collée
+  sous la photo), `vendue` (la même, tamponnée, sans prix), `fiche` (page
+  d'une pièce ; elle rend le `h1`, donc une seule par page), `barre` (barre
+  d'achat, muette), `look` (N° de passage sur le fil ; avec `onOpen`, un
+  bouton qui ouvre les pièces du look).
+- **Ne pas utiliser pour** : un décor, un libellé de champ (`FieldLabel`), un
+  badge qui ne décrit ni une pièce ni un look. Ne jamais redessiner un prix
+  ou une taille à la main dans un écran : poser l'étiquette.
+- Donne gratuitement : le texte lu par un lecteur d'écran (`carte`, `vendue`,
+  `look`), les règles de débordement, la cible de 44 px du bouton `look`.
+  Ses textes viennent de `lib/etiquette.ts`.
+
 ### `ui/Stamp` — le tampon (signature, DA §9)
 
-- **Utiliser pour** : les VRAIS jalons uniquement — Payée, Déposée, Publié,
-  Vendue. Un par écran de succès, jamais ailleurs, jamais pour décorer.
+- **Utiliser pour** : les VRAIS jalons uniquement — Payée, Déposée, Publié.
+  Un par écran de succès, jamais ailleurs, jamais pour décorer.
 - **Ne pas utiliser pour** : confirmations mineures (le changement d'état à
-  l'écran suffit), badges permanents (utiliser l'étiquette overline).
+  l'écran suffit), badges permanents (utiliser l'étiquette overline), une
+  pièce vendue (c'est l'étiquette `vendue`, immobile).
 
 ### `ui/ReportSheet`
 

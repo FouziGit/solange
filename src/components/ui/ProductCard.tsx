@@ -4,7 +4,8 @@ import Link from "next/link";
 import { motion } from "motion/react";
 import type { CatalogItem } from "@/lib/mock";
 import type { ApiProduct } from "@/lib/api";
-import { euro } from "@/lib/utils";
+import { libellePiece } from "@/lib/etiquette";
+import { cn, euro } from "@/lib/utils";
 import { imgItem } from "@/lib/img";
 import { useStore } from "@/lib/store";
 import {
@@ -12,8 +13,9 @@ import {
   shippingFromCents,
   type PackageSizeId,
 } from "@/lib/shipping";
+import { Etiquette } from "./Etiquette";
 import { LuxeMedia } from "./LuxeMedia";
-import { Heart, Bag } from "../chrome/icons";
+import { Bookmark } from "../chrome/icons";
 
 /**
  * CatalogItem élargi pour les surfaces de vente :
@@ -79,9 +81,6 @@ export function ProductCard({
   const { isSaved, toggleSave, isSold } = useStore();
   const saved = isSaved(item.id);
   const sold = item.soldBase || isSold(item.id);
-  const discount = item.originalEUR
-    ? Math.round((1 - item.priceEUR / item.originalEUR) * 100)
-    : 0;
 
   const onSave = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -89,29 +88,28 @@ export function ProductCard({
     toggleSave(item.id);
   };
 
+  /* Rien n'est posé sur la photo, à part Garder. Taille, prix et « Vendue »
+     vivent dans l'étiquette collée dessous (DA §9). */
   const card = (
     <>
       <div
-        className={`relative overflow-hidden rounded-2xl ring-1 ring-bone/10 ${
+        className={`relative overflow-hidden ${
           item.span ? "aspect-[3/5]" : "aspect-[3/4]"
         }`}
       >
-        {/* media (scales on hover) — quieter take on the KenBurns luxury still */}
+        {/* media (scales on hover) — quieter take on the KenBurns luxury still ;
+            vendue : la photo seule s'efface, pas le bouton Garder */}
         <LuxeMedia
           seed={item.seed}
           image={item.image ?? item.images?.[0] ?? imgItem(item.id)}
           brand={item.brand}
           alt=""
           eager={index < 2}
-          className="transition-transform duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-[1.06]"
+          className={cn(
+            "transition-transform duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-[1.06]",
+            sold && "opacity-40",
+          )}
         />
-
-        {/* discount badge */}
-        {discount > 0 && !sold && (
-          <span className="absolute left-2.5 top-2.5 rounded-full bg-bone px-2 py-0.5 text-[11px] font-bold text-ink">
-            −{discount}%
-          </span>
-        )}
 
         {/* save — separate control, expanded ~44px hit area */}
         <button
@@ -122,51 +120,18 @@ export function ProductCard({
           aria-pressed={saved}
           className="absolute right-2.5 top-2.5 z-10 grid size-8 place-items-center rounded-full glass text-bone transition-transform before:absolute before:-inset-2 before:content-[''] active:scale-90"
         >
-          <Heart filled={saved} className="size-4" />
+          <Bookmark filled={saved} className="size-4" />
         </button>
-
-        {/* condition + quick-buy (achat masqué si vendu) */}
-        <span className="absolute bottom-2.5 left-2.5 rounded-full glass px-2 py-0.5 text-[11px] font-medium tracking-wide text-bone/85">
-          {item.condition}
-        </span>
-        {!sold && !item.member && (
-          <span
-            data-cursor="link"
-            aria-hidden="true"
-            className="absolute bottom-2.5 right-2.5 grid size-8 translate-y-2 place-items-center rounded-full bg-bone text-ink opacity-0 transition-all duration-300 before:absolute before:-inset-2 before:content-[''] group-hover:translate-y-0 group-hover:opacity-100"
-          >
-            <Bag className="size-4" />
-          </span>
-        )}
-
-        {/* état vendu — overlay sombre discret, la carte reste lisible ;
-            theme-dark : en thème clair, text-bone serait de l'encre sombre
-            sur le voile noir */}
-        {sold && (
-          <span className="theme-dark pointer-events-none absolute inset-0 grid place-items-center bg-black/55">
-            <span className="border border-bone/60 px-3 py-1 text-[11px] font-semibold uppercase tracking-widest text-bone">
-              Vendu
-            </span>
-          </span>
-        )}
       </div>
 
-      <div className="mt-2.5 px-0.5">
-        <p className="text-[12px] text-ash">{item.brand}</p>
-        <p className="mt-0.5 truncate text-sm text-bone">{item.name}</p>
-        <div className="mt-1 flex items-baseline justify-between gap-2">
-          <div className="flex items-baseline gap-1.5">
-            <span className="font-display text-[15px] font-bold text-bone">
-              {euro(item.priceEUR)}
-            </span>
-            {item.originalEUR && (
-              <span className="text-[11px] text-ash line-through">
-                {euro(item.originalEUR)}
-              </span>
-            )}
-          </div>
-          <span className="text-[11px] text-ash">T. {item.size}</span>
-        </div>
+      <Etiquette variant={sold ? "vendue" : "carte"} item={item} />
+
+      <div className="mt-2 px-0.5">
+        <p className="font-display text-[11px] font-bold uppercase tracking-[0.14em] text-bone">
+          {item.brand}
+        </p>
+        <p className="mt-0.5 truncate text-[13.5px] text-bone">{item.name}</p>
+        <p className="mt-0.5 text-[12px] text-ash">{item.condition}</p>
         {/* port de l'annonce membre : grille × taille figée, relais */}
         {item.member && !sold && (
           <p className="mt-0.5 text-[11px] text-ash">
@@ -197,14 +162,8 @@ export function ProductCard({
         /* Annonce membre : pas de page détail en beta — contact direct. */
         <div className="block">
           {card}
-          {sold ? (
-            <span
-              aria-disabled="true"
-              className="mt-2 flex min-h-11 cursor-not-allowed items-center justify-center border border-bone/15 text-[12px] font-semibold text-ash"
-            >
-              Vendu
-            </span>
-          ) : item.reserved ? (
+          {/* vendue : l'étiquette le dit, rien à ajouter dessous */}
+          {sold ? null : item.reserved ? (
             <span
               aria-disabled="true"
               className="mt-2 flex min-h-11 items-center justify-center border border-bone/15 text-[12px] font-semibold text-ash"
@@ -213,7 +172,7 @@ export function ProductCard({
             </span>
           ) : item.mine ? (
             <span className="mt-2 flex min-h-11 items-center justify-center border border-bone/15 text-[12px] text-ash">
-              Ton annonce
+              Ta pièce
             </span>
           ) : (
             /* Une annonce membre n'avait qu'un bouton « Contacter » : il n'y
@@ -243,7 +202,10 @@ export function ProductCard({
         <Link
           href={`/article/${item.id}`}
           data-cursor="link"
-          aria-label={`${item.brand} — ${item.name}${sold ? ", vendu" : ""}`}
+          /* le nom remplace le contenu du lien : il redit taille et prix */
+          aria-label={`${item.brand} — ${item.name}, ${libellePiece(
+            sold ? { size: item.size } : item,
+          )}`}
           className="block"
         >
           {card}

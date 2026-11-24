@@ -25,7 +25,7 @@ export function photoLabel(i: number, count: number) {
 
 /**
  * Instagram-style image carousel INSIDE a feed post. Horizontal scroll-snap of
- * multiple images, with a "n/N" counter and dot indicators. Lives inside the
+ * multiple images, with dot indicators. Lives inside the
  * vertical TikTok feed: horizontal swipes page the carousel, vertical swipes
  * still scroll the feed (nested native scroll containers, no touch-action lock).
  * Each slide shows the full image (object-contain) over a blurred fill so
@@ -110,16 +110,6 @@ export function CarouselMedia({
       {/* legibility scrims — same as the single-media layer */}
       <div className="pointer-events-none absolute inset-x-0 top-0 h-48 bg-gradient-to-b from-black/70 via-black/20 to-transparent" />
       <div className="pointer-events-none absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-black via-black/60 to-transparent" />
-
-      {/* "n/N" counter — top-left, clears the feed top bar. Visuel seul :
-          l'alt de chaque photo et les pastilles portent déjà la position. */}
-      <div
-        aria-hidden="true"
-        style={{ top: "calc(env(safe-area-inset-top) + 5.25rem)" }}
-        className="pointer-events-none absolute left-3 z-10 rounded-full bg-black/55 px-2.5 py-1 text-[11px] font-semibold tabular-nums text-bone backdrop-blur"
-      >
-        {index + 1}/{count}
-      </div>
 
       {/* précédente · pastilles · suivante — sous la barre du haut (le
           sélecteur Looks / Pièces recouvrait les pastilles), au centre

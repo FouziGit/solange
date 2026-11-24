@@ -5,6 +5,10 @@ import { cn } from "@/lib/utils";
 /**
  * Selectable editorial chip (filters, categories, sizes) — sharp brutalist rectangle. Strict noir & blanc.
  *
+ * Choisi = filet fort + point plein à gauche du mot, jamais le renversement
+ * (réservé à l'action primaire de l'écran, DA §2). Le point vit dans la marge
+ * gauche : le chip ne change pas de largeur.
+ *
  * - par défaut : bouton bascule (aria-pressed), pour les choix multiples.
  * - `radio` : choix UNIQUE (catégorie, état, transporteur, motif) —
  *   role="radio" + aria-checked, et les flèches passent au choix voisin.
@@ -35,12 +39,18 @@ export function Chip({
         : { "aria-pressed": active })}
       data-cursor="link"
       className={cn(
-        "inline-flex min-h-11 items-center whitespace-nowrap rounded-none border px-4 text-[13px] font-medium transition-colors",
+        "relative inline-flex min-h-11 min-w-11 items-center justify-center whitespace-nowrap rounded-none border px-4 text-[13px] font-medium transition-colors",
         active
-          ? "border-bone bg-bone text-ink"
-          : "border-bone/20 text-bone/70 hover:border-bone/40 hover:text-bone",
+          ? "border-line-strong text-bone"
+          : "border-line text-bone/70 hover:border-line-strong hover:text-bone",
       )}
     >
+      {active && (
+        <span
+          aria-hidden
+          className="absolute left-1.5 top-1/2 size-1.5 -translate-y-1/2 rounded-full bg-bone"
+        />
+      )}
       {children}
     </button>
   );

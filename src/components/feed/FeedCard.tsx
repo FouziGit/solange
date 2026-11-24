@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import {
   AnimatePresence,
   motion,
@@ -8,7 +8,7 @@ import {
   type Variants,
 } from "motion/react";
 import Link from "next/link";
-import type { Look } from "@/lib/mock";
+import { catalogItem, type Look } from "@/lib/mock";
 import { imgItem, imgLook, videoLook, videoPoster } from "@/lib/img";
 import { useStore } from "@/lib/store";
 import { KenBurnsMedia } from "./KenBurnsMedia";
@@ -21,6 +21,7 @@ import {
 } from "./MemberVideo";
 import { Avatar } from "../chrome/Avatar";
 import { TogglePill } from "../ui/TogglePill";
+import { Etiquette } from "../ui/Etiquette";
 import { ActionRail } from "./ActionRail";
 import { sharePost } from "@/lib/share";
 import { CommentSheet } from "./CommentSheet";
@@ -80,11 +81,14 @@ export function FeedCard({
   const [commentsOpen, setCommentsOpen] = useState(false);
   const [bursts, setBursts] = useState<Burst[]>([]);
 
-  // Shop-the-look drawer state. `highlightId` scrolls-to / rings the piece the
-  // shopper tapped on the media so the pin and the drawer row stay connected.
+  // Les pièces du look : les pièces du catalogue qu'il cite.
   const [shopOpen, setShopOpen] = useState(false);
-  const [highlightId, setHighlightId] = useState<string | null>(null);
-  const hasShop = look.products.length > 0;
+  const pieces = useMemo(
+    () => (look.linkedProductIds ?? []).flatMap((id) => catalogItem(id) ?? []),
+    [look.linkedProductIds],
+  );
+  const hasShop = pieces.length > 0;
+  const openShop = hasShop ? () => setShopOpen(true) : undefined;
   // Multi-image posts render an Instagram-style swipeable carousel instead of
   // the single video/photo hero.
   const hasGallery = (look.gallery?.length ?? 0) > 1;
@@ -120,11 +124,6 @@ export function FeedCard({
       ? "Mettre la vidéo en pause"
       : "Lire la vidéo";
 
-  const openShop = (id: string | null) => {
-    setHighlightId(id);
-    setShopOpen(true);
-  };
-
   // caption "afficher plus / moins" — clamped to 2 lines, the toggle only
   // shows when the text actually overflows (measured in the clamped state).
   const [captionExpanded, setCaptionExpanded] = useState(false);
@@ -139,7 +138,7 @@ export function FeedCard({
       path: `/membre/${look.creator.handle}`,
     });
     if (r === "copied") {
-      setShareLabel("Copié");
+      setShareLabel("Lien copié");
       setTimeout(() => setShareLabel("Partager"), 1800);
     }
   };
@@ -341,8 +340,8 @@ export function FeedCard({
                 onComment={() => setCommentsOpen(true)}
                 onShare={() => void share()}
                 shareLabel={shareLabel}
-                onShop={hasShop ? () => openShop(null) : undefined}
-                shopCount={look.products.length}
+                onShop={openShop}
+                shopCount={pieces.length}
                 active={active}
               />
             </motion.div>
@@ -358,6 +357,17 @@ export function FeedCard({
               }}
               className="absolute inset-x-0 bottom-0 z-20 space-y-1 p-4 pl-[max(1rem,env(safe-area-inset-left))] pr-[calc(5rem+env(safe-area-inset-right))] md:!pb-9 md:pl-4 md:pr-20"
             >
+              {/* Le numéro de passage (DA §5) ; avec des pièces, l'étiquette
+                  les ouvre. */}
+              <motion.div variants={item} className="flex">
+                <Etiquette
+                  variant="look"
+                  index={index}
+                  pieces={pieces.length}
+                  onOpen={openShop}
+                />
+              </motion.div>
+
               {/* Créateur — rangée compacte au-dessus de la légende, sur
                   TOUTES les tailles. Rien ne flotte plus en haut : le média
                   garde l'écran entier, mobile comme ordinateur. */}
@@ -383,6 +393,12 @@ export function FeedCard({
                   labelOn="Suivi"
                   labelOff="Suivre"
                   size="sm"
+                  // l'étiquette est le seul bloc renversé du fil (DA §9)
+                  className={
+                    following
+                      ? undefined
+                      : "border border-bone/45 bg-transparent text-bone hover:bg-bone/10"
+                  }
                 />
                 {/* Pas de bouton son : les clips des looks n'ont aucune piste
                     audio (ffprobe), il annonçait un son qui n'existe pas. */}
@@ -421,11 +437,9 @@ export function FeedCard({
                 whole card, not just the caption strip. */}
             {hasShop && (
               <ShopTheLook
-                variant="drawer"
-                products={look.products}
+                pieces={pieces}
                 open={shopOpen}
                 onOpenChange={setShopOpen}
-                highlightId={highlightId}
               />
             )}
 

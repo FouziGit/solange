@@ -659,7 +659,7 @@ export function StreamsView({ streams }: { streams: Stream[] }) {
               À venir
             </h2>
             <span className="etiquette text-[11px] text-ash">
-              Nº {String(upcoming.length).padStart(2, "0")}
+              {upcoming.length} à venir
             </span>
           </div>
           <div className="space-y-2.5">

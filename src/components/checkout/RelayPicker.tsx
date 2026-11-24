@@ -217,7 +217,7 @@ function ManualRelay({
       )}
 
       <Button type="submit" size="lg" className="mt-5">
-        Valider ce point relais
+        Choisir ce point relais
       </Button>
     </form>
   );

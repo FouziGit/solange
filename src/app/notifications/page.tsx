@@ -79,10 +79,10 @@ export default function NotificationsPage() {
   const unread = user ? realUnread : mockUnread;
 
   return (
-    <PageShell marginWord="Activité">
+    <PageShell marginWord="Notifications">
       <PageHeader
-        eyebrow="Notifications"
-        title="Activité"
+        eyebrow="Quoi de neuf"
+        title="Notifications"
         right={
           <span className="inline-flex items-center gap-2 text-sm text-ash">
             <Bell className="size-4" />

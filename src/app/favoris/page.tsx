@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { PageShell } from "@/components/ui/PageShell";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { ProductCard } from "@/components/ui/ProductCard";
+import { ProductCard, toDisplayItem } from "@/components/ui/ProductCard";
 import { Button } from "@/components/ui/Button";
 import { TogglePill } from "@/components/ui/TogglePill";
 import { Avatar } from "@/components/chrome/Avatar";
@@ -45,7 +45,9 @@ function FollowToggle({ handle }: { handle: string }) {
 export default function FavorisPage() {
   const [tab, setTab] = useState<Tab>("pieces");
   const { savedItems, followedList } = useStore();
-  const saved = savedItems();
+  const saved = savedItems().map((it) =>
+    "status" in it ? toDisplayItem(it) : it,
+  );
 
   /* Clé stable : on ne redemande que si la liste des membres suivis
      change, pas à chaque rendu. */
@@ -81,7 +83,7 @@ export default function FavorisPage() {
         {(
           [
             ["pieces", `Pièces · ${saved.length}`],
-            ["vendeurs", `Vendeurs suivis · ${creators.length}`],
+            ["vendeurs", `Membres suivis · ${creators.length}`],
           ] as const
         ).map(([id, label]) => {
           const on = tab === id;
@@ -150,7 +152,7 @@ export default function FavorisPage() {
                     )}
                   </span>
                   <span className="block truncate text-[12px] text-ash">
-                    {c.linked ? c.name : "Profil introuvable"}
+                    {c.linked ? c.name : "Membre introuvable"}
                   </span>
                 </span>
               </>

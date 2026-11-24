@@ -4,19 +4,22 @@
 import { useId, useState } from "react";
 import { useStore } from "@/lib/store";
 import { announce } from "@/lib/announce";
-import { euro, compact, gradientFor, initials } from "@/lib/utils";
+import { compact, gradientFor, initials } from "@/lib/utils";
 import { imgItem } from "@/lib/img";
 import type { DisplayItem } from "../ui/ProductCard";
 import { Button } from "../ui/Button";
+import { Etiquette } from "../ui/Etiquette";
 import { Heart, Bookmark, Share, Bag } from "../chrome/icons";
 import { RailAction, shareOrCopy } from "./RailAction";
 
 /**
  * Full-screen shoppable product card — the Vinted-in-TikTok side of the feed.
  * Same immersive format as a look (snap, full-bleed), but the content is a
- * single catalog piece: photo, price, size, condition, seller, buy CTA.
+ * single catalog piece: photo, étiquette (taille, prix), condition, seller,
+ * buy CTA.
  * Accepte aussi les annonces membres (item.image + item.member) : photo réelle,
- * CTA « Contacter » au lieu d'un checkout, badge « Vendu » quand c'est parti.
+ * CTA « Contacter » au lieu d'un checkout, étiquette « Vendue » quand c'est
+ * parti.
  */
 export function ShopCard({
   item,
@@ -35,9 +38,6 @@ export function ShopCard({
   const [imgOk, setImgOk] = useState(true);
   // Photo réelle (annonce membre) prioritaire ; sinon visuel par seed.
   const src = item.image ?? imgItem(item.id);
-  const off = item.originalEUR
-    ? Math.round((1 - item.priceEUR / item.originalEUR) * 100)
-    : null;
   const brandId = useId();
   const nameId = useId();
 
@@ -109,23 +109,10 @@ export function ShopCard({
         <div className="pointer-events-none absolute inset-x-0 top-0 h-40 bg-gradient-to-b from-black/70 via-black/20 to-transparent" />
         <div className="pointer-events-none absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-black via-black/70 to-transparent" />
 
-        {/* état vendu — overlay sombre sur la photo, sous l'info et le rail */}
+        {/* état vendu — overlay sombre sur la photo, sous l'info et le
+            rail ; c'est l'étiquette qui dit « Vendue » */}
         {sold && (
-          <div className="pointer-events-none absolute inset-0 z-10 grid place-items-center bg-black/55">
-            <span className="border border-bone/60 px-4 py-1.5 text-[12px] font-semibold uppercase tracking-widest text-bone">
-              Vendu
-            </span>
-          </div>
-        )}
-
-        {/* discount badge — top-left, under the top bar */}
-        {off !== null && off > 0 && !sold && (
-          <span
-            style={{ top: "calc(env(safe-area-inset-top) + 6.75rem)" }}
-            className="absolute left-[max(1rem,env(safe-area-inset-left))] z-20 bg-bone px-2.5 py-1 text-[11px] font-bold tracking-wide text-ink md:left-4"
-          >
-            −{off}%
-          </span>
+          <div className="pointer-events-none absolute inset-0 z-10 bg-black/55" />
         )}
 
         {/* action rail — like / save / share (resserré sur écran court) */}
@@ -150,7 +137,7 @@ export function ShopCard({
             <Bookmark filled={saved} className="size-6 text-bone" />
           </RailAction>
           <RailAction
-            label={copied ? "Copié" : "Partager"}
+            label={copied ? "Lien copié" : "Partager"}
             onClick={() => void onShare()}
           >
             <Share className="size-[22px] text-bone" />
@@ -173,35 +160,22 @@ export function ShopCard({
             {item.name}
           </h2>
 
-          <div className="flex items-baseline gap-2">
-            <span className="font-display text-2xl font-black tracking-mega text-bone">
-              {euro(item.priceEUR)}
-            </span>
-            {item.originalEUR && (
-              <span className="text-[13px] text-ash line-through">
-                {euro(item.originalEUR)}
-              </span>
-            )}
-          </div>
-
-          <div className="flex flex-wrap items-center gap-1.5">
-            <span className="border border-bone/25 px-2.5 py-1 text-[11px] font-medium text-bone/80">
-              Taille {item.size}
-            </span>
-            <span className="border border-bone/25 px-2.5 py-1 text-[11px] font-medium text-bone/80">
-              {item.condition}
-            </span>
-          </div>
+          <Etiquette
+            variant={sold ? "vendue" : "carte"}
+            item={item}
+            className="max-w-[15rem]"
+          />
+          <p className="text-[12px] text-ash">{item.condition}</p>
 
           <p className="text-[11px] text-ash">
-            Vendu par <span className="text-bone/80">@{item.seller}</span> ·
+            Vendue par <span className="text-bone/80">@{item.seller}</span> ·
             protection acheteur incluse
           </p>
 
           <div className="flex items-center gap-2 pt-1">
             {sold ? (
               <Button disabled>
-                <Bag className="size-4" /> Vendu
+                <Bag className="size-4" /> Vendue
               </Button>
             ) : item.member ? (
               /* Annonce membre : pas de page détail/checkout en beta. */

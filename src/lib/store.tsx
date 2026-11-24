@@ -63,7 +63,9 @@ type Store = {
   /** Les pseudos réellement suivis. L'écran Gardées les résolvait via le
       jeu de démonstration : un vendeur réel suivi n'y apparaissait jamais. */
   followedList: string[];
-  savedItems(): CatalogItem[];
+  /** Pièces gardées, brutes : une pièce de membre se convertit par
+      toDisplayItem avant d'aller dans une carte. */
+  savedItems(): (CatalogItem | ApiProduct)[];
   isJoined(communityId: string): boolean;
   toggleJoin(communityId: string): void;
   orders: Order[];
@@ -376,7 +378,7 @@ export function SolangeProvider({ children }: { children: ReactNode }) {
     () =>
       [...saved]
         .map((id) => catalogItem(id) ?? serverProducts.find((p) => p.id === id))
-        .filter((it): it is CatalogItem => it !== undefined),
+        .filter((it): it is CatalogItem | ApiProduct => it !== undefined),
     [saved, serverProducts],
   );
 

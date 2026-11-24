@@ -93,21 +93,38 @@ CTA commerce) sont normalisées. Justification brief : l'étiquette est carrée,
 le cintre est courbe.
 
 **Profondeur : une seule stratégie — le filet.** Hairlines teintées `bone` en
-**trois crans tokenisés** : `--line-hair` (10 %), `--line` (20 %),
-`--line-strong` (45 %). Le glass (`.glass`) est réservé aux surfaces posées
-sur un média (rail, barres flottantes). Les ombres sont bannies **sauf** une
-exception écrite : l'ombre du stage feed desktop (profondeur de scène).
+**trois crans**, déclarés dans `globals.css` et exposés en utilitaires. Tout
+nouveau filet passe par eux :
+
+| Jeton | Utilitaire | Valeur | En contraste renforcé |
+|---|---|---|---|
+| `--line-hair` | `border-line-hair` | 10 % | 10 % |
+| `--line` | `border-line` | 20 % | 40 % |
+| `--line-strong` | `border-line-strong` | 45 % | 70 % |
+
+`--line-strong` fait 4,1:1 en sombre mais 2,9:1 en clair : c'est un bord
+décoratif. Il n'est **jamais un contour de champ** (les champs gardent
+`--field-border`, garanti à 3:1) **ni le seul porteur d'un état** (un chip
+choisi a aussi son point plein). Le glass (`.glass`) est réservé aux surfaces
+posées sur un média (rail, barres flottantes). Les ombres sont bannies
+**sauf** une exception écrite : l'ombre du stage feed desktop (profondeur de
+scène).
 
 ## 5. Structure
 
 - **La numérotation dit le vrai** : les looks du feed sont une vraie séquence →
-  chaque carte porte discrètement son numéro de passage (« N°03 ») dans
-  l'étiquette basse — façon défilé. On ne numérote rien d'autre.
+  chaque carte porte son numéro de passage (« N°07 ») dans l'étiquette `look`
+  (§9), en bas à gauche du média, juste au-dessus du pseudo, suivi du nombre
+  de pièces quand le look en a — façon défilé. Cette rangée ajoute 40 px au
+  bloc du bas : écart assumé avec « sans rien ajouter en hauteur », le média
+  garde tout le reste. On ne numérote rien d'autre : ni le Journal, ni le
+  Live, ni les en-têtes de page.
 - Surtitre serif italique + H1 griffe : le couple existant, systématisé sur
   toutes les pages (déjà le cas via `PageHeader` — on le garde).
-- L'**étiquette** (cadre hairline carré + overline trackée) est LE dispositif
-  de mise en page : prix, taille, état, badges — tout ce qui décrit une pièce
-  vit dans une étiquette. Jamais d'étiquette pour du décoratif.
+- L'**étiquette** (`ui/Etiquette`, anatomie au §9) est LE dispositif de mise
+  en page : prix, taille, état, numéro de passage, « Vendue » — tout ce qui
+  décrit une pièce ou un look vit dans une étiquette. Jamais d'étiquette pour
+  du décoratif.
 
 ## 6. Iconographie et images
 
@@ -133,6 +150,11 @@ feedback, direction de l'attention. Sinon : immobile.
   est calme.
 - Supprimés : blobs errants de l'AuthScreen (on garde la seule émergence du
   logo), keyframes morts (`shimmer`, `marquee`, `grain-shift`).
+- **Écran de lancement** : réservé à l'app installée (`display-mode:
+  standalone`), 0,9 s au plus, fond uni, l'émergence du logo seule. Il ne
+  capte plus les touchers en sortant, et ne s'affiche pas avant la connexion
+  (son écran fait déjà émerger le logo). Supprimés : maillage 3D, halo, anneau
+  pulsé, cascade des lettres.
 - `prefers-reduced-motion` : déjà respecté sur le feed, étendu partout.
 
 ## 8. Voix et ton
@@ -165,16 +187,63 @@ feedback, direction de l'attention. Sinon : immobile.
 
 ## 9. Signature
 
-**Un élément visuel : l'étiquette poinçonnée.** Le cadre hairline carré à
-overline trackée (déjà partout de façon informe) devient le motif conscient de
-Solange — prix, état, taille, « N°07 », VENDU. Reconnaissable flouté : une
-photo pleine page + une petite étiquette carrée claire.
+**Un élément visuel : l'étiquette poinçonnée.** Un seul composant,
+`ui/Etiquette`, porte tout ce qui décrit une pièce ou un look — prix, taille,
+état, « N°07 », « VENDUE ». Reconnaissable flouté : une photo et, collée
+dessous, une bande claire à talon.
+
+*Anatomie.* Surface `coal`, bord `--line-strong`, angles vifs ; ni ombre, ni
+dégradé, ni flou, ni opacité sur l'étiquette ou ses textes. À gauche, le
+**talon**, fermé par une **perforation** (filet pointillé vertical). Il ne
+porte que l'**œillet** : un anneau à filet, troué à la couleur de la page.
+C'est le poinçon, et le seul rond de l'objet. Pas de numéro de dépôt : on ne
+numérote que les looks (§5). Chiffres en Montserrat 800, `tabular-nums` ;
+libellés en capitales espacées, 11 px, `ash` ; rien sous 11 px. L'étiquette
+n'est jamais interactive, sauf `look` quand le look a des pièces.
+
+| Variante | Où | Ce qu'elle porte |
+|---|---|---|
+| `carte` | Collée sous la photo : Marché, profil, Gardées, pièces d'un look, paiement | Bande de 36 px : `T. 43` (Montserrat 700, 12 px), un filet, le prix calé à droite (800, 15 px). Marque, nom et état restent dessous, hors cadre |
+| `vendue` | À la place de `carte` | La même bande : taille en `ash`, « VENDUE » tamponné à la place du prix, aucun prix. La photo passe à 40 % |
+| `fiche` | Page d'une pièce, sous la photo | Œillet relié au bord bas de la photo par un fil de 1 px (masqué dès `lg`, où la photo passe à gauche). Marque en griffe (800, 22 px) et nom (Hanken 17 px) : c'est le `h1` de la page. Puis trois cases à filets : TAILLE (22 px), ÉTAT (crans et mot), PRIX (34 px) |
+| `barre` | Barre d'achat de la fiche, sur téléphone | Bande de 52 px : prix (17 px) puis taille, à gauche du bloc « Acheter » ; les deux se partagent la barre à parts égales. Muette pour un lecteur d'écran : la fiche vient de tout dire |
+| `look` | Fil, au-dessus du pseudo | Renversée : `N°07` (800, 15 px), puis « 3 pièces » (11 px). Avec des pièces, c'est un bouton qui les ouvre |
+
+*Débordement.* La taille d'une pièce de membre est un texte libre de 12
+caractères au plus, et un prix va jusqu'à « 8 000 € ». Dans une bande
+(`carte`, `vendue`), la taille tient sur deux lignes de 12 px puis se coupe,
+le prix ne se coupe jamais, la hauteur ne bouge pas. Dans la `barre`, s'il
+reste moins de 32 px après le prix, la taille n'est pas affichée. Dans la
+`fiche`, rien n'est coupé, c'est la seule source : la taille et le mot d'état
+passent à la ligne, le prix reste d'un seul tenant. Les trois cases sont de
+front dès que le corps de l'étiquette fait 312 px (écran de 390 px) ; plus
+étroit, TAILLE et ÉTAT partagent une rangée et PRIX passe dessous.
+
+*Couleurs de `look`.* Dans le monde sombre l'étiquette est `bone`, sans bord,
+tout le texte en `ink` (17,8:1), « 3 pièces » en `ink` à 70 % (7,5:1),
+perforation et filet en `ink` à 45 % et 20 %. Jamais `ash` ni la classe
+`.etiquette` ici : `ash` sur `bone` tombe à 2,56:1. C'est le seul bloc
+renversé du fil, donc « Suivre » y passe en filet.
+
+*L'état en crans (essai).* Sur la `fiche` seulement : quatre carrés de 10 px,
+pleins depuis la gauche, le reste à filet fort. Neuf avec étiquette 4,
+Excellent état 3, Très bon état 2, Bon état 1 ; un état inconnu n'a pas de
+crans. C'est un décor : le mot porte l'information, un lecteur d'écran lit
+« État : Bon état ». Ni sur les cartes ni dans les filtres tant que les deux
+fondateurs n'ont pas jugé l'essai.
+
+*Réserve.* `fiche` et `barre` n'existent que là où une pièce a une page :
+aujourd'hui, le catalogue de démonstration. Une pièce de membre s'achète par
+le bouton de sa carte ; lui donner une fiche est une décision des fondateurs.
 
 **Une interaction : le tampon.** Aux vrais jalons seulement (pièce déposée,
-achat confirmé, pièce vendue), l'étiquette de confirmation s'applique d'un
-« coup de tampon » : scale 1.15→1 + rotation -4°→-2° en `--dur-move`,
-`ease-out`, une fois. C'est l'unique célébration de l'app — pas de confetti,
-pas de toast redondant. Sous `prefers-reduced-motion` : apparition simple.
+achat confirmé, look publié), l'étiquette de confirmation (`ui/Stamp`)
+s'applique d'un « coup de tampon » : scale 1.15→1 + rotation -4°→-2° en
+`--dur-move`, `ease-out`, une fois. C'est l'unique célébration de l'app — pas
+de confetti, pas de toast redondant. Sous `prefers-reduced-motion` :
+apparition simple. « VENDUE » sur une étiquette n'est pas ce geste : c'est un
+tampon immobile (cadre 1,5 px, Montserrat 800, 11 px, penché de -2°), un
+état, pas une célébration.
 
 **L'unique prise de risque esthétique** est là : un objet graphique (l'étiquette)
 et un geste (le tampon) empruntés au vestiaire réel. Tout le reste — grilles,

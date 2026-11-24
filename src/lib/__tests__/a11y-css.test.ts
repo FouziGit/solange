@@ -310,6 +310,46 @@ describe("globals.css — contrastes des tokens (WCAG 1.4.3 / 1.4.11)", () => {
   });
 });
 
+/* Les trois crans de filet (DA §4) sont des color-mix() : color() ne les lit
+   pas, on verrouille donc leurs pourcentages. Le prélude combiné n'est pas
+   confondu avec `:root` ni `.theme-dark` par find(). */
+describe("globals.css — filets et étiquette look", () => {
+  const FILETS = ":root, .theme-dark";
+  const filet = (pct: number) =>
+    `color-mix(in srgb, var(--c-bone) ${pct}%, transparent)`;
+
+  it("trois crans teintés bone : 10, 20 et 45 %, exposés à Tailwind", () => {
+    const filets = find(ROOT, [FILETS])?.decls;
+    const theme = find(ROOT, ["@theme inline"])?.decls;
+    const crans = { "line-hair": 10, line: 20, "line-strong": 45 };
+    for (const [nom, pct] of Object.entries(crans)) {
+      expect(filets?.get(`--${nom}`), nom).toBe(filet(pct));
+      expect(theme?.get(`--color-${nom}`), nom).toBe(`var(--${nom})`);
+    }
+  });
+
+  it("contraste renforcé : filet à 40 %, filet fort à 70 %", () => {
+    const filets = find(ROOT, [MEDIA_MORE, FILETS])?.decls;
+    expect(filets?.get("--line")).toBe(filet(40));
+    expect(filets?.get("--line-strong")).toBe(filet(70));
+  });
+
+  it("étiquette look : ink et ink à 70 % ≥ 4.5:1 sur bone, feed sombre", () => {
+    for (const name of [
+      "feed .theme-dark (OS clair)",
+      "contraste renforcé, .theme-dark",
+    ]) {
+      const bone = color(THEMES[name].get("--c-bone"));
+      const ink = color(THEMES[name].get("--c-ink"));
+      expect(contrast(ink, bone), name).toBeGreaterThanOrEqual(4.5);
+      expect(
+        contrast(over(ink, bone, 0.7), bone),
+        `${name}, ink à 70 %`,
+      ).toBeGreaterThanOrEqual(4.5);
+    }
+  });
+});
+
 function px(size: string | undefined): number {
   const m = size?.match(/^([\d.]+)(rem|px)$/);
   if (!m) throw new Error(`taille non gérée : ${size}`);

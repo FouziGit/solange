@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/ProductCard";
 import { TogglePill } from "@/components/ui/TogglePill";
 import { FilterDrawer, type Filters } from "@/components/ui/FilterDrawer";
-import { MARQUES_PHARES, suggestions } from "@/lib/brands";
+import { suggestions } from "@/lib/brands";
 import { Avatar } from "@/components/chrome/Avatar";
 import {
   POINTURES,
@@ -24,7 +24,8 @@ import { filterCatalog, searchAll } from "@/lib/data";
 import { useStore } from "@/lib/store";
 import { cn, compact, euro, gradientFor } from "@/lib/utils";
 import { announce } from "@/lib/announce";
-import { filtresLabel, resultatsMarche } from "@/lib/marche";
+import { nPieces } from "@/lib/etiquette";
+import { filtresLabel, marquesEnVente, resultatsMarche } from "@/lib/marche";
 import { imgLook } from "@/lib/img";
 import { Photo } from "@/components/ui/Photo";
 import { Search, Sliders, Verified } from "@/components/chrome/icons";
@@ -33,7 +34,7 @@ import { Search, Sliders, Verified } from "@/components/chrome/icons";
 const CATS: string[] = categories.filter((c) => c !== "Tout");
 
 const EMPTY_FILTERS: Filters = {
-  cats: CATS,
+  cats: [],
   priceMin: "",
   priceMax: "",
   sizes: [],
@@ -46,8 +47,8 @@ type Dimension = "pieces" | "profils" | "contenu";
 
 const DIMENSIONS: { key: Dimension; label: string }[] = [
   { key: "pieces", label: "Pièces" },
-  { key: "profils", label: "Profils" },
-  { key: "contenu", label: "Contenu" },
+  { key: "profils", label: "Membres" },
+  { key: "contenu", label: "Looks" },
 ];
 
 function DecouvrirInner() {
@@ -81,6 +82,13 @@ function DecouvrirInner() {
         ...serverProducts.map((p) => p.brand).filter(Boolean),
       ]),
     ],
+    [serverProducts],
+  );
+  /* Les marques proposées d'emblée sont celles réellement en vente : filtrer
+     sur une marque dont aucune pièce n'existe ne rend jamais rien. Le reste
+     de la base se trouve par la recherche du tiroir. */
+  const brandsOnSale = useMemo(
+    () => marquesEnVente([...filterCatalog(), ...serverProducts]),
     [serverProducts],
   );
 
@@ -140,6 +148,11 @@ function DecouvrirInner() {
 
   const hasQuery = q.trim().length > 0;
   const results = useMemo(() => searchAll(q), [q]);
+  // l'onglet Looks ne liste que des looks : le Journal a ses propres entrées
+  const looksTrouves = useMemo(
+    () => results.content.filter((h) => h.type === "post"),
+    [results],
+  );
 
   const priceMinNum = filters.priceMin ? Number(filters.priceMin) : undefined;
   const priceMaxNum = filters.priceMax ? Number(filters.priceMax) : undefined;
@@ -158,7 +171,7 @@ function DecouvrirInner() {
   const counts: Record<Dimension, number | null> = {
     pieces: allItems.length,
     profils: hasQuery ? results.profiles.length : null,
-    contenu: hasQuery ? results.content.length : null,
+    contenu: hasQuery ? looksTrouves.length : null,
   };
 
   /* Bilan lu par VoiceOver quand la recherche, la catégorie ou un filtre
@@ -186,49 +199,47 @@ function DecouvrirInner() {
       <PageHeader
         eyebrow="Seconde main"
         title="Marché"
-        subtitle="Les belles pièces ne restent jamais longtemps ici."
+        subtitle="Ce que les membres mettent en vente en ce moment."
         right={
           <span className="hidden text-sm text-ash md:block">
-            {allItems.length} pièces
+            {nPieces(allItems.length)}
           </span>
         }
       />
 
-      {/* search */}
-      <div className="glass flex items-center gap-3 rounded-full px-4 py-3">
+      {/* search — un champ carré (DA §4), aux contours de .field */}
+      <div className="flex items-center gap-3 border border-[var(--field-border)] bg-[var(--field-bg)] pl-4 focus-within:border-[var(--field-border-focus)]">
         <Search className="size-5 shrink-0 text-ash" />
         <input
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          placeholder="Rechercher une marque, un profil, un contenu…"
+          placeholder="Marque, pièce, membre…"
           aria-label="Rechercher dans SOLANGE"
-          className="w-full bg-transparent text-base text-bone outline-none placeholder:text-ash md:text-sm"
+          className="min-h-12 w-full bg-transparent text-base text-bone outline-none placeholder:text-ash md:text-sm"
         />
-        {/* 44 px de zone tactile (HIG) autour du rond visible de 32 px */}
+        {/* carré de 48 px, au-dessus des 44 px de zone tactile (HIG) */}
         <button
           type="button"
           onClick={() => setDrawer(true)}
-          className="group -my-1.5 -mr-1.5 grid size-11 shrink-0 place-items-center rounded-full text-bone"
+          className="relative grid size-12 shrink-0 place-items-center border-l border-line text-bone transition-colors hover:bg-bone/10"
           aria-label={filtresLabel(activeCount)}
           aria-haspopup="dialog"
           aria-expanded={drawer}
         >
-          <span className="relative grid size-8 place-items-center rounded-full bg-bone/10 transition-colors group-hover:bg-bone/20">
-            <Sliders className="size-4" />
-            {activeCount > 0 && (
-              <span
-                className="absolute -right-0.5 -top-0.5 grid size-4 place-items-center rounded-full bg-bone text-[11px] font-bold text-ink"
-                aria-hidden="true"
-              >
-                {activeCount}
-              </span>
-            )}
-          </span>
+          <Sliders className="size-4" />
+          {activeCount > 0 && (
+            <span
+              className="absolute right-1.5 top-1.5 grid size-4 place-items-center rounded-full bg-bone text-[11px] font-bold text-ink"
+              aria-hidden="true"
+            >
+              {activeCount}
+            </span>
+          )}
         </button>
       </div>
 
-      {/* échec /api/products : les annonces membres manquent — on le dit
-          (lot 0 : plus d'échec réseau muet), le catalogue reste complet */}
+      {/* échec /api/products : les pièces des membres manquent — on le dit
+          (lot 0 : plus d'échec réseau muet) */}
       {productsError && (
         <div
           role="status"
@@ -236,8 +247,7 @@ function DecouvrirInner() {
           className="mt-4 flex flex-wrap items-center justify-between gap-3 border border-bone/15 px-4 py-3"
         >
           <p className="text-[13px] text-ash">
-            Les annonces membres n&apos;ont pas chargé. Le catalogue reste
-            complet.
+            Les pièces des membres n&apos;ont pas chargé.
           </p>
           <button
             type="button"
@@ -320,7 +330,7 @@ function DecouvrirInner() {
         )}
       </div>
 
-      {/* ————— Profils ————— */}
+      {/* ————— Membres ————— */}
       <div
         role="tabpanel"
         id="panel-profils"
@@ -329,11 +339,11 @@ function DecouvrirInner() {
       >
         {!hasQuery ? (
           <p className="mt-16 text-center text-sm text-ash">
-            Cherche un nom ou un handle pour trouver des profils.
+            Cherche un nom ou un @identifiant pour trouver un membre.
           </p>
         ) : results.profiles.length === 0 ? (
           <p className="mt-16 text-center text-sm text-ash">
-            Aucun profil ne correspond à «&nbsp;{q.trim()}&nbsp;».
+            Aucun membre ne correspond à «&nbsp;{q.trim()}&nbsp;».
           </p>
         ) : (
           <ul className="mt-5 divide-y divide-bone/10 border border-bone/15">
@@ -342,7 +352,7 @@ function DecouvrirInner() {
               return (
                 <li key={c.id} className="flex items-center gap-3 p-3">
                   <Link
-                    href="/profil"
+                    href={`/membre/${encodeURIComponent(c.handle)}`}
                     data-cursor="link"
                     className="flex min-w-0 flex-1 items-center gap-3"
                   >
@@ -379,7 +389,7 @@ function DecouvrirInner() {
         )}
       </div>
 
-      {/* ————— Contenu ————— */}
+      {/* ————— Looks ————— */}
       <div
         role="tabpanel"
         id="panel-contenu"
@@ -388,19 +398,18 @@ function DecouvrirInner() {
       >
         {!hasQuery ? (
           <p className="mt-16 text-center text-sm text-ash">
-            Cherche une marque, un style ou un sujet pour trouver des posts et
-            des articles.
+            Cherche une marque, un style ou un sujet pour trouver des looks.
           </p>
-        ) : results.content.length === 0 ? (
+        ) : looksTrouves.length === 0 ? (
           <p className="mt-16 text-center text-sm text-ash">
-            Aucun contenu ne correspond à «&nbsp;{q.trim()}&nbsp;».
+            Aucun look ne correspond à «&nbsp;{q.trim()}&nbsp;».
           </p>
         ) : (
           <ul className="mt-5 divide-y divide-bone/10 border border-bone/15">
-            {results.content.map((hit) => (
-              <li key={`${hit.type}-${hit.id}`}>
+            {looksTrouves.map((hit) => (
+              <li key={hit.id}>
                 <Link
-                  href={hit.type === "post" ? "/" : `/journal/${hit.id}`}
+                  href="/"
                   data-cursor="link"
                   className="flex items-center gap-3 p-3 transition-colors hover:bg-bone/[0.04]"
                 >
@@ -409,13 +418,11 @@ function DecouvrirInner() {
                     style={{ background: gradientFor(hit.seed) }}
                     aria-hidden="true"
                   >
-                    {hit.type === "post" && (
-                      <Photo src={imgLook(hit.id)} alt="" />
-                    )}
+                    <Photo src={imgLook(hit.id)} alt="" />
                   </span>
                   <span className="min-w-0">
                     <span className="etiquette block text-[11px] text-ash">
-                      {hit.type === "post" ? "Post" : "Journal"}
+                      Look
                     </span>
                     <span className="block truncate text-sm font-semibold text-bone">
                       {hit.title}
@@ -440,7 +447,7 @@ function DecouvrirInner() {
         clothingSizes={TAILLES}
         shoeSizes={POINTURES}
         conditions={conditions}
-        featuredBrands={MARQUES_PHARES}
+        featuredBrands={brandsOnSale}
         allBrands={brandPool}
         resultCount={allItems.length}
       />

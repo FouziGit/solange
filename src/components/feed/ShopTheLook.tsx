@@ -1,13 +1,9 @@
 "use client";
 
 import { Sheet } from "../ui/Sheet";
-import { Button } from "../ui/Button";
-import { useState, useSyncExternalStore } from "react";
-import { motion } from "motion/react";
-import type { Product } from "@/lib/mock";
-import { track } from "@/lib/track";
-import { euro, gradientFor, initials } from "@/lib/utils";
-import { Bag, Check, ChevronUp } from "../chrome/icons";
+import { ProductCard, type DisplayItem } from "../ui/ProductCard";
+import { useSyncExternalStore } from "react";
+import { nPieces } from "@/lib/etiquette";
 
 const DESKTOP = "(min-width: 48rem)";
 
@@ -31,159 +27,37 @@ export function useFeedSheetContainer(): "fixed" | "absolute" {
   return desktop ? "absolute" : "fixed";
 }
 
+/** Les pièces d'un look, dans une feuille : les cartes du Marché. */
 export function ShopTheLook({
-  products,
+  pieces,
   open,
   onOpenChange,
-  highlightId,
-  variant = "both",
 }: {
-  products: Product[];
+  pieces: DisplayItem[];
   open: boolean;
   onOpenChange: (v: boolean) => void;
-  highlightId: string | null;
-  /**
-   * "trigger" renders only the pill (place it in flow), "drawer" only the
-   * bottom sheet (mount it at the card root so it fills the card), "both" is
-   * the standalone default.
-   */
-  variant?: "trigger" | "drawer" | "both";
 }) {
-  const minPrice = Math.min(...products.map((p) => p.priceEUR));
-  const [added, setAdded] = useState(false);
-  const showTrigger = variant !== "drawer";
-  const showDrawer = variant !== "trigger";
   const container = useFeedSheetContainer();
 
-  // reset the micro-state whenever the drawer is dismissed so re-opening
-  // always shows the actionable "Tout ajouter" label again
-  const close = () => {
-    setAdded(false);
-    onOpenChange(false);
-  };
-
-  const addAll = () => {
-    if (added) return;
-    track("add_all", { count: products.length });
-    setAdded(true);
-  };
-
   return (
-    <>
-      {/* trigger pill */}
-      {showTrigger && (
-        <motion.button
-          onClick={() => onOpenChange(true)}
-          data-cursor="link"
-          whileHover={{ y: -2, scale: 1.01 }}
-          whileTap={{ scale: 0.99 }}
-          transition={{ type: "spring", stiffness: 420, damping: 26 }}
-          className="glass flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-left transition-colors hover:bg-bone/15"
-        >
-          <span className="grid size-9 shrink-0 place-items-center rounded-full bg-bone text-ink">
-            <Bag className="size-5" />
-          </span>
-          <span className="min-w-0 flex-1">
-            <span className="block text-sm font-semibold text-bone">
-              Shop the look
-            </span>
-            <span className="block text-[11px] text-ash">
-              {products.length} pièce{products.length > 1 ? "s" : ""} · dès{" "}
-              {euro(minPrice)}
-            </span>
-          </span>
-          <ChevronUp className="size-5 text-bone/80" />
-        </motion.button>
-      )}
+    <Sheet
+      open={open}
+      onClose={() => onOpenChange(false)}
+      eyebrow="Les pièces du look"
+      title={`${nPieces(pieces.length)} à chiner`}
+      container={container}
+    >
+      <div className="grid grid-cols-2 gap-3 overflow-y-auto overscroll-contain px-5 py-4">
+        {pieces.map((p, i) => (
+          <ProductCard key={p.id} item={p} index={i} />
+        ))}
+      </div>
 
-      {/* drawer */}
-      <Sheet
-        open={showDrawer && open}
-        onClose={close}
-        eyebrow="Shop the look"
-        title={`${products.length} pièce${products.length > 1 ? "s" : ""} à chiner`}
-        container={container}
-      >
-        <div className="flex flex-col gap-2 overflow-y-auto overscroll-contain px-5 py-4">
-          {products.map((p) => {
-            const hot = highlightId === p.id;
-            return (
-              <motion.div
-                key={p.id}
-                layout
-                className={`flex items-center gap-3 rounded-2xl p-2 transition-colors ${
-                  hot ? "bg-bone/10 ring-1 ring-bone/40" : "bg-bone/[0.03]"
-                }`}
-              >
-                <span
-                  className="grid size-16 shrink-0 place-items-center overflow-hidden rounded-xl ring-1 ring-bone/10"
-                  style={{ background: gradientFor(p.id) }}
-                  aria-hidden="true"
-                >
-                  <span className="font-display text-lg font-black text-bone/25">
-                    {initials(p.brand)}
-                  </span>
-                </span>
-                <div className="min-w-0 flex-1">
-                  <p className="text-[12px] text-ash">{p.brand}</p>
-                  <p className="truncate text-sm font-medium text-bone">
-                    {p.name}
-                  </p>
-                  <div className="mt-0.5 flex items-center gap-2 text-[11px] text-ash">
-                    <span>Taille {p.size}</span>
-                    <span className="size-0.5 rounded-full bg-ash" />
-                    <span>{p.condition}</span>
-                  </div>
-                </div>
-                <div className="flex flex-col items-end gap-1.5">
-                  <div className="text-right leading-none">
-                    <span className="font-display text-base font-bold text-bone">
-                      {euro(p.priceEUR)}
-                    </span>
-                    {p.originalEUR && (
-                      <span className="ml-1 text-[11px] text-ash line-through">
-                        {euro(p.originalEUR)}
-                      </span>
-                    )}
-                  </div>
-                  <Button
-                    href={`/checkout/${p.id}`}
-                    size="sm"
-                    aria-label={`Acheter ${p.name}`}
-                  >
-                    Acheter
-                  </Button>
-                </div>
-              </motion.div>
-            );
-          })}
-        </div>
-
-        {/* au-dessus de la barre d'onglets (feuille fixed) : seul l'indicateur
-            d'accueil reste à dégager */}
-        <div className="flex items-center justify-between gap-3 border-t border-bone/10 px-5 pb-[calc(1rem+env(safe-area-inset-bottom))] pt-4 md:pb-5">
-          <span className="text-xs text-ash">
-            Protection acheteur incluse · envoi Mondial Relay
-          </span>
-          <Button
-            onClick={addAll}
-            aria-live="polite"
-            className={
-              added
-                ? "bg-bone/15 text-bone ring-1 ring-bone/40 hover:bg-bone/15"
-                : ""
-            }
-          >
-            {added ? (
-              <>
-                <Check className="size-4" /> Ajouté
-              </>
-            ) : (
-              "Tout ajouter"
-            )}
-          </Button>
-        </div>
-      </Sheet>
-    </>
+      {/* au-dessus de la barre d'onglets (feuille fixed) : seul l'indicateur
+          d'accueil reste à dégager */}
+      <p className="border-t border-bone/10 px-5 pb-[calc(1rem+env(safe-area-inset-bottom))] pt-4 text-xs text-ash md:pb-5">
+        Protection acheteur incluse · envoi Mondial Relay
+      </p>
+    </Sheet>
   );
 }

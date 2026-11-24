@@ -14,11 +14,14 @@ import { useStore } from "@/lib/store";
 import { catalogItem } from "@/lib/mock";
 import { authorAvatar, hasProfile } from "@/lib/member-display";
 import { compact, gradientFor, initials } from "@/lib/utils";
+import { nPieces } from "@/lib/etiquette";
 import { CarouselMedia } from "./CarouselMedia";
 import { MemberVideo } from "./MemberVideo";
 import { RailAction } from "./RailAction";
 import { ShopTheLook } from "./ShopTheLook";
 import { ReportSheet } from "../ui/ReportSheet";
+import { Etiquette } from "../ui/Etiquette";
+import { toDisplayItem, type DisplayItem } from "../ui/ProductCard";
 import { Avatar } from "../chrome/Avatar";
 import { Heart, Bookmark, Hanger, ChevronRight, Share } from "../chrome/icons";
 import { sharePost } from "@/lib/share";
@@ -92,31 +95,21 @@ export function MemberPostCard({
     />
   );
 
-  /* Lot 5 : pièces taguées — « Shop the look » sur une publication membre
-     exactement comme sur un look éditorial (même primitive, même feuille). */
+  /* Lot 5 : pièces taguées — une publication membre ouvre les pièces du
+     look exactement comme un look éditorial (même primitive, même feuille). */
   const [shopOpen, setShopOpen] = useState(false);
   const taggedPieces = useMemo(
     () =>
-      (post.productIds ?? [])
-        .map((id) => {
-          const seed = catalogItem(id);
-          if (seed) return { ...seed, hotspot: { x: 50, y: 50 } };
-          const p = serverProducts.find((sp) => sp.id === id);
-          return p
-            ? {
-                id: p.id,
-                name: p.name,
-                brand: p.brand,
-                priceEUR: p.priceEUR,
-                size: p.size,
-                condition: p.condition,
-                hotspot: { x: 50, y: 50 },
-              }
-            : null;
-        })
-        .filter((x): x is NonNullable<typeof x> => x !== null),
+      (post.productIds ?? []).flatMap((id): DisplayItem | [] => {
+        const seed = catalogItem(id);
+        if (seed) return seed;
+        const p = serverProducts.find((sp) => sp.id === id);
+        return p ? toDisplayItem(p) : [];
+      }),
     [post.productIds, serverProducts],
   );
+  const openShop =
+    taggedPieces.length > 0 ? () => setShopOpen(true) : undefined;
 
   // légende "afficher plus / moins" — même pattern que FeedCard : clamp 2
   // lignes, le toggle n'apparaît que si le texte déborde réellement.
@@ -132,7 +125,7 @@ export function MemberPostCard({
       path: `/membre/${encodeURIComponent(post.authorHandle)}`,
     });
     if (r === "copied") {
-      setShareLabel("Copié");
+      setShareLabel("Lien copié");
       setTimeout(() => setShareLabel("Partager"), 1800);
     }
   };
@@ -255,11 +248,11 @@ export function MemberPostCard({
             >
               {/* écran court : rail resserré, il ne sort plus de la carte */}
               <div className="flex flex-col items-center gap-5 [@media(max-height:700px)]:gap-2">
-                {taggedPieces.length > 0 && (
+                {openShop && (
                   <RailAction
-                    label={`${taggedPieces.length} pièce${taggedPieces.length > 1 ? "s" : ""}`}
-                    hint="à shopper"
-                    onClick={() => setShopOpen(true)}
+                    label={nPieces(taggedPieces.length)}
+                    hint="du look"
+                    onClick={openShop}
                   >
                     <Hanger className="size-6 text-bone" />
                   </RailAction>
@@ -319,6 +312,17 @@ export function MemberPostCard({
               }}
               className="absolute inset-x-0 bottom-0 z-20 space-y-1 p-4 pl-[max(1rem,env(safe-area-inset-left))] pr-[calc(5rem+env(safe-area-inset-right))] md:!pb-9 md:pl-4 md:pr-20"
             >
+              {/* le numéro de passage (DA §5) ; avec des pièces, l'étiquette
+                  les ouvre */}
+              <motion.div variants={item} className="flex">
+                <Etiquette
+                  variant="look"
+                  index={index}
+                  pieces={taggedPieces.length}
+                  onOpen={openShop}
+                />
+              </motion.div>
+
               {/* auteur — rangée compacte en bas (mobile), profil cliquable ;
                   un compte supprimé n'a plus de profil vers lequel mener */}
               <motion.div variants={item} className="flex items-center gap-2.5">
@@ -399,6 +403,17 @@ export function MemberPostCard({
                 )}
             </motion.div>
 
+            {/* les pièces du look — montée dans la carte, comme FeedCard :
+                dès md la feuille reste dans la carte (`absolute`), pas sur
+                toute la largeur du fil */}
+            {openShop && (
+              <ShopTheLook
+                pieces={taggedPieces}
+                open={shopOpen}
+                onOpenChange={setShopOpen}
+              />
+            )}
+
             {/* toast éphémère (confirmation signalement) */}
             <AnimatePresence></AnimatePresence>
 
@@ -415,16 +430,6 @@ export function MemberPostCard({
           </>
         )}
       </motion.div>
-
-      {taggedPieces.length > 0 && (
-        <ShopTheLook
-          products={taggedPieces}
-          open={shopOpen}
-          onOpenChange={setShopOpen}
-          highlightId={null}
-          variant="drawer"
-        />
-      )}
 
       <ReportSheet
         open={reportOpen}

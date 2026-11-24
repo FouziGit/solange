@@ -13,7 +13,7 @@ Ten connected routes with real navigation (side rail / bottom tab bar, sliding a
 - **Feed** (`/`) — the **social video feed**: TikTok-style snap-scroll, cinematic B&W "editorial film stills" (seed-varied campaign type + Ken-Burns + light-sweep), **shoppable hotspots** → **Shop the look** sheet, functional Pour toi / Suivis / Drops tabs, double-tap heart.
 - **Découvrir** (`/decouvrir`) — marketplace + search + **advanced filter drawer** (size / price / condition / brand / sort), masonry grid.
 - **Article** (`/article/[id]`) — **product detail**: gallery, price, verified seller, _Acheter_ / _Faire une offre_, similar pieces (every buy CTA now lands here).
-- **Profil** (`/profil`) — creator **vitrine**: hero, stats, tabs (À vendre / Looks / Aimés).
+- **Profil** (`/profil`) — creator **vitrine**: hero, stats, tabs (À vendre / Looks / Gardées).
 - **Messages** (`/messages`) — **messagerie**: list + working chat thread with product context.
 - **Vendre** (`/vendre`) — **listing flow** with a live **commission calculator** (degressive 2–4 % tiers), boost toggle, dynamic Premium upsell, validation + success state.
 - **Premium** (`/premium`) — subscription plans (0 € / 4,99 € / 9,99 €) + Product JSON-LD.
@@ -57,7 +57,7 @@ src/
     globals.css           design tokens, surfaces, keyframes
   components/
     chrome/               Brandmark, Avatar, SideNav, MobileTabBar, CustomCursor, GrainOverlay, icons
-    feed/                 VideoFeed, FeedCard, KenBurnsMedia, ProductHotspots, ActionRail, CreatorHeader, ShopTheLook, FeedTopBar
+    feed/                 VideoFeed, FeedCard, KenBurnsMedia, ProductHotspots, ActionRail, ShopTheLook, FeedTopBar
     ui/                   PageShell, PageHeader, ProductCard
   lib/
     mock.ts               looks, creators, catalog, conversations, profile, plans (all fake)

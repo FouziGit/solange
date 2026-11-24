@@ -15,7 +15,6 @@ export function PageHeader({
   subtitle,
   right,
   back,
-  sectionNo,
 }: {
   eyebrow?: string;
   title: string;
@@ -23,8 +22,6 @@ export function PageHeader({
   right?: React.ReactNode;
   /** Optional back-link href — renders a glass ArrowLeft button before the eyebrow. */
   back?: string;
-  /** Optional right-aligned section number (e.g. "Nº 04"). */
-  sectionNo?: string;
 }) {
   return (
     <header className="mb-8 flex items-end justify-between gap-4 md:mb-10">
@@ -68,15 +65,8 @@ export function PageHeader({
           </motion.p>
         )}
       </div>
-      {(right || sectionNo) && (
-        <div className="flex shrink-0 flex-col items-end gap-1">
-          {sectionNo && (
-            <span className="etiquette text-[11px] text-ash">
-              {sectionNo}
-            </span>
-          )}
-          {right}
-        </div>
+      {right && (
+        <div className="flex shrink-0 flex-col items-end gap-1">{right}</div>
       )}
     </header>
   );

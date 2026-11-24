@@ -12,12 +12,13 @@ import {
   Live,
   Plus,
   Chat,
-  Heart,
+  Bookmark,
   Bell,
   Grid,
   Users,
 } from "./icons";
 import { streams } from "@/lib/mock";
+import { dansMarche } from "@/lib/nav";
 import { useStore } from "@/lib/store";
 
 const anyLive = streams.some((s) => s.live);
@@ -41,14 +42,14 @@ const items = [
     href: "/decouvrir",
     label: "Marché",
     Icon: Compass,
-    match: (p: string) => p.startsWith("/decouvrir"),
+    match: dansMarche,
     live: false,
   },
   {
     href: "/journal",
     label: "Journal",
     Icon: Grid,
-    match: (p: string) => p.startsWith("/journal") || p.startsWith("/article"),
+    match: (p: string) => p.startsWith("/journal"),
     live: false,
   },
   {
@@ -61,7 +62,7 @@ const items = [
   {
     href: "/favoris",
     label: "Gardées",
-    Icon: Heart,
+    Icon: Bookmark,
     match: (p: string) => p.startsWith("/favoris"),
     live: false,
   },
@@ -198,27 +199,22 @@ export function SideNav() {
                 transition={{ type: "spring", stiffness: 460, damping: 34 }}
                 className="glass-bone absolute left-[calc(100%+14px)] top-1/2 z-50 w-44 -translate-y-1/2 overflow-hidden rounded-none p-1.5"
               >
-                <Link
-                  href="/vendre"
-                  role="menuitem"
-                  onClick={() => setComposeOpen(false)}
-                  className="flex flex-col rounded-xl px-3 py-2 text-left transition-colors hover:bg-bone/10"
-                >
-                  <span className="text-sm font-semibold text-bone">
-                    Déposer une pièce
-                  </span>
-                  <span className="text-[11px] text-ash">Mettre en vente</span>
-                </Link>
+                {/* mêmes mots, même ordre que la feuille du téléphone */}
                 <Link
                   href="/creer"
                   role="menuitem"
                   onClick={() => setComposeOpen(false)}
-                  className="flex flex-col rounded-xl px-3 py-2 text-left transition-colors hover:bg-bone/10"
+                  className="flex min-h-11 items-center rounded-xl px-3 text-sm font-semibold text-bone transition-colors hover:bg-bone/10"
                 >
-                  <span className="text-sm font-semibold text-bone">
-                    Créer un look
-                  </span>
-                  <span className="text-[11px] text-ash">Publier un édito</span>
+                  Publier un look
+                </Link>
+                <Link
+                  href="/vendre"
+                  role="menuitem"
+                  onClick={() => setComposeOpen(false)}
+                  className="flex min-h-11 items-center rounded-xl px-3 text-sm font-semibold text-bone transition-colors hover:bg-bone/10"
+                >
+                  Déposer une pièce
                 </Link>
               </motion.div>
             )}

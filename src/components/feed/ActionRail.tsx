@@ -12,6 +12,7 @@ import {
 import { Avatar } from "../chrome/Avatar";
 import { RailAction } from "./RailAction";
 import { compact } from "@/lib/utils";
+import { nPieces } from "@/lib/etiquette";
 
 export function ActionRail({
   liked,
@@ -38,7 +39,7 @@ export function ActionRail({
   onComment?: () => void;
   /** Partager n'apparaît que branché : un bouton inerte ne sert à personne. */
   onShare?: () => void;
-  /** « Copié » un instant quand le lien a été copié faute de feuille de partage. */
+  /** « Lien copié » un instant quand le lien a été copié faute de feuille de partage. */
   shareLabel?: string;
   /** Opens the Shop-the-look drawer. When set, a cart bubble tops the rail. */
   onShop?: () => void;
@@ -58,12 +59,8 @@ export function ActionRail({
       {/* Pièces du look — cintre, ouvre le tiroir Shop-the-look. */}
       {onShop && (
         <RailAction
-          label={
-            shopCount && shopCount > 0
-              ? `${shopCount} pièce${shopCount > 1 ? "s" : ""}`
-              : "Shop"
-          }
-          hint="à shopper"
+          label={shopCount && shopCount > 0 ? nPieces(shopCount) : "Pièces"}
+          hint="du look"
           onClick={onShop}
         >
           <Hanger className="size-6 text-bone" />

@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { AnimatePresence } from "motion/react";
 import { usePathname } from "next/navigation";
 import { useStore } from "@/lib/store";
 import { LEGAL_DOCS } from "@/lib/legal";
@@ -35,8 +34,9 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
   // One-time, hydration-safe read of the persisted onboarding flag (localStorage
   // is client-only, so we resolve it after mount rather than during SSR).
   const [state, setState] = useState({ ready: false, authed: false });
-  /* Écran de lancement (maillage 3D) : app installée ou téléphone, une
-     fois par session — à chaque ouverture de l'app, pas à chaque page. */
+  /* Écran de lancement : app installée et accueil déjà passé, une fois par
+     session — à chaque ouverture de l'app, pas à chaque page ni à chaque
+     onglet d'un navigateur. */
   const [launch, setLaunch] = useState(false);
   const endLaunch = useCallback(() => setLaunch(false), []);
   /* `authReady` attendait la fin de refreshSession() — un fetch /api/me
@@ -53,15 +53,19 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
     try {
       // outillage (Lighthouse/captures) : ?e2e=1 == « Passer » (mode invité)
       const e2e = new URLSearchParams(location.search).get("e2e") === "1";
-      if (e2e) onboarded = true;
-      const mobileApp =
-        matchMedia("(display-mode: standalone)").matches ||
-        matchMedia("(max-width: 767px)").matches;
-      if (mobileApp && !e2e && sessionStorage.getItem(LAUNCH_KEY) !== "1") {
+      onboarded = e2e || localStorage.getItem(ONBOARD_KEY) === "1";
+      const installee = matchMedia("(display-mode: standalone)").matches;
+      // pas de lancement avant la connexion : son écran fait déjà émerger
+      // le logo (un geste, pas deux)
+      if (
+        installee &&
+        onboarded &&
+        !e2e &&
+        sessionStorage.getItem(LAUNCH_KEY) !== "1"
+      ) {
         sessionStorage.setItem(LAUNCH_KEY, "1");
         showLaunch = true;
       }
-      onboarded = onboarded || localStorage.getItem(ONBOARD_KEY) === "1";
     } catch {
       /* storage blocked — treat as not onboarded */
     }
@@ -82,16 +86,7 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
   if (!ready) {
     return (
       <div className="theme-dark fixed inset-0 z-[100] grid place-items-center bg-noir">
-        <span className="relative grid place-items-center">
-          {/* anneau séparé animé en transform/opacity (composité GPU) : un
-              box-shadow animé repeindrait toute la zone à chaque frame et
-              fait trembler le splash sur mobile (jank à l'ouverture PWA) */}
-          <span
-            aria-hidden
-            className="pulse-ring absolute -inset-3 rounded-full border border-bone/40"
-          />
-          <LogoMark variant="white" className="size-16" />
-        </span>
+        <LogoMark variant="white" className="size-16" />
       </div>
     );
   }
@@ -103,9 +98,8 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
       ) : (
         <LegalGate>{children}</LegalGate>
       )}
-      <AnimatePresence>
-        {launch && <LaunchScreen key="launch" onDone={endLaunch} />}
-      </AnimatePresence>
+      {/* le fondu de sortie est interne à LaunchScreen */}
+      {launch && <LaunchScreen onDone={endLaunch} />}
     </>
   );
 }

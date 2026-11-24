@@ -2,7 +2,7 @@
    SOLANGE — data selectors (the backend seam)
    These are SYNC functions over the in-memory mock arrays today.
    When a real backend lands, each becomes an async repository call
-   (e.g. filterCatalog -> GET /catalog?…, liked -> GET /me/favoris)
+   (e.g. filterCatalog -> GET /catalog?…)
    with the SAME signature, so callers don't change.
    ============================================================ */
 
@@ -12,7 +12,6 @@ import {
   catalogItem,
   looks,
   me,
-  savedItems,
   streams,
   type CatalogItem,
   type Creator,
@@ -96,11 +95,6 @@ function filtrer(
 /** Pieces the current user has listed for sale (vitrine). */
 export function forSale(): CatalogItem[] {
   return catalog.filter((it) => it.seller === me.handle);
-}
-
-/** Pieces the current user has saved (favoris). */
-export function liked(): CatalogItem[] {
-  return savedItems;
 }
 
 /** Lookup a single catalog tile by id. */

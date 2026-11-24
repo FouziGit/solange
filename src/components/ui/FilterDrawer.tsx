@@ -4,7 +4,8 @@ import { useId, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { Sheet } from "./Sheet";
 import { Button } from "./Button";
-import { Check, Search, X } from "@/components/chrome/icons";
+import { Chip } from "./Chip";
+import { Search, X } from "@/components/chrome/icons";
 import { cn } from "@/lib/utils";
 import type { SortKey } from "@/lib/data";
 
@@ -52,6 +53,8 @@ function resume(list: string[], vide: string, max = 2) {
  * Sections dépliables, chacune résume son choix sur sa ligne : on voit
  * tout ce qui est actif sans rien ouvrir. Bottom-sheet sur mobile,
  * panneau droit sur desktop. Strict noir & blanc.
+ * Rien de coché veut dire aucun filtre. Un choix se marque par un filet fort
+ * et un point plein (Chip, Tick) : le seul bloc renversé est « Voir N pièces ».
  */
 export function FilterDrawer({
   open,
@@ -86,7 +89,7 @@ export function FilterDrawer({
 
   const reset = () =>
     onChange({
-      cats: categories,
+      cats: [],
       priceMin: "",
       priceMax: "",
       sizes: [],
@@ -101,7 +104,7 @@ export function FilterDrawer({
   const brandList = useMemo(() => {
     const k = cle(brandQ.trim());
     if (!k) {
-      // les maisons choisies hors des phares restent visibles en tête
+      // les marques choisies hors de celles en vente restent visibles en tête
       const extra = value.brands.filter((b) => !featuredBrands.includes(b));
       return [...extra, ...featuredBrands];
     }
@@ -141,18 +144,20 @@ export function FilterDrawer({
       <div className="min-h-0 flex-1 touch-pan-y overflow-y-auto overscroll-contain px-5 pb-4">
         <Row
           label="Trier par"
+          role="radiogroup"
           summary={SORTS.find((s) => s.key === value.sort)?.label ?? ""}
           {...sec("tri")}
         >
           <div className="grid grid-cols-2 gap-1.5">
             {SORTS.map((s) => (
-              <Pill
+              <Chip
                 key={s.key}
-                on={value.sort === s.key}
+                radio
+                active={value.sort === s.key}
                 onClick={() => set("sort", s.key)}
               >
                 {s.label}
-              </Pill>
+              </Chip>
             ))}
           </div>
         </Row>
@@ -166,20 +171,14 @@ export function FilterDrawer({
           {...sec("cats")}
         >
           <div className="flex flex-wrap gap-1.5">
-            <Pill
-              on={allCats}
-              onClick={() => set("cats", allCats ? [] : categories)}
-            >
-              Tout
-            </Pill>
             {categories.map((c) => (
-              <Pill
+              <Chip
                 key={c}
-                on={value.cats.includes(c)}
+                active={value.cats.includes(c)}
                 onClick={() => set("cats", toggle(value.cats, c))}
               >
                 {c}
-              </Pill>
+              </Chip>
             ))}
           </div>
         </Row>
@@ -192,7 +191,7 @@ export function FilterDrawer({
         >
           {/* collée en haut pendant qu'on parcourt la liste */}
           <div className="sticky top-0 z-10 -mx-5 bg-coal px-5 pb-2 pt-1">
-            <div className="flex items-center gap-3 border border-bone/25 bg-ink/40 px-3.5 focus-within:border-bone/60">
+            <div className="flex items-center gap-3 border border-[var(--field-border)] bg-ink/40 px-3.5 focus-within:border-[var(--field-border-focus)]">
               <Search className="size-4 shrink-0 text-ash" />
               <input
                 type="search"
@@ -216,22 +215,16 @@ export function FilterDrawer({
             </div>
             <p className="mt-1.5 text-[11px] text-ash">
               {brandQ.trim()
-                ? `${brandList.length} résultat${brandList.length > 1 ? "s" : ""} dans toute la base`
-                : `${featuredBrands.length} maisons phares · tape pour chercher parmi ${allBrands.length}`}
+                ? `${brandList.length} marque${brandList.length > 1 ? "s trouvées" : " trouvée"}.`
+                : `${featuredBrands.length} marque${featuredBrands.length > 1 ? "s" : ""} en vente. Tape un nom pour chercher parmi ${allBrands.length}.`}
               {value.brands.length > 0 &&
-                ` · ${value.brands.length} sélectionnée${value.brands.length > 1 ? "s" : ""}`}
+                ` ${value.brands.length} sélectionnée${value.brands.length > 1 ? "s" : ""}.`}
             </p>
           </div>
-          <ul
-            aria-label="Marques"
-            className="mt-2 grid grid-cols-2 gap-x-4"
-          >
-            {brandList.length === 0 ? (
-              <li className="col-span-full py-6 text-center text-[12.5px] text-ash">
-                Aucune maison ne s&apos;appelle ainsi.
-              </li>
-            ) : (
-              brandList.map((b) => {
+          {/* sans recherche et sans marque en vente : rien à lister */}
+          {brandList.length > 0 ? (
+            <ul aria-label="Marques" className="mt-2 grid grid-cols-2 gap-x-4">
+              {brandList.map((b) => {
                 const on = value.brands.includes(b);
                 return (
                   <li key={b}>
@@ -250,9 +243,15 @@ export function FilterDrawer({
                     </button>
                   </li>
                 );
-              })
-            )}
-          </ul>
+              })}
+            </ul>
+          ) : (
+            brandQ.trim() && (
+              <p className="mt-2 py-6 text-center text-[12.5px] text-ash">
+                Aucune marque ne s&apos;appelle ainsi.
+              </p>
+            )
+          )}
         </Row>
 
         <Row
@@ -261,30 +260,28 @@ export function FilterDrawer({
           active={value.sizes.length > 0}
           {...sec("tailles")}
         >
-          <p className="etiquette mb-2 text-[10.5px] text-ash">Vêtements</p>
-          <div className="grid grid-cols-7 gap-1">
+          <p className="etiquette mb-2 text-[11px] text-ash">Vêtements</p>
+          <div className="flex flex-wrap gap-1.5">
             {clothingSizes.map((s) => (
-              <Square
+              <Chip
                 key={s}
-                on={value.sizes.includes(s)}
+                active={value.sizes.includes(s)}
                 onClick={() => set("sizes", toggle(value.sizes, s))}
               >
                 {s}
-              </Square>
+              </Chip>
             ))}
           </div>
-          <p className="etiquette mb-2 mt-5 text-[10.5px] text-ash">
-            Chaussures
-          </p>
-          <div className="grid grid-cols-8 gap-1">
+          <p className="etiquette mb-2 mt-5 text-[11px] text-ash">Chaussures</p>
+          <div className="flex flex-wrap gap-1.5">
             {shoeSizes.map((s) => (
-              <Square
+              <Chip
                 key={s}
-                on={value.sizes.includes(s)}
+                active={value.sizes.includes(s)}
                 onClick={() => set("sizes", toggle(value.sizes, s))}
               >
                 {s}
-              </Square>
+              </Chip>
             ))}
           </div>
         </Row>
@@ -354,11 +351,14 @@ export function FilterDrawer({
   );
 }
 
-/** Une section dépliable : libellé, résumé du choix, chevron. */
+/** Une section dépliable : libellé, résumé du choix, chevron. Le bloc déplié
+    est un groupe nommé par le libellé seul (« Catégories », pas « Catégories
+    Toutes ») ; `radiogroup` pour un choix unique. */
 function Row({
   label,
   summary,
   active = false,
+  role = "group",
   open,
   onToggle,
   children,
@@ -366,11 +366,13 @@ function Row({
   label: string;
   summary: string;
   active?: boolean;
+  role?: "group" | "radiogroup";
   open: boolean;
   onToggle: () => void;
   children: React.ReactNode;
 }) {
   const id = useId();
+  const labelId = useId();
   // overflow-hidden le temps du dépliage seulement : ouvert, il casserait
   // la recherche collante des marques
   const [settled, setSettled] = useState(false);
@@ -384,7 +386,9 @@ function Row({
         onClick={onToggle}
         className="flex min-h-14 w-full items-center gap-3 text-left"
       >
-        <span className="text-[15px] font-medium text-bone">{label}</span>
+        <span id={labelId} className="text-[15px] font-medium text-bone">
+          {label}
+        </span>
         <span
           className={cn(
             "ml-auto truncate text-[12.5px]",
@@ -419,6 +423,8 @@ function Row({
           <motion.div
             id={id}
             key="body"
+            role={role}
+            aria-labelledby={labelId}
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
@@ -435,71 +441,16 @@ function Row({
   );
 }
 
-function Pill({
-  on,
-  onClick,
-  children,
-}: {
-  on: boolean;
-  onClick: () => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <button
-      type="button"
-      aria-pressed={on}
-      data-cursor="link"
-      onClick={onClick}
-      className={cn(
-        "min-h-11 border px-4 text-[13px] font-medium transition-colors",
-        on
-          ? "border-bone bg-bone text-ink"
-          : "border-bone/20 text-bone/70 hover:border-bone/40 hover:text-bone",
-      )}
-    >
-      {children}
-    </button>
-  );
-}
-
-/** Case de taille / pointure : carrée, compacte, alignée en grille. */
-function Square({
-  on,
-  onClick,
-  children,
-}: {
-  on: boolean;
-  onClick: () => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <button
-      type="button"
-      aria-pressed={on}
-      data-cursor="link"
-      onClick={onClick}
-      className={cn(
-        "grid min-h-11 place-items-center border text-[12.5px] font-medium tabular-nums transition-colors",
-        on
-          ? "border-bone bg-bone text-ink"
-          : "border-bone/15 text-bone/70 hover:border-bone/40 hover:text-bone",
-      )}
-    >
-      {children}
-    </button>
-  );
-}
-
 function Tick({ on }: { on: boolean }) {
   return (
     <span
       aria-hidden
       className={cn(
         "grid size-4 shrink-0 place-items-center border transition-colors",
-        on ? "border-bone bg-bone text-ink" : "border-bone/25",
+        on ? "border-line-strong" : "border-line",
       )}
     >
-      {on && <Check className="size-3" />}
+      {on && <span className="size-1.5 rounded-full bg-bone" />}
     </span>
   );
 }
@@ -516,7 +467,7 @@ function PriceField({
   onChange: (v: string) => void;
 }) {
   return (
-    <label className="flex flex-1 items-center gap-2 border border-bone/15 px-3.5 focus-within:border-bone/40">
+    <label className="flex flex-1 items-center gap-2 border border-[var(--field-border)] px-3.5 focus-within:border-[var(--field-border-focus)]">
       <input
         type="number"
         inputMode="numeric"

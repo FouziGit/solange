@@ -6,7 +6,11 @@ import { flushSync } from "react-dom";
 import Link from "next/link";
 import { motion } from "motion/react";
 import { PageShell } from "@/components/ui/PageShell";
-import { ProductCard } from "@/components/ui/ProductCard";
+import {
+  ProductCard,
+  toDisplayItem,
+  type DisplayItem,
+} from "@/components/ui/ProductCard";
 import { SkeletonRow } from "@/components/ui/Skeleton";
 import { PushSettings } from "@/components/chrome/PushSettings";
 import { SellerPayments } from "@/components/chrome/SellerPayments";
@@ -15,7 +19,7 @@ import { AvatarSheet } from "@/components/profile/AvatarSheet";
 import { HandleSheet } from "@/components/profile/HandleSheet";
 import { AnimatePresence } from "motion/react";
 import { invite, looks, me } from "@/lib/mock";
-import { forSale, liked } from "@/lib/data";
+import { forSale } from "@/lib/data";
 import { EASE, compact, euro, gradientFor } from "@/lib/utils";
 import { useStore } from "@/lib/store";
 import {
@@ -51,7 +55,7 @@ import {
 const tabs = [
   { key: "vente", label: "À vendre" },
   { key: "looks", label: "Looks" },
-  { key: "aimes", label: "Aimés" },
+  { key: "gardees", label: "Gardées" },
 ] as const;
 
 /** Ligne commande/vente — Link vers /commande/[id] quand un suivi existe. */
@@ -195,8 +199,15 @@ function ReferralCard() {
 export default function ProfilPage() {
   const [tab, setTab] = useState<string>("vente");
   const [referral, setReferral] = useState(false);
-  const { orders, user, authReady, signOut, savedItems, refreshProducts } =
-    useStore();
+  const {
+    orders,
+    user,
+    authReady,
+    signOut,
+    savedItems,
+    refreshProducts,
+    circlesUnread,
+  } = useStore();
   const { memberPosts } = useStore();
   // par id : un changement d'@identifiant ne fait rien disparaître
   const mesPublications = user
@@ -205,12 +216,12 @@ export default function ProfilPage() {
   const [avatarOpen, setAvatarOpen] = useState(false);
   const [handleOpen, setHandleOpen] = useState(false);
   const handleNext = user ? nextHandleChange(user) : null;
-  const saleItems = forSale();
-  const likedItems = liked();
   const isGuest = authReady && user === null;
 
   // Mes annonces (toutes, y compris vendues/retirées) + mes ventes — serveur.
   const [myProds, setMyProds] = useState<ApiProduct[]>([]);
+  // sa penderie n'est dite vide qu'une fois chargée
+  const [mineLoaded, setMineLoaded] = useState(false);
   const [sales, setSales] = useState<ApiOrder[]>([]);
   const [mineLoading, setMineLoading] = useState(false);
   const [withdrawing, setWithdrawing] = useState<string | null>(null);
@@ -265,7 +276,10 @@ export default function ProfilPage() {
       api.sales(),
       api.getSettings(),
     ]);
-    if (p.ok) setMyProds(p.data.products);
+    if (p.ok) {
+      setMyProds(p.data.products);
+      setMineLoaded(true);
+    }
     if (s.ok) setSales(s.data.orders);
     if (st.ok) setDmOpen(st.data.dmOpen);
     setMineLoading(false);
@@ -306,6 +320,16 @@ export default function ProfilPage() {
   }, [myProds, uid]);
 
   const myListings = myProds.length;
+
+  // onglets : un membre voit ses pièces en vente, un invité la vitrine de démo
+  const saleItems: DisplayItem[] = user
+    ? myProds.filter((p) => p.status === "available").map(toDisplayItem)
+    : forSale();
+  const keptItems: DisplayItem[] = savedItems().map((it) =>
+    "status" in it ? toDisplayItem(it) : it,
+  );
+  const tabItems = tab === "vente" ? saleItems : keptItems;
+  const tabKnown = authReady && (tab !== "vente" || !user || mineLoaded);
 
   const reconnect = () => {
     try {
@@ -409,7 +433,7 @@ export default function ProfilPage() {
         </div>
 
         <div className="mt-5 flex items-center gap-2 md:mt-0">
-          <Button href="/premium">
+          <Button href="/premium" variant="outline">
             <Crown className="size-4" /> Premium
           </Button>
           <button
@@ -444,9 +468,9 @@ export default function ProfilPage() {
           <>
             <Stat value={String(orders.length)} label="Commandes" />
             <span className="h-8 w-px bg-bone/10" />
-            <Stat value={String(savedItems().length)} label="Favoris" />
+            <Stat value={String(keptItems.length)} label="Gardées" />
             <span className="h-8 w-px bg-bone/10" />
-            <Stat value={String(myListings)} label="Annonces" />
+            <Stat value={String(myListings)} label="Pièces" />
           </>
         ) : (
           <>
@@ -459,12 +483,38 @@ export default function ProfilPage() {
         )}
       </div>
 
+      {/* téléphone : ces trois écrans n'ont pas d'onglet dans la barre du
+          bas, on y entre par le profil */}
+      <nav
+        aria-label="Raccourcis"
+        className="mt-3 grid grid-cols-3 gap-2 md:hidden"
+      >
+        <Button href="/favoris" variant="outline" className="px-2">
+          Gardées
+        </Button>
+        <Button href="/communaute" variant="outline" className="px-2">
+          Cercles
+          {circlesUnread > 0 && (
+            <>
+              <span
+                aria-hidden="true"
+                className="size-1.5 rounded-full bg-bone"
+              />
+              <span className="sr-only">, du nouveau</span>
+            </>
+          )}
+        </Button>
+        <Button href="/journal" variant="outline" className="px-2">
+          Journal
+        </Button>
+      </nav>
+
       {/* invité : encart mode démo + reconnexion */}
       {isGuest && (
         <div className="mt-6 rounded-2xl border border-bone/12 bg-coal/60 p-5 md:max-w-md">
           <p className="etiquette text-[11px] text-ash">Mode démo</p>
           <p className="mt-1.5 text-[13.5px] leading-relaxed text-bone/85">
-            Connecte-toi pour garder tes achats et tes favoris.
+            Connecte-toi pour retrouver tes achats et tes pièces gardées.
           </p>
           <Button onClick={reconnect} className="mt-4 w-full md:w-auto">
             Se connecter / créer un compte
@@ -536,7 +586,7 @@ export default function ProfilPage() {
       {user && myProds.length > 0 && (
         <div className="mt-8 md:max-w-md">
           <p className="etiquette mb-3 text-[11px] text-ash">
-            Mes annonces · {myProds.length}
+            Mes pièces · {myProds.length}
           </p>
           <div className="flex flex-col gap-2">
             {myProds.map((p) => {
@@ -578,7 +628,7 @@ export default function ProfilPage() {
                               setWithdrawArmed(p.id);
                             }, `${uid}-retrait-${p.id}`)
                           }
-                          aria-label={`Retirer l'annonce ${p.name}`}
+                          aria-label={`Retirer la pièce ${p.name}`}
                           disabled={withdrawing !== null}
                           className="inline-flex min-h-11 shrink-0 items-center rounded-full border border-bone/20 px-3.5 text-[12px] font-medium text-bone/80 transition-colors hover:border-bone/50 hover:text-bone disabled:opacity-40"
                         >
@@ -632,7 +682,7 @@ export default function ProfilPage() {
                             }, `${uid}-retirer-${p.id}`)
                           }
                         >
-                          Garder l&apos;annonce
+                          Laisser en vente
                         </Button>
                       </div>
                     </div>
@@ -802,12 +852,31 @@ export default function ProfilPage() {
               ))}
             </div>
           )
-        ) : (
+        ) : tabItems.length ? (
           <div className="columns-2 gap-3 md:columns-3 xl:columns-4">
-            {(tab === "vente" ? saleItems : likedItems).map((it, i) => (
+            {tabItems.map((it, i) => (
               <ProductCard key={it.id} item={it} index={i} />
             ))}
           </div>
+        ) : (
+          tabKnown && (
+            <div className="flex flex-col items-center gap-5 py-14 text-center">
+              <p className="max-w-[30ch] text-[14px] text-bone">
+                {tab === "vente"
+                  ? "Ta penderie est vide. Dépose ta première pièce."
+                  : "Aucune pièce gardée. Chine le Marché."}
+              </p>
+              {tab === "vente" ? (
+                <Button href="/vendre" variant={user ? "primary" : "outline"}>
+                  Déposer une pièce
+                </Button>
+              ) : (
+                <Button href="/decouvrir" variant="outline">
+                  Chiner le Marché
+                </Button>
+              )}
+            </div>
+          )
         )}
       </div>
 
@@ -882,7 +951,7 @@ export default function ProfilPage() {
                 Autoriser les messages directs
               </span>
               <span className="block text-[11.5px] text-ash">
-                Les membres peuvent t&apos;écrire sans passer par une annonce.
+                Les membres peuvent t&apos;écrire sans passer par une pièce.
               </span>
             </span>
             <span

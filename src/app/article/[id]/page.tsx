@@ -1,7 +1,6 @@
 import { notFound } from "next/navigation";
 import { catalog, catalogItem } from "@/lib/mock";
 import { similarTo } from "@/lib/data";
-import { euro } from "@/lib/utils";
 import { PageShell } from "@/components/ui/PageShell";
 import { ArrowLeft } from "@/components/chrome/icons";
 import Link from "next/link";
@@ -29,15 +28,13 @@ export default async function ArticlePage({
         href="/decouvrir"
         data-cursor="link"
         aria-label="Retour"
-        className="glass mb-6 inline-grid size-11 place-items-center rounded-full text-bone transition-transform active:scale-90"
+        className="glass mb-6 inline-grid size-11 place-items-center rounded-none text-bone transition-transform active:scale-90"
       >
         <ArrowLeft className="size-5" />
       </Link>
+      {/* marque, nom et prix : l'étiquette `fiche` les rend, côté serveur
+          aussi. Une seule source, et aucun prix quand la pièce est vendue. */}
       <ArticleDetail item={item} similar={similar} />
-      {/* SSR-visible price for crawlers even before island hydrates */}
-      <span className="sr-only">
-        {item.brand} {item.name} — {euro(item.priceEUR)}
-      </span>
     </PageShell>
   );
 }

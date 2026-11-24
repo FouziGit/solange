@@ -2,8 +2,10 @@
    SOLANGE — publications de démonstration (fil Looks).
 
    Quatre posts de créateurs mode fictifs, sur de vrais médias : deux
-   carrousels à faire glisser, deux vidéos. Rien à vendre : ce sont des
-   créateurs qui parlent de mode. Branchés dans `looks` UNIQUEMENT quand
+   carrousels à faire glisser, deux vidéos. Ce sont des créateurs qui
+   parlent de mode ; deux looks citent une pièce des annonces de
+   démonstration (`linkedProductIds`), pour que le pont look → pièce se
+   voie. Branchés dans `looks` UNIQUEMENT quand
    NEXT_PUBLIC_DEMO_ANNONCES=1 à la construction (démo locale).
 
    Médias : /public/img/posts (carrousels), /public/video/<id>.mp4 et
@@ -102,6 +104,7 @@ export const POSTS_DEMO: Look[] = [
     products: [],
     soundtrack: "son original — karim.kicks",
     brandTags: ["Maison Margiela"],
+    linkedProductIds: ["maison-margiela-track-jacket-bleu"],
   },
   {
     id: "post-gucci-ss27-details",
@@ -119,5 +122,6 @@ export const POSTS_DEMO: Look[] = [
     soundtrack: "son original — lea.details",
     badge: "SS27",
     brandTags: ["Gucci"],
+    linkedProductIds: ["gucci-horsebit-1953-marron"],
   },
 ];

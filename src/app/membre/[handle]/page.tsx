@@ -17,6 +17,7 @@ import { api, type PublicProfile } from "@/lib/api";
 import { catalog, looks, me } from "@/lib/mock";
 import { VENDEURS_DEMO } from "@/lib/annonces-demo";
 import { imgItem, imgLook } from "@/lib/img";
+import { nPieces } from "@/lib/etiquette";
 import { EASE, compact, gradientFor } from "@/lib/utils";
 import { normalizeHandle, profileRedirect } from "@/lib/handle";
 import { useStore } from "@/lib/store";
@@ -281,7 +282,7 @@ export default function MembrePage() {
             @
           </span>
           <h1 className="font-editorial mt-6 text-3xl font-semibold tracking-tight text-bone md:text-4xl">
-            Profil introuvable
+            Membre introuvable
           </h1>
           <p className="mt-4 max-w-sm text-[14px] leading-relaxed text-ash">
             Aucun membre ne répond au nom de{" "}
@@ -335,9 +336,8 @@ export default function MembrePage() {
                 )}
               </p>
               <p className="mt-2 text-[12px] text-ash">
-                {state.profile.products.length} annonce
-                {state.profile.products.length > 1 ? "s" : ""} ·{" "}
-                {state.profile.posts.length} post
+                {nPieces(state.profile.products.length)} ·{" "}
+                {state.profile.posts.length} look
                 {state.profile.posts.length > 1 ? "s" : ""}
               </p>
             </div>
@@ -427,7 +427,7 @@ export default function MembrePage() {
                 Membre bloqué
               </p>
               <p className="mt-2 text-[13px] leading-relaxed text-ash">
-                Ses annonces et ses posts sont masqués partout sur SOLANGE.
+                Ses pièces et ses looks sont masqués partout sur SOLANGE.
               </p>
               <button
                 type="button"
@@ -440,14 +440,14 @@ export default function MembrePage() {
             </div>
           ) : (
             <>
-              {/* annonces */}
-              <section className="mt-10" aria-label="Annonces en vente">
+              {/* pièces */}
+              <section className="mt-10" aria-label="Pièces en vente">
                 <p className="etiquette mb-3 text-[11px] text-ash">
                   En vente · {state.profile.products.length}
                 </p>
                 {state.profile.products.length === 0 ? (
                   <p className="rounded-2xl border border-bone/10 px-4 py-6 text-center text-[13px] text-ash">
-                    Aucune annonce en vente pour le moment.
+                    Aucune pièce en vente pour le moment.
                   </p>
                 ) : (
                   <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-4">
@@ -458,14 +458,14 @@ export default function MembrePage() {
                 )}
               </section>
 
-              {/* posts */}
-              <section className="mt-10" aria-label="Posts publiés">
+              {/* looks */}
+              <section className="mt-10" aria-label="Looks publiés">
                 <p className="etiquette mb-3 text-[11px] text-ash">
-                  Posts · {state.profile.posts.length}
+                  Looks · {state.profile.posts.length}
                 </p>
                 {state.profile.posts.length === 0 ? (
                   <p className="rounded-2xl border border-bone/10 px-4 py-6 text-center text-[13px] text-ash">
-                    Aucun post publié pour le moment.
+                    Aucun look publié pour le moment.
                   </p>
                 ) : (
                   <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-4">

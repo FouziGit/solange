@@ -111,9 +111,10 @@ describe("CGV — cohérence avec D-037", () => {
     )?.[0];
     expect(art126).toBeDefined();
     const plafond = euro(CARRIERS.mondial_relay.lossCompensationCents / 100);
-    expect(plafond).toBe("25 €");
+    expect(plafond).toBe("25\u00a0€");
+    // euro() rend une insécable ; le texte lu a ses espaces aplaties
     expect(art126).toContain(
-      `${CARRIERS.mondial_relay.name} indique une indemnisation forfaitaire de ${plafond}`,
+      `${CARRIERS.mondial_relay.name} indique une indemnisation forfaitaire de ${plafond.replace(/\s+/g, " ")}`,
     );
   });
 });

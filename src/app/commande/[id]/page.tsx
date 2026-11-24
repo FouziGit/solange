@@ -771,7 +771,7 @@ export default function CommandePage() {
               {/* montants */}
               <dl className="mt-6 space-y-2 rounded-2xl border border-bone/10 p-4 text-[13px]">
                 <div className="flex justify-between">
-                  <dt className="text-ash">Article</dt>
+                  <dt className="text-ash">Pièce</dt>
                   <dd className="text-bone">{euro(o.priceEUR)}</dd>
                 </div>
                 <div className="flex justify-between">

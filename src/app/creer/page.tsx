@@ -6,25 +6,19 @@ import { FieldLabel } from "@/components/ui/FieldLabel";
 import { Stamp } from "@/components/ui/Stamp";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Chip } from "@/components/ui/Chip";
+import { Etiquette } from "@/components/ui/Etiquette";
 import { GlassInput } from "@/components/ui/GlassInput";
 import { ProductCard } from "@/components/ui/ProductCard";
 import { catalog, trendingTags } from "@/lib/mock";
 import { catalogBrands } from "@/lib/data";
-import { euro, gradientFor } from "@/lib/utils";
+import { gradientFor } from "@/lib/utils";
 import { api, fileToDataUrl, resizeImage, videoPoster } from "@/lib/api";
 import { MAX_VIDEO_SECONDS, checkVideo } from "@/lib/video";
 import { TRANSCRIPT_MAX } from "@/lib/transcript";
 import { announce } from "@/lib/announce";
 import { Button } from "@/components/ui/Button";
 import { useStore } from "@/lib/store";
-import {
-  Camera,
-  Bag,
-  ChevronUp,
-  Check,
-  Sparkle,
-  X,
-} from "@/components/chrome/icons";
+import { Camera, Check, Sparkle, X } from "@/components/chrome/icons";
 
 const MAX_PHOTOS = 4;
 
@@ -135,9 +129,6 @@ export default function CreerPage() {
 
   const taggedItems = taggable.filter((it) => tagged.includes(it.id));
   const linkedItems = taggable.filter((it) => linked.includes(it.id));
-  const minPrice = taggedItems.length
-    ? Math.min(...taggedItems.map((it) => it.priceEUR))
-    : 0;
 
   /* per-type readiness + missing hints, comme sur Vendre */
   const ready =
@@ -269,13 +260,13 @@ export default function CreerPage() {
       // sans vidéo, la transcription n'a rien à décrire
       transcript: (video && transcript.trim()) || undefined,
       // lot 5 : les pièces taguées existaient côté client mais n'étaient
-      // jamais envoyées — « Shop the look » ne pouvait donc pas s'ouvrir
+      // jamais envoyées — les pièces du look ne pouvaient donc pas s'ouvrir
       productIds: taggedItems.map((it) => it.id),
     });
     if (res.ok) {
       setPublished(true);
       focusNext.current = "succes";
-      announce(`${title.trim() || "Ton post"} est en ligne dans le feed.`);
+      announce(`${title.trim() || "Ton look"} est publié.`);
     } else if (res.status === 401) {
       setSubmitError("Ta session a expiré — reconnecte-toi pour publier.");
       void refreshSession();
@@ -308,7 +299,7 @@ export default function CreerPage() {
     <PageShell marginWord="Créer">
       <PageHeader
         title="Créer"
-        subtitle="Compose ton look, tague tes pièces — et il part dans le feed."
+        subtitle="Tes photos, ta légende, les pièces que tu portes."
       />
 
       <div className="grid gap-8 lg:grid-cols-[1fr_360px]">
@@ -436,7 +427,7 @@ export default function CreerPage() {
                           Vidéo prête · {video.seconds} s
                         </p>
                         <p className="text-[11.5px] text-ash">
-                          Elle passera avant tes photos dans le feed.
+                          Elle passera avant tes photos.
                         </p>
                       </div>
                       <Button
@@ -504,9 +495,9 @@ export default function CreerPage() {
 
           {/* editorial title */}
           <div>
-            <FieldLabel>Titre éditorial</FieldLabel>
+            <FieldLabel>Titre du look</FieldLabel>
             <GlassInput
-              aria-label="Titre éditorial du post"
+              aria-label="Titre du look"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder={
@@ -514,7 +505,7 @@ export default function CreerPage() {
                   ? "Archive · Plissé · Gorpcore…"
                   : kind === "actu"
                     ? "Le drop Lemaire SS26…"
-                    : "Haul du week-end…"
+                    : "Mes achats du week-end…"
               }
             />
           </div>
@@ -524,7 +515,7 @@ export default function CreerPage() {
             <FieldLabel>{kind === "look" ? "Légende" : "Texte"}</FieldLabel>
             <GlassInput
               multiline
-              aria-label={kind === "look" ? "Légende du look" : "Texte du post"}
+              aria-label={kind === "look" ? "Légende du look" : "Texte du look"}
               rows={4}
               value={caption}
               onChange={(e) => setCaption(e.target.value)}
@@ -542,7 +533,7 @@ export default function CreerPage() {
           {/* brand tags — actu + achats */}
           {kind !== "look" && (
             <div>
-              <FieldLabel>Tagguer des marques</FieldLabel>
+              <FieldLabel>Associer des marques</FieldLabel>
               <div className="flex flex-wrap gap-2">
                 {brands.map((b) => (
                   <Chip
@@ -555,9 +546,9 @@ export default function CreerPage() {
                 ))}
               </div>
               <p className="mt-2 text-[11px] text-ash">
-                {brandSel.length} marque{brandSel.length > 1 ? "s" : ""} taguée
-                {brandSel.length > 1 ? "s" : ""} · le post remonte dans leur
-                recherche.
+                {brandSel.length} marque{brandSel.length > 1 ? "s" : ""}{" "}
+                associée{brandSel.length > 1 ? "s" : ""} · le look remonte dans
+                leur recherche.
               </p>
             </div>
           )}
@@ -565,7 +556,7 @@ export default function CreerPage() {
           {/* linked marketplace pieces — achats */}
           {kind === "achats" && (
             <div>
-              <FieldLabel>Lier des articles de la marketplace</FieldLabel>
+              <FieldLabel>Associer des pièces du Marché</FieldLabel>
               <div className="flex flex-wrap gap-2">
                 {taggable.map((it) => (
                   <Chip
@@ -578,9 +569,8 @@ export default function CreerPage() {
                 ))}
               </div>
               <p className="mt-2 text-[11px] text-ash">
-                {linked.length} pièce{linked.length > 1 ? "s" : ""} liée
-                {linked.length > 1 ? "s" : ""} · leurs marques sont taguées sur
-                ton post.
+                {linked.length} pièce{linked.length > 1 ? "s" : ""} associée
+                {linked.length > 1 ? "s" : ""} · leurs marques le sont aussi.
               </p>
             </div>
           )}
@@ -588,7 +578,7 @@ export default function CreerPage() {
           {/* tag pieces — look */}
           {kind === "look" && (
             <div>
-              <FieldLabel>Tagguer des pièces</FieldLabel>
+              <FieldLabel>Associer des pièces du Marché</FieldLabel>
               <div className="flex flex-wrap gap-2">
                 {taggable.map((it) => (
                   <Chip
@@ -601,9 +591,8 @@ export default function CreerPage() {
                 ))}
               </div>
               <p className="mt-2 text-[11px] text-ash">
-                {tagged.length} pièce{tagged.length > 1 ? "s" : ""} taguée
-                {tagged.length > 1 ? "s" : ""} · leurs marques sont taguées sur
-                ton post.
+                {tagged.length} pièce{tagged.length > 1 ? "s" : ""} associée
+                {tagged.length > 1 ? "s" : ""} · leurs marques le sont aussi.
               </p>
             </div>
           )}
@@ -611,7 +600,7 @@ export default function CreerPage() {
           {/* trending tags — look */}
           {kind === "look" && (
             <div>
-              <FieldLabel>Tags tendances</FieldLabel>
+              <FieldLabel>Mots-clés du moment</FieldLabel>
               <div className="flex flex-wrap gap-2">
                 {trendingTags.map((t) => (
                   <Chip
@@ -646,14 +635,13 @@ export default function CreerPage() {
                   En ligne
                 </h2>
                 <p className="mt-1 max-w-[24ch] text-[13px] leading-relaxed text-ash">
-                  {title.trim() || "Ton post"} est en ligne — visible dans le
-                  feed.
+                  {title.trim() || "Ton look"} est publié.
                 </p>
                 <button
                   onClick={resetForm}
                   className="mt-6 min-h-11 rounded-none border border-bone/30 px-5 py-2.5 text-sm font-semibold text-bone transition-colors hover:bg-bone/10"
                 >
-                  Créer un autre post
+                  Publier un autre look
                 </button>
               </div>
             ) : (
@@ -699,35 +687,24 @@ export default function CreerPage() {
                     <div className="absolute inset-x-0 bottom-0">
                       <div className="h-28 bg-gradient-to-t from-black/80 to-transparent" />
                       <div className="absolute inset-x-3 bottom-3 space-y-2.5">
+                        {/* le numéro de passage et les pièces du look, comme
+                            sur la carte du fil : un nouveau look y entre en
+                            tête */}
+                        <Etiquette
+                          variant="look"
+                          index={0}
+                          pieces={taggedItems.length}
+                          className="flex w-fit"
+                        />
                         <p className="line-clamp-2 text-[12px] leading-snug text-bone/90">
                           {caption.trim() ||
-                            "Ta légende s'affiche ici, au-dessus des pièces shoppables."}
+                            "Ta légende s'affiche ici, sous l'étiquette du look."}
                         </p>
                         {hashtags.length > 0 && (
                           <p className="truncate text-[11px] text-bone/75">
                             {hashtags.join(" ")}
                           </p>
                         )}
-
-                        {/* Shop the look pill — identical to ShopTheLook trigger */}
-                        <div className="glass flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-left">
-                          <span className="grid size-9 shrink-0 place-items-center rounded-full bg-bone text-ink">
-                            <Bag className="size-5" />
-                          </span>
-                          <span className="min-w-0 flex-1">
-                            <span className="block text-sm font-semibold text-bone">
-                              Shop the look
-                            </span>
-                            <span className="block text-[11px] text-ash">
-                              {taggedItems.length} pièce
-                              {taggedItems.length > 1 ? "s" : ""}
-                              {taggedItems.length > 0
-                                ? ` · dès ${euro(minPrice)}`
-                                : ""}
-                            </span>
-                          </span>
-                          <ChevronUp className="size-5 text-bone/80" />
-                        </div>
                       </div>
                     </div>
                   </div>
@@ -750,7 +727,7 @@ export default function CreerPage() {
                       <p className="mt-3 text-[12.5px] leading-relaxed text-bone/85">
                         {caption.trim() ||
                           (kind === "actu"
-                            ? "Ton texte d'actu s'affiche ici, en carte éditoriale dans le feed."
+                            ? "Ton texte d'actu s'affiche ici, en carte éditoriale dans les looks."
                             : "Le récit de tes achats s'affiche ici, au-dessus des pièces liées.")}
                       </p>
                       {brandSel.length > 0 && (
@@ -837,10 +814,10 @@ export default function CreerPage() {
                 )}
                 <p className="mt-2.5 px-1 text-[12px] leading-relaxed text-ash">
                   {kind === "look"
-                    ? "Ton look part dans le feed avec ta légende, tes photos et les marques taguées."
+                    ? "Ton look part avec ta légende, tes photos et les marques de ses pièces."
                     : kind === "actu"
-                      ? "Ton actu part dans le feed en carte éditoriale, taguée aux marques choisies."
-                      : "Ton haul part dans le feed avec son texte et les marques choisies."}
+                      ? "Ton actu part dans les looks en carte éditoriale, avec les marques choisies."
+                      : "Tes achats partent dans les looks avec leur texte et les marques choisies."}
                 </p>
               </>
             )}

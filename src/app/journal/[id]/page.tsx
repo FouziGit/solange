@@ -17,11 +17,6 @@ const KIND_LABEL: Record<Article["kind"], string> = {
   entretien: "Entretien",
 };
 
-/** Editorial folio: index 0 → "Nº 01". */
-function folio(index: number): string {
-  return `Nº ${String(index + 1).padStart(2, "0")}`;
-}
-
 /** "2026-07-08" → "8 juillet 2026" (UTC, deterministic). */
 function frDate(iso: string): string {
   return new Intl.DateTimeFormat("fr-FR", {
@@ -90,9 +85,7 @@ export default async function JournalArticlePage({
             {KIND_LABEL[article.kind]}
             {article.brand ? ` — ${article.brand}` : ""}
           </span>
-          <span className="etiquette text-[11px] text-ash">
-            Journal · {folio(index)}
-          </span>
+          <span className="etiquette text-[11px] text-ash">Journal</span>
         </div>
 
         <h1 className="font-editorial mt-6 text-[clamp(2.4rem,9vw,5.25rem)] font-semibold leading-[0.95] tracking-tight text-bone">
@@ -126,11 +119,8 @@ export default async function JournalArticlePage({
             eager
           />
         </div>
-        <figcaption className="mt-2 flex items-center justify-between">
-          <span className="text-[12px] text-ash">
-            {article.brand ?? KIND_LABEL[article.kind]} — Archive Solange
-          </span>
-          <span className="etiquette text-[11px] text-ash">{folio(index)}</span>
+        <figcaption className="mt-2 text-[12px] text-ash">
+          {article.brand ?? KIND_LABEL[article.kind]} — Archive Solange
         </figcaption>
       </figure>
 
@@ -197,11 +187,9 @@ export default async function JournalArticlePage({
         </section>
       )}
 
-      {/* closing folio */}
+      {/* closing line */}
       <div className="mt-14 flex items-center justify-center gap-4 border-t border-bone/15 pt-6">
-        <span className="etiquette text-[11px] text-ash">
-          {folio(index)} — Journal Solange
-        </span>
+        <span className="etiquette text-[11px] text-ash">Journal Solange</span>
       </div>
     </PageShell>
   );

@@ -143,7 +143,7 @@ export default function VendrePage() {
     title.trim() && p > 0 && !tropCher && cond && packageSize,
   );
   const missing = [
-    !title.trim() && "un titre",
+    !title.trim() && "un nom",
     !(p > 0) && "un prix",
     tropCher && `un prix de ${PRIX_MAX_EUR.toLocaleString("fr-FR")} € au plus`,
     !cond && "un état",
@@ -218,7 +218,9 @@ export default function VendrePage() {
     if (res.ok) {
       setListed(true);
       focusNext.current = "succes";
-      announce(`${title.trim()} est en ligne dans le Marché.`);
+      announce(
+        `${title.trim()} est déposée : tout le monde peut la voir au Marché.`,
+      );
       void refreshProducts();
     } else {
       setSubmitError(res.error);
@@ -256,9 +258,9 @@ export default function VendrePage() {
     <PageShell>
       <PageHeader
         back="/"
-        eyebrow="Vendre = mettre en vente"
+        eyebrow="Au Marché"
         title="Déposer"
-        subtitle="Mets une pièce en vente en moins d'une minute. Commission légère, tu fixes ton prix."
+        subtitle="Des photos, un prix, une taille de colis."
       />
 
       <div className="grid gap-8 lg:grid-cols-[1fr_360px]">
@@ -358,7 +360,7 @@ export default function VendrePage() {
           <div className="grid gap-5 sm:grid-cols-2">
             <div>
               <FieldLabel htmlFor={`${uid}-titre`}>
-                Titre de l&apos;annonce
+                Nom de la pièce
                 <Obligatoire />
               </FieldLabel>
               <GlassInput
@@ -506,11 +508,11 @@ export default function VendrePage() {
                   tabIndex={-1}
                   className="mt-5 font-editorial text-2xl font-semibold text-bone"
                 >
-                  En ligne
+                  Ta pièce est au Marché.
                 </h2>
                 <p className="mt-1 max-w-[26ch] text-[13px] leading-relaxed text-ash">
-                  {title || "Ta pièce"} est publiée : ton annonce est désormais
-                  visible par tout le monde dans le Marché.
+                  {title || "Ta pièce"} est déposée : tout le monde peut la
+                  voir au Marché.
                 </p>
                 <Button href="/decouvrir" size="lg" className="mt-6">
                   Voir dans le Marché
@@ -557,7 +559,7 @@ export default function VendrePage() {
                       {brand || "Marque"}
                     </p>
                     <p className="truncate text-sm text-bone">
-                      {title || "Ton article"}
+                      {title || "Ta pièce"}
                     </p>
                   </div>
                 </div>
@@ -621,9 +623,7 @@ export default function VendrePage() {
                     <span className="block text-[13px] font-medium text-bone">
                       Mise en avant 72 h
                     </span>
-                    <span className="block text-[11px] text-ash">
-                      Boost ta visibilité dans le feed · 2 €
-                    </span>
+                    <span className="block text-[11px] text-ash">2 €</span>
                   </span>
                   <span
                     aria-hidden="true"
@@ -662,7 +662,7 @@ export default function VendrePage() {
                   /* invité — publier demande une session */
                   <div className="mt-4 rounded-2xl border border-bone/12 bg-bone/[0.04] p-4 text-center">
                     <p className="text-[13px] leading-relaxed text-bone/85">
-                      Connecte-toi pour publier ta pièce.
+                      Connecte-toi pour déposer ta pièce.
                     </p>
                     <button
                       type="button"
@@ -690,10 +690,10 @@ export default function VendrePage() {
                       }`}
                     >
                       {submitting ? (
-                        "Publication…"
+                        "Dépôt…"
                       ) : (
                         <>
-                          <Check className="size-4" /> Mettre en vente
+                          <Check className="size-4" /> Déposer la pièce
                         </>
                       )}
                     </button>
@@ -702,7 +702,7 @@ export default function VendrePage() {
                         id={`${uid}-manque`}
                         className="mt-2 text-center text-[11px] text-ash"
                       >
-                        Ajoute {missing.join(", ")} pour publier.
+                        Ajoute {missing.join(", ")} pour déposer.
                       </p>
                     )}
                     {submitError && (

@@ -4,36 +4,40 @@ import { useState } from "react";
 import Link from "next/link";
 import { motion } from "motion/react";
 import type { CatalogItem } from "@/lib/mock";
-import { compact, euro } from "@/lib/utils";
 import { imgItem } from "@/lib/img";
 import { track } from "@/lib/track";
 import { useStore } from "@/lib/store";
 import { usePaymentsMode } from "@/lib/use-payments-mode";
 import { Avatar } from "@/components/chrome/Avatar";
 import { Button } from "@/components/ui/Button";
+import { Etiquette } from "@/components/ui/Etiquette";
 import { LuxeMedia } from "@/components/ui/LuxeMedia";
-import { ProductCard } from "@/components/ui/ProductCard";
+import { Photo } from "@/components/ui/Photo";
+import { ProductCard, type DisplayItem } from "@/components/ui/ProductCard";
 import { ReportSheet } from "@/components/ui/ReportSheet";
-import { Chip } from "@/components/ui/Chip";
-import { Bag, Heart, Send } from "@/components/chrome/icons";
+import { Bookmark, Send } from "@/components/chrome/icons";
 
 export function ArticleDetail({
   item,
   similar,
 }: {
-  item: CatalogItem;
+  item: DisplayItem;
   similar: CatalogItem[];
 }) {
-  const { isSaved, toggleSave, isSold, likeCount } = useStore();
+  const { isSaved, toggleSave, isSold } = useStore();
   // « simulé » seulement quand le serveur l'a confirmé (paiement réel en prod)
   const payments = usePaymentsMode();
   const [reportOpen, setReportOpen] = useState(false);
   const saved = isSaved(item.id);
-  const sold = isSold(item.id);
-  const [size, setSize] = useState(item.size);
-  const discount = item.originalEUR
-    ? Math.round((1 - item.priceEUR / item.originalEUR) * 100)
-    : 0;
+  const sold = item.soldBase || isSold(item.id);
+  // ce que la barre d'achat dit à la place du bouton
+  const etat = sold
+    ? "Vendue"
+    : item.reserved
+      ? "Paiement en cours"
+      : item.mine
+        ? "Ta pièce"
+        : null;
 
   // deterministic thumbnail variants off the base seed
   const thumbs = [`${item.seed}-a`, `${item.seed}-b`];
@@ -41,17 +45,67 @@ export function ArticleDetail({
   const photos = item.images ?? [];
   const [shown, setShown] = useState(0);
 
+  /* Écrites une fois, rendues deux fois : sous la photo dès lg, sous
+     l'étiquette avant (la photo et son étiquette restent collées). */
+  const vignettes =
+    photos.length > 1 ? (
+      <div className="mt-3 grid grid-cols-3 gap-2.5">
+        {photos.map((src, i) => (
+          <button
+            key={src}
+            type="button"
+            onClick={() => setShown(i)}
+            aria-label={`Photo ${i + 1} sur ${photos.length}`}
+            aria-pressed={shown === i}
+            data-cursor="link"
+            className={`relative aspect-square overflow-hidden ring-1 transition ${
+              shown === i
+                ? "ring-bone"
+                : "opacity-60 ring-bone/10 hover:opacity-100"
+            }`}
+          >
+            <Photo src={src} />
+          </button>
+        ))}
+      </div>
+    ) : (
+      <div className="mt-3 grid grid-cols-2 gap-3">
+        {thumbs.map((t) => (
+          <div
+            key={t}
+            className="relative aspect-[4/3] overflow-hidden ring-1 ring-bone/10"
+          >
+            <LuxeMedia
+              seed={t}
+              brand={item.brand}
+              small
+              className="theme-dark"
+            />
+          </div>
+        ))}
+      </div>
+    );
+
+  const details = [
+    ["Catégorie", item.category],
+    ["Couleur", item.color],
+    ["Matière", item.material],
+    ["En ligne", item.postedAgo],
+  ].filter(([, v]) => v);
+
   return (
     <div>
       {/* two-column: media left, details right */}
-      <div className="grid grid-cols-1 gap-7 lg:grid-cols-[1.05fr_0.95fr] lg:gap-12">
-        {/* LEFT — media */}
+      <div className="grid grid-cols-1 gap-0 lg:grid-cols-[1.05fr_0.95fr] lg:gap-12">
+        {/* LEFT — media. Opacité seule, comme la colonne de droite : la photo
+            ne glisse pas sous le fil de son étiquette. */}
         <motion.div
-          initial={{ opacity: 0, y: 18 }}
-          animate={{ opacity: 1, y: 0 }}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
           transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
         >
-          <div className="relative aspect-[3/4] overflow-hidden rounded-3xl ring-1 ring-bone/10">
+          {/* ni arrondi ni contour : le fil de l'étiquette touche son bord */}
+          <div className="relative aspect-[3/4] overflow-hidden">
             {/* theme-dark : le filigrane reste clair sur le fond sombre */}
             <LuxeMedia
               seed={item.seed}
@@ -60,158 +114,73 @@ export function ArticleDetail({
               eager
               className="theme-dark"
             />
-            {photos.length > 1 && (
-              <span className="absolute bottom-3 right-3 rounded-full bg-ink/60 px-2.5 py-1 text-[11px] tabular-nums text-bone backdrop-blur">
-                {shown + 1} / {photos.length}
-              </span>
-            )}
+            <button
+              type="button"
+              onClick={() => toggleSave(item.id)}
+              aria-label={`Garder ${item.brand} ${item.name}`}
+              aria-pressed={saved}
+              data-cursor="link"
+              className="glass absolute right-3 top-3 z-10 grid size-11 place-items-center rounded-full text-bone transition-transform active:scale-90"
+            >
+              <Bookmark filled={saved} className="size-5" />
+            </button>
           </div>
-          {photos.length > 1 ? (
-            <div className="mt-3 grid grid-cols-3 gap-2.5">
-              {photos.map((src, i) => (
-                <button
-                  key={src}
-                  type="button"
-                  onClick={() => setShown(i)}
-                  aria-label={`Photo ${i + 1} sur ${photos.length}`}
-                  aria-pressed={shown === i}
-                  data-cursor="link"
-                  className={`relative aspect-square overflow-hidden rounded-2xl ring-1 transition ${
-                    shown === i
-                      ? "ring-bone"
-                      : "opacity-60 ring-bone/10 hover:opacity-100"
-                  }`}
-                >
-                  {/* eslint-disable-next-line @next/next/no-img-element -- vignette locale */}
-                  <img
-                    src={src}
-                    alt=""
-                    className="absolute inset-0 size-full object-cover"
-                  />
-                </button>
-              ))}
-            </div>
-          ) : (
-            <div className="mt-3 grid grid-cols-2 gap-3">
-              {thumbs.map((t) => (
-                <div
-                  key={t}
-                  className="relative aspect-[4/3] overflow-hidden rounded-3xl ring-1 ring-bone/10"
-                >
-                  <LuxeMedia
-                    seed={t}
-                    brand={item.brand}
-                    small
-                    className="theme-dark"
-                  />
-                </div>
-              ))}
-            </div>
-          )}
+          <div className="hidden lg:block">{vignettes}</div>
         </motion.div>
 
-        {/* RIGHT — details */}
+        {/* RIGHT — details. Opacité seule : un transform sur cet ancêtre
+            calerait la barre d'achat fixed sur la colonne, pas sur l'écran. */}
         <motion.div
-          initial={{ opacity: 0, y: 18 }}
-          animate={{ opacity: 1, y: 0 }}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
           transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1], delay: 0.08 }}
-          className="lg:py-2"
         >
-          <p className="text-[12px] text-ash">{item.brand}</p>
-          <h1 className="font-editorial mt-2 text-5xl font-semibold leading-[0.95] tracking-tight text-bone md:text-7xl">
-            {item.name}
-          </h1>
+          <Etiquette variant="fiche" item={item} sold={sold} />
 
-          {/* price row */}
-          <div className="mt-5 flex flex-wrap items-baseline gap-3">
-            <span className="font-display text-3xl font-bold text-bone">
-              {euro(item.priceEUR)}
-            </span>
-            {item.originalEUR && (
-              <span className="text-base text-ash line-through">
-                {euro(item.originalEUR)}
-              </span>
+          {/* barre d'achat : collée en bas sur téléphone (à la place de la
+              barre d'onglets), sous l'étiquette dès md. Marges de PageShell :
+              étiquette et bouton s'alignent sur la photo. Moitié-moitié :
+              plus étroite, l'étiquette couperait son prix. */}
+          <div className="fixed inset-x-0 bottom-0 z-50 flex gap-2 border-t border-line bg-[var(--background)] pt-2.5 pl-[max(1.25rem,env(safe-area-inset-left))] pr-[max(1.25rem,env(safe-area-inset-right))] pb-[max(0.75rem,env(safe-area-inset-bottom))] md:static md:z-auto md:mt-4 md:border-0 md:bg-transparent md:p-0">
+            {/* aucun prix pour une pièce vendue */}
+            {!sold && (
+              <Etiquette
+                variant="barre"
+                item={item}
+                className="min-w-0 flex-1 md:hidden"
+              />
             )}
-            {discount > 0 && (
-              <span className="rounded-full bg-bone px-2 py-0.5 text-[11px] font-bold text-ink">
-                −{discount}%
-              </span>
+            {etat ? (
+              <p className="flex min-h-[52px] flex-1 items-center justify-center border border-line px-3 text-center text-[13.5px] font-semibold text-ash">
+                {etat}
+              </p>
+            ) : (
+              <Button
+                href={`/checkout/${item.id}`}
+                onClick={() =>
+                  track("checkout_start", {
+                    id: item.id,
+                    brand: item.brand,
+                    priceEUR: item.priceEUR,
+                  })
+                }
+                className="min-h-[52px] flex-1"
+              >
+                Acheter
+              </Button>
             )}
-            {/* scarcity pill */}
-            <span className="rounded-full border border-bone/25 px-2.5 py-0.5 text-[11px] font-medium uppercase tracking-[0.14em] text-bone/70">
-              Pièce unique
-            </span>
-            {/* compteur réel = base + likes membres agrégés serveur */}
-            <span
-              aria-label={`${likeCount(item.id, item.likes)} j'aime`}
-              className="inline-flex items-center gap-1 text-[12px] text-ash"
-            >
-              <Heart className="size-3.5" aria-hidden="true" />
-              <span className="tabular-nums">
-                {compact(likeCount(item.id, item.likes))}
-              </span>
-            </span>
           </div>
 
-          {/* size + condition pills */}
-          <div className="mt-6">
-            <p className="etiquette text-[11px] text-ash">Taille</p>
-            <div className="mt-2 flex flex-wrap gap-2">
-              {[item.size].map((s) => (
-                <Chip key={s} active={size === s} onClick={() => setSize(s)}>
-                  {s}
-                </Chip>
-              ))}
-            </div>
-          </div>
-          <div className="mt-4 flex flex-wrap items-center gap-2">
-            <span className="rounded-full border border-bone/20 px-3 py-1 text-[12px] text-bone/70">
-              {item.condition}
-            </span>
-            <span className="rounded-full border border-bone/20 px-3 py-1 text-[12px] text-bone/70">
-              {item.category}
-            </span>
-          </div>
+          <div className="lg:hidden">{vignettes}</div>
 
-          {item.description && (
-            <div className="mt-7">
-              <p className="etiquette text-[11px] text-ash">Description</p>
-              <div className="mt-2.5 space-y-3 text-[14px] leading-relaxed text-bone/85">
-                {item.description.split("\n\n").map((para) => (
-                  <p key={para.slice(0, 24)}>{para}</p>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {(item.color || item.material) && (
-            <dl className="mt-6 divide-y divide-bone/10 border-y border-bone/10 text-[13px]">
-              {[
-                ["Marque", item.brand],
-                ["Taille", item.size],
-                ["État", item.condition],
-                ["Couleur", item.color],
-                ["Matière", item.material],
-                ["En ligne", item.postedAgo],
-              ]
-                .filter(([, v]) => v)
-                .map(([k, v]) => (
-                  <div key={k} className="flex justify-between gap-4 py-2.5">
-                    <dt className="text-ash">{k}</dt>
-                    <dd className="text-right text-bone">{v}</dd>
-                  </div>
-                ))}
-            </dl>
-          )}
-
-          {/* seller row — handle réel cliquable → profil public ; le lien
-              messages reste porté par « Contacter le vendeur » */}
-          <div className="glass mt-7 flex items-center gap-2 rounded-2xl p-2 pr-2.5">
+          {/* seller row — handle réel cliquable → profil public, et un seul
+              lien pour lui écrire */}
+          <div className="mt-6 flex flex-col gap-2 border border-line p-2 sm:flex-row sm:items-center">
             <Link
               href={`/membre/${encodeURIComponent(item.seller)}`}
               data-cursor="link"
               aria-label={`Voir le profil de @${item.seller}`}
-              className="flex min-h-11 min-w-0 flex-1 items-center gap-3 rounded-xl px-2 py-1 transition-colors hover:bg-bone/10"
+              className="flex min-h-11 min-w-0 flex-1 items-center gap-3 px-2 py-1 transition-colors hover:bg-bone/10"
             >
               {/* annonce d'un membre : son compte et sa photo ; pièce de
                   démo : le monogramme du vendeur, comme avant */}
@@ -231,66 +200,46 @@ export function ArticleDetail({
                 </span>
               </span>
             </Link>
-            <Link
-              href={`/messages?item=${item.id}`}
-              data-cursor="link"
-              className="inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-full border border-bone/25 px-4 text-center text-[12px] font-semibold leading-tight text-bone transition-colors hover:bg-bone/15"
-            >
-              <Send className="size-3.5 shrink-0" aria-hidden="true" />
-              Contacter le vendeur
-            </Link>
-          </div>
-
-          {/* actions */}
-          <div className="mt-5 flex flex-col gap-3 sm:flex-row">
-            {sold ? (
-              <Button disabled className="min-h-12 flex-1">
-                <Bag className="size-5" />
-                Vendu
-              </Button>
-            ) : (
-              <Button
-                href={`/checkout/${item.id}`}
-                onClick={() =>
-                  track("checkout_start", {
-                    id: item.id,
-                    brand: item.brand,
-                    priceEUR: item.priceEUR,
-                  })
-                }
-                className="min-h-12 flex-1"
-              >
-                <Bag className="size-5" />
-                Acheter — {euro(item.priceEUR)}
-              </Button>
-            )}
             <Button
               variant="outline"
+              size="sm"
               href={`/messages?item=${item.id}`}
-              className="min-h-12"
+              className="min-w-0"
             >
-              <Send className="size-4" />
-              Faire une offre
+              <Send className="size-3.5 shrink-0" />
+              <span className="truncate">Écrire à @{item.seller}</span>
             </Button>
-            <button
-              type="button"
-              onClick={() => toggleSave(item.id)}
-              aria-label="Enregistrer"
-              aria-pressed={saved}
-              data-cursor="link"
-              className="glass grid size-[52px] shrink-0 place-items-center rounded-none text-bone transition-transform active:scale-90"
-            >
-              <Heart filled={saved} className="size-5" />
-            </button>
           </div>
+
+          {item.description && (
+            <div className="mt-7">
+              <p className="etiquette text-[11px] text-ash">Description</p>
+              <div className="mt-2.5 space-y-3 text-[14px] leading-relaxed text-bone/85">
+                {item.description.split("\n\n").map((para) => (
+                  <p key={para.slice(0, 24)}>{para}</p>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* marque, taille et état ne sont dits que par l'étiquette */}
+          {details.length > 0 && (
+            <dl className="mt-6 divide-y divide-bone/10 border-y border-bone/10 text-[13px]">
+              {details.map(([k, v]) => (
+                <div key={k} className="flex justify-between gap-4 py-2.5">
+                  <dt className="text-ash">{k}</dt>
+                  <dd className="text-right text-bone">{v}</dd>
+                </div>
+              ))}
+            </dl>
+          )}
 
           <p className="mt-6 text-[13px] leading-relaxed text-ash">
             {payments.ready && !payments.live
               ? "Protection acheteur (démo) — paiement simulé, aucune transaction réelle."
               : payments.live
                 ? "Protection acheteur — le paiement se fait par carte, via Stripe."
-                : "Protection acheteur."}{" "}
-            Commission dégressive reversée au vendeur.
+                : "Protection acheteur."}
           </p>
 
           {/* Lot 4 : les annonces étaient le SEUL contenu non signalable
