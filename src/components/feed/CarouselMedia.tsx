@@ -77,10 +77,13 @@ export function CarouselMedia({
       aria-label={`Photos · ${title}`}
       className="absolute inset-0 bg-black"
     >
+      {/* focalisable : une zone qui défile doit s'atteindre au clavier
+          (flèches gauche / droite) */}
       <div
         ref={ref}
         onScroll={onScroll}
-        className="flex h-full w-full snap-x snap-mandatory overflow-x-auto overflow-y-hidden [overscroll-behavior-x:contain]"
+        tabIndex={0}
+        className="peer flex h-full w-full snap-x snap-mandatory overflow-x-auto overflow-y-hidden [overscroll-behavior-x:contain]"
       >
         {images.map((src, i) => (
           <div
@@ -110,6 +113,9 @@ export function CarouselMedia({
       {/* legibility scrims — same as the single-media layer */}
       <div className="pointer-events-none absolute inset-x-0 top-0 h-48 bg-gradient-to-b from-black/70 via-black/20 to-transparent" />
       <div className="pointer-events-none absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-black via-black/60 to-transparent" />
+      {/* anneau de focus de la zone qui défile, rentré (la carte rogne ses
+          bords) : le sien passe sous les photos et les voiles */}
+      <div className="pointer-events-none absolute inset-0 peer-focus-visible:outline-2 peer-focus-visible:-outline-offset-4 peer-focus-visible:outline-bone" />
 
       {/* précédente · pastilles · suivante — sous la barre du haut (le
           sélecteur Looks / Pièces recouvrait les pastilles), au centre

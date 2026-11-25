@@ -83,13 +83,8 @@ export default function NotificationsPage() {
       <PageHeader
         eyebrow="Quoi de neuf"
         title="Notifications"
-        right={
-          <span className="inline-flex items-center gap-2 text-sm text-ash">
-            <Bell className="size-4" />
-            {unread > 0
-              ? `${unread} non lue${unread > 1 ? "s" : ""}`
-              : "À jour"}
-          </span>
+        subtitle={
+          unread > 0 ? `${unread} non lue${unread > 1 ? "s" : ""}` : "À jour"
         }
       />
 

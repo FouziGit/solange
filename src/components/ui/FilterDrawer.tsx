@@ -234,12 +234,13 @@ export function FilterDrawer({
                       data-cursor="link"
                       onClick={() => set("brands", toggle(value.brands, b))}
                       className={cn(
-                        "flex min-h-11 w-full items-center justify-between gap-2 py-1.5 text-left text-[13.5px] leading-snug transition-colors",
+                        "flex min-h-11 w-full items-center gap-2 py-1.5 text-left text-[13.5px] leading-snug transition-colors",
                         on ? "text-bone" : "text-bone/65 hover:text-bone",
                       )}
                     >
-                      <span>{b}</span>
+                      {/* le point à gauche du mot, comme sur Chip */}
                       <Tick on={on} />
+                      <span>{b}</span>
                     </button>
                   </li>
                 );
@@ -292,26 +293,16 @@ export function FilterDrawer({
           active={value.conds.length > 0}
           {...sec("etat")}
         >
-          <div className="flex flex-col">
-            {conditions.map((c) => {
-              const on = value.conds.includes(c);
-              return (
-                <button
-                  key={c}
-                  type="button"
-                  aria-pressed={on}
-                  data-cursor="link"
-                  onClick={() => set("conds", toggle(value.conds, c))}
-                  className={cn(
-                    "flex min-h-11 items-center justify-between text-left text-[13.5px] transition-colors",
-                    on ? "text-bone" : "text-bone/65 hover:text-bone",
-                  )}
-                >
-                  {c}
-                  <Tick on={on} />
-                </button>
-              );
-            })}
+          <div className="flex flex-wrap gap-1.5">
+            {conditions.map((c) => (
+              <Chip
+                key={c}
+                active={value.conds.includes(c)}
+                onClick={() => set("conds", toggle(value.conds, c))}
+              >
+                {c}
+              </Chip>
+            ))}
           </div>
         </Row>
 

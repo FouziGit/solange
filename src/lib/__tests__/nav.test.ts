@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   dansMarche,
+  dansProfil,
   dernierMessage,
   messageNonLu,
   sansBarreOnglets,
@@ -19,12 +20,36 @@ describe("dansMarche", () => {
   });
 });
 
+describe("dansProfil", () => {
+  it("couvre le Profil et les écrans qui s'ouvrent depuis lui", () => {
+    expect(dansProfil("/profil")).toBe(true);
+    expect(dansProfil("/favoris")).toBe(true);
+    expect(dansProfil("/communaute/c1")).toBe(true);
+    expect(dansProfil("/journal/x")).toBe(true);
+  });
+
+  it("laisse les autres écrans dehors", () => {
+    expect(dansProfil("/")).toBe(false);
+    expect(dansProfil("/messages")).toBe(false);
+    expect(dansProfil("/membre/x")).toBe(false);
+    expect(dansProfil("/notifications")).toBe(false);
+  });
+});
+
 describe("sansBarreOnglets", () => {
+  const existe = (id: string) => id === "x";
+
   it("ne retire la barre que sur la fiche d'une pièce", () => {
-    expect(sansBarreOnglets("/article/x")).toBe(true);
-    expect(sansBarreOnglets("/decouvrir")).toBe(false);
-    expect(sansBarreOnglets("/checkout/x")).toBe(false);
-    expect(sansBarreOnglets("/")).toBe(false);
+    expect(sansBarreOnglets("/article/x", existe)).toBe(true);
+    expect(sansBarreOnglets("/decouvrir", existe)).toBe(false);
+    expect(sansBarreOnglets("/checkout/x", existe)).toBe(false);
+    expect(sansBarreOnglets("/", existe)).toBe(false);
+  });
+
+  it("la laisse sur la 404 d'une pièce introuvable : aucune barre d'achat ne la remplace", () => {
+    expect(sansBarreOnglets("/article/nexistepas", existe)).toBe(false);
+    expect(sansBarreOnglets("/article/", existe)).toBe(false);
+    expect(sansBarreOnglets("/article/x/suite", existe)).toBe(false);
   });
 });
 

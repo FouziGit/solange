@@ -77,7 +77,8 @@ aucun emoji.
   profil et le NotifySwitch de Drops restent des interrupteurs — candidats
   à une primitive `Switch` quand les préférences de notification du Lot 3
   en créeront un 3ᵉ usage).
-- Migré sur : FeedCard, favoris, membre, decouvrir (seule
+- Migré sur : FeedCard (sur le fil, Suivre est en filet : l'étiquette look y
+  est le bloc renversé, DA §9), favoris, membre, decouvrir (seule
   version carrée, normalisée), CommunityView, CommunityDetail, Drops
   (Réserver), Live (Me prévenir). Zéro implémentation locale restante.
 
@@ -93,7 +94,7 @@ aucun emoji.
   sélection (Chip), la navigation (onglets/nav).
 - Migré sur : checkout, vendre, membre (réessayer, introuvable), profil
   (Premium, se connecter, supprimer, copier le code), not-found, error,
-  ArticleDetail, ShopCard, ShopTheLook, FilterDrawer, PlanCards, Live,
+  ArticleDetail, ShopCard, FilterDrawer, PlanCards, Live,
   Drops (lot 0). **Plus aucun CTA texte hors Button** (balayage
   `audit/lots/00-filet.md`).
 

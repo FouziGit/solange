@@ -302,7 +302,9 @@ export function MemberPostCard({
             </motion.div>
 
             {/* bas : légende clampée + chips marques — révélation étagée,
-                le padding dégage la barre d'onglets mobile flottante */}
+                le padding dégage la barre d'onglets mobile flottante.
+                Le bloc laisse passer les touchers, ses rangées les gardent :
+                sa marge de droite recouvre le rail. */}
             <motion.div
               variants={group}
               initial="hide"
@@ -310,7 +312,7 @@ export function MemberPostCard({
               style={{
                 paddingBottom: "calc(var(--tabbar-clearance) + 0.5rem)",
               }}
-              className="absolute inset-x-0 bottom-0 z-20 space-y-1 p-4 pl-[max(1rem,env(safe-area-inset-left))] pr-[calc(5rem+env(safe-area-inset-right))] md:!pb-9 md:pl-4 md:pr-20"
+              className="pointer-events-none absolute inset-x-0 bottom-0 z-20 space-y-1 p-4 pl-[max(1rem,env(safe-area-inset-left))] pr-[calc(5rem+env(safe-area-inset-right))] *:pointer-events-auto md:!pb-9 md:pl-4 md:pr-20"
             >
               {/* le numéro de passage (DA §5) ; avec des pièces, l'étiquette
                   les ouvre */}
@@ -349,10 +351,16 @@ export function MemberPostCard({
 
               {post.caption ? (
                 <motion.div variants={item} className="max-w-[34ch]">
+                  {/* dépliée, la légende est bornée : sur un écran court elle
+                      poussait l'étiquette sur les flèches du carrousel. Elle
+                      peut alors défiler, donc s'atteint au clavier. */}
                   <p
                     ref={captionRef}
+                    tabIndex={captionExpanded ? 0 : undefined}
                     className={`text-[13.5px] leading-relaxed text-bone/95 ${
-                      captionExpanded ? "" : "line-clamp-1"
+                      captionExpanded
+                        ? "max-h-[24dvh] overflow-y-auto overscroll-contain"
+                        : "line-clamp-1"
                     }`}
                   >
                     {post.caption}

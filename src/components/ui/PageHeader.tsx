@@ -7,7 +7,7 @@ import { ArrowLeft } from "@/components/chrome/icons";
 /** Canonical H1 scale — single source of truth for page titles across views.
  *  Montserrat (font-display) for a minimalist-luxe, modern feel. */
 export const PAGE_TITLE =
-  "font-display text-[2.7rem] font-bold uppercase leading-[0.95] tracking-tight text-bone md:text-6xl";
+  "font-display text-[clamp(2rem,11vw,2.7rem)] font-bold uppercase leading-[0.95] tracking-tight text-bone md:text-6xl";
 
 export function PageHeader({
   eyebrow,

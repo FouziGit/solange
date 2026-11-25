@@ -10,7 +10,7 @@ import { cn, euro } from "@/lib/utils";
 
 type Piece = Pick<Item, "size" | "priceEUR">;
 
-export type EtiquetteProps = { className?: string } & (
+type EtiquetteProps = { className?: string } & (
   | { variant: "carte" | "barre"; item: Piece }
   | { variant: "vendue"; item: Pick<Item, "size"> }
   | {
@@ -182,14 +182,18 @@ export function Etiquette(props: EtiquetteProps): React.JSX.Element {
     );
   }
 
+  /* Bande de moins de 150 px (carte du Marché sur un écran de 320 px) : le
+     préfixe « T. » prenait seul la première des deux lignes et la taille
+     était coupée. Il s'efface, la hauteur ne bouge pas. */
   return (
-    <div className={cn(BANDE, "h-9", className)}>
+    <div className={cn(BANDE, "@container h-9", className)}>
       <Talon />
       <span
         aria-hidden
         className={cn(TAILLE, props.variant === "vendue" && "text-ash")}
       >
-        T. {props.item.size}
+        <span className="@max-[9.375rem]:hidden">T. </span>
+        {props.item.size}
       </span>
       <span className="self-stretch border-l border-line" />
       <span

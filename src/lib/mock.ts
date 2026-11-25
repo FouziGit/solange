@@ -17,10 +17,6 @@ export type Item = {
   condition: string;
 };
 
-export type Product = Item & {
-  hotspot: { x: number; y: number }; // % position over the media
-};
-
 export type Creator = {
   id: string;
   handle: string;
@@ -42,7 +38,6 @@ export type Look = {
   likes: number;
   comments: number;
   shares: number;
-  products: Product[];
   soundtrack: string;
   badge?: string; // e.g. "DROP", "ARCHIVE"
   /** Post nature: look (default), edito framing, actu (news), achats (haul). */

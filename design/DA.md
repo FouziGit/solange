@@ -148,6 +148,8 @@ feedback, direction de l'attention. Sinon : immobile.
 - **Le moment orchestré** (signature motion) : l'entrée étagée de la carte de
   feed (média → étiquette → légende, stagger existant). Tout le reste de l'app
   est calme.
+- **Fiche d'une pièce** : la page entre en fondu, sans glissement, pour que la
+  barre d'achat (§9) soit en place dès la première image.
 - Supprimés : blobs errants de l'AuthScreen (on garde la seule émergence du
   logo), keyframes morts (`shimmer`, `marquee`, `grain-shift`).
 - **Écran de lancement** : réservé à l'app installée (`display-mode:
@@ -203,17 +205,20 @@ n'est jamais interactive, sauf `look` quand le look a des pièces.
 
 | Variante | Où | Ce qu'elle porte |
 |---|---|---|
-| `carte` | Collée sous la photo : Marché, profil, Gardées, pièces d'un look, paiement | Bande de 36 px : `T. 43` (Montserrat 700, 12 px), un filet, le prix calé à droite (800, 15 px). Marque, nom et état restent dessous, hors cadre |
+| `carte` | Collée sous la photo : Marché, profil, Gardées, pièces d'un look, paiement. Exception, à valider par les deux fondateurs : dans le mode Pièces du fil, où la photo occupe toute la carte, la bande est posée dans le bloc du bas, sur le voile | Bande de 36 px : `T. 43` (Montserrat 700, 12 px), un filet, le prix calé à droite (800, 15 px). Marque, nom et état restent dessous, hors cadre |
 | `vendue` | À la place de `carte` | La même bande : taille en `ash`, « VENDUE » tamponné à la place du prix, aucun prix. La photo passe à 40 % |
 | `fiche` | Page d'une pièce, sous la photo | Œillet relié au bord bas de la photo par un fil de 1 px (masqué dès `lg`, où la photo passe à gauche). Marque en griffe (800, 22 px) et nom (Hanken 17 px) : c'est le `h1` de la page. Puis trois cases à filets : TAILLE (22 px), ÉTAT (crans et mot), PRIX (34 px) |
-| `barre` | Barre d'achat de la fiche, sur téléphone | Bande de 52 px : prix (17 px) puis taille, à gauche du bloc « Acheter » ; les deux se partagent la barre à parts égales. Muette pour un lecteur d'écran : la fiche vient de tout dire |
+| `barre` | Barre d'achat de la fiche, sur téléphone | Bande de 52 px : prix (17 px) puis taille, à gauche du bloc « Acheter », qui prend un peu plus de la moitié de la largeur utile (ses marges intérieures en plus). Muette pour un lecteur d'écran : la fiche vient de tout dire |
 | `look` | Fil, au-dessus du pseudo | Renversée : `N°07` (800, 15 px), puis « 3 pièces » (11 px). Avec des pièces, c'est un bouton qui les ouvre |
 
 *Débordement.* La taille d'une pièce de membre est un texte libre de 12
 caractères au plus, et un prix va jusqu'à « 8 000 € ». Dans une bande
 (`carte`, `vendue`), la taille tient sur deux lignes de 12 px puis se coupe,
-le prix ne se coupe jamais, la hauteur ne bouge pas. Dans la `barre`, s'il
-reste moins de 32 px après le prix, la taille n'est pas affichée. Dans la
+le prix ne se coupe jamais, la hauteur ne bouge pas. Quand la bande est trop
+étroite (moins de 150 px : une carte du Marché sur un écran de 320 px), le
+préfixe « T. » de la taille s'efface plutôt que de couper la taille ; la
+hauteur de 36 px ne bouge pas. Dans la `barre`, s'il reste moins de 32 px
+après le prix, la taille n'est pas affichée. Dans la
 `fiche`, rien n'est coupé, c'est la seule source : la taille et le mot d'état
 passent à la ligne, le prix reste d'un seul tenant. Les trois cases sont de
 front dès que le corps de l'étiquette fait 312 px (écran de 390 px) ; plus
@@ -223,7 +228,10 @@ front dès que le corps de l'étiquette fait 312 px (écran de 390 px) ; plus
 tout le texte en `ink` (17,8:1), « 3 pièces » en `ink` à 70 % (7,5:1),
 perforation et filet en `ink` à 45 % et 20 %. Jamais `ash` ni la classe
 `.etiquette` ici : `ash` sur `bone` tombe à 2,56:1. C'est le seul bloc
-renversé du fil, donc « Suivre » y passe en filet.
+renversé de la carte, donc « Suivre » y passe en filet ; le « + » et le
+sélecteur Looks / Pièces restent pleins tant que les deux fondateurs n'ont
+pas tranché. Sur le fil, « Suivre » est un bouton à filet sur fond `ink` à
+55 %, pour rester lisible sur un média chargé.
 
 *L'état en crans (essai).* Sur la `fiche` seulement : quatre carrés de 10 px,
 pleins depuis la gauche, le reste à filet fort. Neuf avec étiquette 4,

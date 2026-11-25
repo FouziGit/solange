@@ -239,11 +239,7 @@ export function FeedCard({
                 <CarouselMedia
                   images={look.gallery!}
                   title={look.title}
-                  house={
-                    look.products[0]?.brand ??
-                    look.brandTags?.[0] ??
-                    look.creator.name
-                  }
+                  house={look.brandTags?.[0] ?? look.creator.name}
                 />
               ) : (
                 <KenBurnsMedia
@@ -252,7 +248,7 @@ export function FeedCard({
                   house={
                     isPost
                       ? (look.brandTags?.[0] ?? look.creator.name)
-                      : (look.products[0]?.brand ?? look.creator.name)
+                      : look.creator.name
                   }
                   active={active}
                   paused={paused}
@@ -347,7 +343,9 @@ export function FeedCard({
             </motion.div>
 
             {/* bottom: caption, tags, sound, shop — staggered reveal.
-            Bottom padding clears the floating mobile tab bar (0 at md). */}
+            Bottom padding clears the floating mobile tab bar (0 at md).
+            Le bloc laisse passer les touchers, ses rangées les gardent :
+            sa marge de droite recouvre le rail. */}
             <motion.div
               variants={group}
               initial="hide"
@@ -355,7 +353,7 @@ export function FeedCard({
               style={{
                 paddingBottom: "calc(var(--tabbar-clearance) + 0.5rem)",
               }}
-              className="absolute inset-x-0 bottom-0 z-20 space-y-1 p-4 pl-[max(1rem,env(safe-area-inset-left))] pr-[calc(5rem+env(safe-area-inset-right))] md:!pb-9 md:pl-4 md:pr-20"
+              className="pointer-events-none absolute inset-x-0 bottom-0 z-20 space-y-1 p-4 pl-[max(1rem,env(safe-area-inset-left))] pr-[calc(5rem+env(safe-area-inset-right))] *:pointer-events-auto md:!pb-9 md:pl-4 md:pr-20"
             >
               {/* Le numéro de passage (DA §5) ; avec des pièces, l'étiquette
                   les ouvre. */}
@@ -393,11 +391,12 @@ export function FeedCard({
                   labelOn="Suivi"
                   labelOff="Suivre"
                   size="sm"
-                  // l'étiquette est le seul bloc renversé du fil (DA §9)
+                  // l'étiquette est le seul bloc renversé de la carte (DA §9) ;
+                  // le fond sombre détache le mot du texte incrusté du média
                   className={
                     following
                       ? undefined
-                      : "border border-bone/45 bg-transparent text-bone hover:bg-bone/10"
+                      : "border border-line-strong bg-ink/55 text-bone hover:bg-bone/10"
                   }
                 />
                 {/* Pas de bouton son : les clips des looks n'ont aucune piste
@@ -405,10 +404,16 @@ export function FeedCard({
               </motion.div>
 
               <motion.div variants={item} className="max-w-[34ch]">
+                {/* dépliée, la légende est bornée : sur un écran court elle
+                    poussait l'étiquette sur les flèches du carrousel. Elle
+                    peut alors défiler, donc s'atteint au clavier. */}
                 <p
                   ref={captionRef}
+                  tabIndex={captionExpanded ? 0 : undefined}
                   className={`text-[13.5px] leading-relaxed text-bone/95 ${
-                    captionExpanded ? "" : "line-clamp-1"
+                    captionExpanded
+                      ? "max-h-[24dvh] overflow-y-auto overscroll-contain"
+                      : "line-clamp-1"
                   }`}
                 >
                   {look.caption}

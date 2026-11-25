@@ -79,7 +79,7 @@ function page(next: string, error: boolean) {
     ${error ? '<span id="err" class="err" role="alert">Ce code ne marche pas. Vérifie-le et réessaie.</span>' : ""}
     <button type="submit">Entrer</button>
   </form>
-  <small>Annonces et paiements fictifs · aucune somme n'est débitée</small>
+  <small>Pièces et paiements fictifs · aucune somme n'est débitée</small>
 </main>
 </body>
 </html>`;

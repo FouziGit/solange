@@ -4,8 +4,10 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { api } from "@/lib/api";
+import { catalogItem } from "@/lib/mock";
 import {
   dansMarche,
+  dansProfil,
   dernierMessage,
   messageNonLu,
   sansBarreOnglets,
@@ -50,7 +52,7 @@ const items: TabItem[] = [
     href: "/profil",
     label: "Profil",
     Icon: User,
-    match: (p) => p.startsWith("/profil"),
+    match: dansProfil,
   },
 ];
 
@@ -61,6 +63,9 @@ export function MobileTabBar() {
   const [composeOpen, setComposeOpen] = useState(false);
   const { circlesUnread, user } = useStore();
   const connecte = user !== null;
+  // par compte : le repère d'un membre n'éteint pas le point du suivant
+  const cleVus = user ? `${MESSAGES_VUS}:${user.id}` : null;
+  const sansBarre = sansBarreOnglets(pathname, (id) => !!catalogItem(id));
   const [messagesNonLus, setMessagesNonLus] = useState(false);
   const etaitSurMessages = useRef(false);
 
@@ -70,18 +75,23 @@ export function MobileTabBar() {
     const surMessages = pathname.startsWith("/messages");
     const vu = surMessages || etaitSurMessages.current;
     etaitSurMessages.current = surMessages;
-    if (!connecte) return;
+    /* barre absente (fiche d'une pièce) ou masquée (écran large) : personne
+       ne voit le point, on n'appelle que pour écrire le repère « vu » */
+    if (
+      !cleVus ||
+      (!vu && (sansBarre || matchMedia("(min-width: 768px)").matches))
+    )
+      return;
     let cancelled = false;
     void api.notifications().then((res) => {
       if (!res.ok) return;
       const notifs = res.data.notifications;
-      // ponytail: repère « vu » par appareil ; un vrai compteur de messages non lus demande le serveur (netlify/), hors chantier.
+      // ponytail: repère « vu » par appareil et par compte ; un vrai compteur de messages non lus demande le serveur (netlify/), hors chantier.
       let vuA = 0;
       try {
         /* écrit même si on est déjà reparti : ce qui a été vu l'a été */
-        if (vu)
-          localStorage.setItem(MESSAGES_VUS, String(dernierMessage(notifs)));
-        else vuA = Number(localStorage.getItem(MESSAGES_VUS)) || 0;
+        if (vu) localStorage.setItem(cleVus, String(dernierMessage(notifs)));
+        else vuA = Number(localStorage.getItem(cleVus)) || 0;
       } catch {
         /* stockage bloqué : vuA reste à 0 */
       }
@@ -90,9 +100,9 @@ export function MobileTabBar() {
     return () => {
       cancelled = true;
     };
-  }, [pathname, connecte]);
+  }, [pathname, cleVus, sansBarre]);
 
-  if (sansBarreOnglets(pathname)) return null;
+  if (sansBarre) return null;
 
   const left = items.slice(0, 2);
   const right = items.slice(2);
@@ -125,7 +135,7 @@ export function MobileTabBar() {
           aria-haspopup="dialog"
           aria-expanded={composeOpen}
           onClick={() => setComposeOpen((v) => !v)}
-          className="relative -mt-4 grid size-14 place-items-center rounded-full bg-bone text-ink shadow-[0_8px_24px_-6px_rgba(0,0,0,0.5)] transition-transform active:scale-90"
+          className="relative -mt-4 grid size-14 place-items-center rounded-full bg-bone text-ink transition-transform active:scale-90"
         >
           <Plus
             className={`size-7 transition-transform duration-300 ${composeOpen ? "rotate-45" : ""}`}

@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import { describe, expect, it, vi } from "vitest";
 import { intentOnLeave, shouldPlay } from "@/components/feed/MemberVideo";
 import {
@@ -85,6 +87,33 @@ describe("carrousel — position et libellés (TAC-5, CAR-1)", () => {
     expect(photoLabel(2, 3)).toBe("Photo 3 sur 3");
     expect(photoLabel(1, 4)).not.toMatch(/\//);
   });
+});
+
+/* Le bloc légende couvre toute la largeur de la carte, au même z-index que
+   le rail et après lui dans le DOM. S'il capte les touchers, sa marge de
+   droite avale ceux destinés à « Partager », « Garder » et « Signaler » sur
+   téléphone. Pas de DOM dans la suite : on lit les vrais fichiers. */
+describe("bloc légende — ne passe pas devant le rail (QA-01, QA-02)", () => {
+  for (const card of ["FeedCard", "MemberPostCard"]) {
+    it(`${card} : le bloc laisse passer les touchers, ses rangées les gardent`, () => {
+      const src = readFileSync(
+        fileURLToPath(
+          new URL(`../../components/feed/${card}.tsx`, import.meta.url),
+        ),
+        "utf8",
+      );
+      const blocs = [...src.matchAll(/className="([^"]*)"/g)]
+        .map((m) => m[1].split(/\s+/))
+        .filter((classes) =>
+          ["absolute", "inset-x-0", "bottom-0", "z-20"].every((c) =>
+            classes.includes(c),
+          ),
+        );
+      expect(blocs).toHaveLength(1); // le motif lit bien le bloc légende
+      expect(blocs[0]).toContain("pointer-events-none");
+      expect(blocs[0]).toContain("*:pointer-events-auto");
+    });
+  }
 });
 
 describe("shareOrCopy — Partager n'est plus inerte (SEM-7)", () => {

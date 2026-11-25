@@ -412,6 +412,20 @@ body {
 .page-enter {
   animation: page-enter 0.45s cubic-bezier(0.16, 1, 0.3, 1) backwards;
 }
+/* La fiche d'une pièce entre en opacité seule : même le temps de l'entrée, un
+   transform ferait de l'enveloppe le bloc conteneur de la barre d'achat
+   `fixed`, calée alors sur le bas de la page entière, hors écran. */
+@keyframes page-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+.page-enter:has([data-barre-achat]) {
+  animation-name: page-fade;
+}
 
 /* ---------- Keyframes ---------- */
 

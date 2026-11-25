@@ -148,11 +148,6 @@ function DecouvrirInner() {
 
   const hasQuery = q.trim().length > 0;
   const results = useMemo(() => searchAll(q), [q]);
-  // l'onglet Looks ne liste que des looks : le Journal a ses propres entrées
-  const looksTrouves = useMemo(
-    () => results.content.filter((h) => h.type === "post"),
-    [results],
-  );
 
   const priceMinNum = filters.priceMin ? Number(filters.priceMin) : undefined;
   const priceMaxNum = filters.priceMax ? Number(filters.priceMax) : undefined;
@@ -171,7 +166,7 @@ function DecouvrirInner() {
   const counts: Record<Dimension, number | null> = {
     pieces: allItems.length,
     profils: hasQuery ? results.profiles.length : null,
-    contenu: hasQuery ? looksTrouves.length : null,
+    contenu: hasQuery ? results.content.length : null,
   };
 
   /* Bilan lu par VoiceOver quand la recherche, la catégorie ou un filtre
@@ -400,13 +395,13 @@ function DecouvrirInner() {
           <p className="mt-16 text-center text-sm text-ash">
             Cherche une marque, un style ou un sujet pour trouver des looks.
           </p>
-        ) : looksTrouves.length === 0 ? (
+        ) : results.content.length === 0 ? (
           <p className="mt-16 text-center text-sm text-ash">
             Aucun look ne correspond à «&nbsp;{q.trim()}&nbsp;».
           </p>
         ) : (
           <ul className="mt-5 divide-y divide-bone/10 border border-bone/15">
-            {looksTrouves.map((hit) => (
+            {results.content.map((hit) => (
               <li key={hit.id}>
                 <Link
                   href="/"

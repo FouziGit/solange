@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  etatAchat,
   libelleLook,
   libellePiece,
   nPieces,
@@ -56,8 +57,25 @@ describe("libelleLook", () => {
     expect(libelleLook(6)).toBe("Look numéro 7");
   });
 
-  it("annonce les pièces à voir, au singulier comme au pluriel", () => {
-    expect(libelleLook(6, 1)).toBe("Look numéro 7, voir la pièce");
-    expect(libelleLook(6, 3)).toBe("Look numéro 7, voir les 3 pièces");
+  it("en bouton, reprend le texte affiché puis annonce les pièces à voir", () => {
+    expect(libelleLook(6, 1)).toBe("N°07, 1 pièce : voir la pièce du look");
+    expect(libelleLook(6, 3)).toBe("N°07, 3 pièces : voir les pièces du look");
+  });
+});
+
+describe("etatAchat", () => {
+  it("dit pourquoi la pièce ne s'achète pas, vendue d'abord", () => {
+    expect(etatAchat({ sold: true, reserved: true, mine: true })).toBe(
+      "Vendue",
+    );
+    expect(etatAchat({ sold: false, reserved: true, mine: true })).toBe(
+      "Paiement en cours",
+    );
+    expect(etatAchat({ sold: false, mine: true })).toBe("Ta pièce");
+  });
+
+  it("ne dit rien d'une pièce achetable", () => {
+    expect(etatAchat({ sold: false })).toBeNull();
+    expect(etatAchat({ sold: false, reserved: false, mine: false })).toBeNull();
   });
 });

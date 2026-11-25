@@ -37,7 +37,10 @@ export function RailAction({
       aria-pressed={pressed}
       className="group flex flex-col items-center gap-1"
     >
+      {/* Motion rend focalisable tout élément qui a `whileTap` : sans ce
+          -1, chaque bouton comptait un second arrêt de tabulation, muet. */}
       <motion.span
+        tabIndex={-1}
         whileHover={{ y: -2, scale: 1.06 }}
         whileTap={{ scale: 0.8 }}
         transition={{ type: "spring", stiffness: 420, damping: 24 }}

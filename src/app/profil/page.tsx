@@ -206,6 +206,7 @@ export default function ProfilPage() {
     signOut,
     savedItems,
     refreshProducts,
+    productsError,
     circlesUnread,
   } = useStore();
   const { memberPosts } = useStore();
@@ -329,7 +330,9 @@ export default function ProfilPage() {
     "status" in it ? toDisplayItem(it) : it,
   );
   const tabItems = tab === "vente" ? saleItems : keptItems;
-  const tabKnown = authReady && (tab !== "vente" || !user || mineLoaded);
+  // Gardées : rien d'affirmé tant que les pièces des membres ont échoué
+  const tabKnown =
+    authReady && (tab === "vente" ? !user || mineLoaded : !productsError);
 
   const reconnect = () => {
     try {

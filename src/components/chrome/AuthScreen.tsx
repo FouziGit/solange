@@ -168,15 +168,10 @@ export function AuthScreen({ onComplete }: { onComplete: () => void }) {
           <span aria-hidden>SOLANGE</span>
         </h1>
 
-        {/* steps */}
-        <motion.div
-          /* naît visible : c'est l'élément LCP du premier écran (mesuré) */
-          initial={{ y: 14 }}
-          animate={{ y: 0 }}
-          transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-          className="mt-10 mb-auto w-full"
-        >
-          <AnimatePresence mode="wait">
+        {/* steps — posées dès le chargement (c'est l'élément LCP du premier
+            écran) : seules les transitions entre étapes s'animent */}
+        <div className="mt-10 mb-auto w-full">
+          <AnimatePresence mode="wait" initial={false}>
             {step === "email" && (
               <motion.div
                 key="email"
@@ -431,20 +426,17 @@ export function AuthScreen({ onComplete }: { onComplete: () => void }) {
               </motion.div>
             )}
           </AnimatePresence>
-        </motion.div>
+        </div>
 
         {/* skip — beta access. Dans le flux (plus en absolute) : il ne
             recouvre plus le formulaire et défile avec lui. */}
         {step !== "success" && (
-          <motion.button
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.6 }}
+          <button
             onClick={onComplete}
             className="pb-safe mt-8 block min-h-11 text-[12.5px] tracking-wide text-ash transition-colors hover:text-bone"
           >
             Passer · mode démo sans compte →
-          </motion.button>
+          </button>
         )}
       </div>
     </div>

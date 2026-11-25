@@ -6,7 +6,6 @@
    with the SAME signature, so callers don't change.
    ============================================================ */
 
-import { articles } from "./journal";
 import {
   catalog,
   catalogItem,
@@ -123,9 +122,8 @@ export function catalogSizes(): string[] {
   );
 }
 
-/** One search-result row for posts & articles (recherche unifiée). */
+/** Une ligne de résultat pour un look (recherche unifiée). */
 export type ContentHit = {
-  type: "post" | "article";
   id: string;
   title: string;
   sub: string;
@@ -146,7 +144,7 @@ function allCreators(): Creator[] {
 
 /**
  * Recherche unifiée : pièces (catalogue), profils (créateurs) et
- * contenus (posts du feed + articles éditoriaux). Case-insensitive
+ * contenus (looks du fil ; le Journal a ses propres entrées). Case-insensitive
  * substring match. Empty query returns empty arrays.
  */
 export function searchAll(q: string): {
@@ -171,26 +169,11 @@ export function searchAll(q: string): {
         .includes(needle),
     )
     .map((l) => ({
-      type: "post" as const,
       id: l.id,
       title: l.title,
       sub: l.caption,
       seed: l.seed,
     }));
 
-  const articleHits: ContentHit[] = articles
-    .filter((a) =>
-      `${a.title} ${a.standfirst} ${a.brand ?? ""}`
-        .toLowerCase()
-        .includes(needle),
-    )
-    .map((a) => ({
-      type: "article" as const,
-      id: a.id,
-      title: a.title,
-      sub: a.standfirst,
-      seed: a.seed,
-    }));
-
-  return { items, profiles, content: [...postHits, ...articleHits] };
+  return { items, profiles, content: postHits };
 }

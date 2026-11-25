@@ -424,4 +424,22 @@ describe("globals.css — défilement et mouvement", () => {
     expect(animation).toMatch(/\bbackwards\b/);
     expect(animation).not.toMatch(/\b(both|forwards)\b/);
   });
+
+  it("la fiche entre en opacité seule (barre d'achat fixed à l'écran dès la première image)", () => {
+    // même le temps de l'animation, un transform calerait la barre sur le
+    // bas de la page entière
+    const etapes = find(ROOT, ["@keyframes page-fade"])?.children ?? [];
+    expect(etapes.map((b) => b.prelude)).toEqual(["from", "to"]);
+    for (const etape of etapes) {
+      expect([...etape.decls.keys()]).toEqual(["opacity"]);
+    }
+    const fiche = find(ROOT, [".page-enter:has([data-barre-achat])"]);
+    expect(fiche?.decls.get("animation-name")).toBe("page-fade");
+    // plus précise que .page-enter : seul !important la coupe encore
+    const reduit = find(ROOT, [
+      "@media (prefers-reduced-motion: reduce)",
+      ".page-enter",
+    ]);
+    expect(reduit?.decls.get("animation")).toBe("none !important");
+  });
 });

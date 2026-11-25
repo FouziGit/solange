@@ -4,6 +4,7 @@
 import { useId, useState } from "react";
 import { useStore } from "@/lib/store";
 import { announce } from "@/lib/announce";
+import { etatAchat } from "@/lib/etiquette";
 import { compact, gradientFor, initials } from "@/lib/utils";
 import { imgItem } from "@/lib/img";
 import type { DisplayItem } from "../ui/ProductCard";
@@ -18,8 +19,9 @@ import { RailAction, shareOrCopy } from "./RailAction";
  * single catalog piece: photo, étiquette (taille, prix), condition, seller,
  * buy CTA.
  * Accepte aussi les annonces membres (item.image + item.member) : photo réelle,
- * CTA « Contacter » au lieu d'un checkout, étiquette « Vendue » quand c'est
- * parti.
+ * et le même achat que les autres (« Acheter » vers /checkout, « Faire une
+ * offre » vers les messages). Vendue, en cours de paiement ou la sienne : un
+ * bouton éteint le dit (etatAchat), comme sur la fiche.
  */
 export function ShopCard({
   item,
@@ -35,6 +37,8 @@ export function ShopCard({
   const liked = isLiked(item.id);
   const saved = isSaved(item.id);
   const sold = isSold(item.id);
+  // ce que le bas de carte dit à la place de « Acheter »
+  const etat = etatAchat({ sold, reserved: item.reserved, mine: item.mine });
   const [imgOk, setImgOk] = useState(true);
   // Photo réelle (annonce membre) prioritaire ; sinon visuel par seed.
   const src = item.image ?? imgItem(item.id);
@@ -173,21 +177,21 @@ export function ShopCard({
           </p>
 
           <div className="flex items-center gap-2 pt-1">
-            {sold ? (
+            {etat ? (
               <Button disabled>
-                <Bag className="size-4" /> Vendue
+                {sold && <Bag className="size-4" />}
+                {etat}
               </Button>
-            ) : item.member ? (
-              /* Annonce membre : pas de page détail/checkout en beta. */
-              <Button href={`/messages?item=${item.id}`}>Contacter</Button>
             ) : (
+              /* Toutes les pièces : une annonce de membre n'avait ici que
+                 deux boutons vers les messages, aucun moyen de l'acheter. */
               <Button href={`/checkout/${item.id}`}>
                 <Bag className="size-4" /> Acheter
               </Button>
             )}
             {/* lot 0 : le bouton était MORT (aucun lien) — branché vers la
                 conversation vendeur, même destination que la fiche pièce */}
-            {!sold && (
+            {!etat && (
               <Button variant="outline" href={`/messages?item=${item.id}`}>
                 Faire une offre
               </Button>

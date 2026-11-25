@@ -4,7 +4,9 @@
    Règles PURES, testées dans src/lib/__tests__/marche.test.ts.
    ============================================================ */
 
-const pluriel = (n: number, mot: string) => `${n} ${mot}${n > 1 ? "s" : ""}`;
+/* Exporté : l'étiquette (nPieces) accorde avec la même règle. */
+export const pluriel = (n: number, mot: string) =>
+  `${n} ${mot}${n > 1 ? "s" : ""}`;
 
 /**
  * Bilan d'une recherche ou d'un filtre, annoncé après la frappe :

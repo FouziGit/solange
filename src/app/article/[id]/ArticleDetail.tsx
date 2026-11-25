@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { motion } from "motion/react";
 import type { CatalogItem } from "@/lib/mock";
+import { etatAchat } from "@/lib/etiquette";
 import { imgItem } from "@/lib/img";
 import { track } from "@/lib/track";
 import { useStore } from "@/lib/store";
@@ -31,13 +32,7 @@ export function ArticleDetail({
   const saved = isSaved(item.id);
   const sold = item.soldBase || isSold(item.id);
   // ce que la barre d'achat dit à la place du bouton
-  const etat = sold
-    ? "Vendue"
-    : item.reserved
-      ? "Paiement en cours"
-      : item.mine
-        ? "Ta pièce"
-        : null;
+  const etat = etatAchat({ sold, reserved: item.reserved, mine: item.mine });
 
   // deterministic thumbnail variants off the base seed
   const thumbs = [`${item.seed}-a`, `${item.seed}-b`];
@@ -139,9 +134,14 @@ export function ArticleDetail({
 
           {/* barre d'achat : collée en bas sur téléphone (à la place de la
               barre d'onglets), sous l'étiquette dès md. Marges de PageShell :
-              étiquette et bouton s'alignent sur la photo. Moitié-moitié :
-              plus étroite, l'étiquette couperait son prix. */}
-          <div className="fixed inset-x-0 bottom-0 z-50 flex gap-2 border-t border-line bg-[var(--background)] pt-2.5 pl-[max(1.25rem,env(safe-area-inset-left))] pr-[max(1.25rem,env(safe-area-inset-right))] pb-[max(0.75rem,env(safe-area-inset-bottom))] md:static md:z-auto md:mt-4 md:border-0 md:bg-transparent md:p-0">
+              étiquette et bouton s'alignent sur la photo. Les deux en
+              flex-1 : Acheter garde ses 40 px de marge, donc un peu plus de
+              la moitié. `data-barre-achat` : globals.css fait entrer cette
+              page en opacité seule, sinon la barre fixed naît hors écran. */}
+          <div
+            data-barre-achat
+            className="fixed inset-x-0 bottom-0 z-50 flex gap-2 border-t border-line bg-[var(--background)] pt-2.5 pl-[max(1.25rem,env(safe-area-inset-left))] pr-[max(1.25rem,env(safe-area-inset-right))] pb-[max(0.75rem,env(safe-area-inset-bottom))] md:static md:z-auto md:mt-4 md:border-0 md:bg-transparent md:p-0"
+          >
             {/* aucun prix pour une pièce vendue */}
             {!sold && (
               <Etiquette

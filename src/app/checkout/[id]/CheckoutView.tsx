@@ -37,7 +37,6 @@ import {
   Lock,
   Card,
   Bag,
-  Verified,
   Pin,
   ChevronRight,
   Check,
@@ -1019,17 +1018,21 @@ function PieceRecap({
           <p className="mt-0.5 text-[11px] text-ash">{item.condition}</p>
           <p className="mt-1 flex items-center gap-1 text-[11px] text-ash">
             Vendue par <span className="text-bone">@{item.seller}</span>
-            <Verified className="size-3 text-bone" />
           </p>
         </div>
       </div>
+      {/* bornée dès md : pleine largeur, taille et prix se perdent de vue */}
       {vendue ? (
-        <Etiquette variant="vendue" item={item} className="mt-3" />
+        <Etiquette
+          variant="vendue"
+          item={item}
+          className="mt-3 md:max-w-[15rem]"
+        />
       ) : (
         <Etiquette
           variant="carte"
           item={{ size: item.size, priceEUR }}
-          className="mt-3"
+          className="mt-3 md:max-w-[15rem]"
         />
       )}
     </div>

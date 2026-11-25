@@ -63,7 +63,7 @@ export default function CreerPage() {
   const draft = readDraft<PostDraft>(CREER_DRAFT);
   const [title, setTitle] = useState(draft?.title ?? "");
   const [caption, setCaption] = useState(draft?.caption ?? "");
-  const [tagged, setTagged] = useState<string[]>(["k1"]);
+  const [tagged, setTagged] = useState<string[]>([]);
   const [hashtags, setHashtags] = useState<string[]>(
     draft?.hashtags ?? ["#archive"],
   );
